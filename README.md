@@ -13,19 +13,19 @@ Scope
 
 The source code indexer will support the following types of queries:
 
-    * location of symbol declaration
+   * location of symbol declaration
 
-    * location of symbol definition
+   * location of symbol definition
 
-    * locations of symbol references
+   * locations of symbol references
 
-    * identify symbol at specific location
+   * identify symbol at specific location
 
-    * list of base classes for symbol, if applicable
+   * list of base classes for symbol, if applicable
 
-    * list of derived classes for symbol, if applicable
+   * list of derived classes for symbol, if applicable
 
-    * list of override functions or methods for symbol, if applicable
+   * list of override functions or methods for symbol, if applicable
 
 As stretch goal, it will implement Language Server Protocol.
 
