@@ -20,6 +20,31 @@
 #include <iostream>
 #include <vector>
 
+static CXChildVisitResult visitTranslationUnit(CXCursor cursor, CXCursor /* parent */, CXClientData /* clientData */)
+{
+   CXString name = clang_getCursorSpelling(cursor);
+
+   CXCursorKind kind     = clang_getCursorKind(cursor);
+   CXString     kindName = clang_getCursorKindSpelling(kind);
+
+   CXSourceLocation location = clang_getCursorLocation(cursor);
+
+   CXString     fileName;
+   unsigned int line   = 0;
+   unsigned int column = 0;
+
+   clang_getPresumedLocation(location, &fileName, &line, &column);
+
+   std::cout << clang_getCString(fileName) << ':' << line << ':' << column << ':' << clang_getCString(kindName) << ':'
+             << clang_getCString(name) << std::endl;
+
+   clang_disposeString(fileName);
+   clang_disposeString(kindName);
+   clang_disposeString(name);
+
+   return CXChildVisit_Recurse;
+}
+
 int main(int argc, char* argv[])
 {
    if (argc < 2)
@@ -27,9 +52,8 @@ int main(int argc, char* argv[])
       return 1;
    }
 
-   CXCompilationDatabase_Error ccderror = CXCompilationDatabase_NoError;
-
-   CXCompilationDatabase compilationDatabase = clang_CompilationDatabase_fromDirectory(argv[1], &ccderror);
+   CXCompilationDatabase_Error ccderror            = CXCompilationDatabase_NoError;
+   CXCompilationDatabase       compilationDatabase = clang_CompilationDatabase_fromDirectory(argv[1], &ccderror);
 
    if (CXCompilationDatabase_NoError == ccderror)
    {
@@ -94,6 +118,10 @@ int main(int argc, char* argv[])
          std::cout << "   Parse status: " << parseError << std::endl;
          if (parseError == CXError_Success)
          {
+            CXCursor cursor = clang_getTranslationUnitCursor(translationUnit);
+
+            clang_visitChildren(cursor, visitTranslationUnit, nullptr);
+
             clang_disposeTranslationUnit(translationUnit);
          }
 
