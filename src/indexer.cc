@@ -48,14 +48,33 @@ int main(int argc, char* argv[])
          const char* sourceFileName = clang_getCString(fileNameString);
          std::cout << "Processing " << sourceFileName << std::endl;
 
-         const unsigned           argCount = clang_CompileCommand_getNumArgs(compileCommand);
-         std::vector<CXString>    argumentsAsCXString(argCount);
-         std::vector<const char*> arguments(argCount);
+         const unsigned        argCount = clang_CompileCommand_getNumArgs(compileCommand);
+         std::vector<CXString> argumentsAsCXString;
+         argumentsAsCXString.reserve(argCount);
+         std::vector<const char*> arguments;
+         arguments.reserve(argCount);
+
+         bool skipFileNames = false;
 
          for (unsigned jj = 0; jj < argCount; jj++)
          {
-            argumentsAsCXString[jj] = clang_CompileCommand_getArg(compileCommand, jj);
-            arguments[jj]           = clang_getCString(argumentsAsCXString[jj]);
+            if (skipFileNames)
+            {
+               skipFileNames = false;
+               continue;
+            }
+
+            CXString cxString = clang_CompileCommand_getArg(compileCommand, jj);
+            argumentsAsCXString.push_back(cxString);
+            const char* argumentText = clang_getCString(cxString);
+
+            if ((argumentText[0] == '-') && ((argumentText[1] == 'c') || (argumentText[1] == 'o')))
+            {
+               skipFileNames = true;
+               continue;
+            }
+
+            arguments.push_back(argumentText);
             std::cout << "   " << arguments[jj] << std::endl;
          }
 
@@ -65,10 +84,11 @@ int main(int argc, char* argv[])
             clang_parseTranslationUnit2(/* CIdx                  = */ index,
                                         /* source_filename       = */ sourceFileName,
                                         /* command_line_args     = */ arguments.data(),
-                                        /* num_command_line_args = */ static_cast<int>(argCount),
+                                        /* num_command_line_args = */ static_cast<int>(arguments.size()),
                                         /* unsaved_files         = */ nullptr,
                                         /* num_unsaved_files     = */ 0,
-                                        /* options               = */ 0,
+                                        /* options               = */ CXTranslationUnit_DetailedPreprocessingRecord |
+                                           CXTranslationUnit_SingleFileParse,
                                         /* out_TU                = */ &translationUnit);
 
          std::cout << "   Parse status: " << parseError << std::endl;
@@ -77,9 +97,9 @@ int main(int argc, char* argv[])
             clang_disposeTranslationUnit(translationUnit);
          }
 
-         for (unsigned jj = 0; jj < argCount; jj++)
+         for (CXString cxString : argumentsAsCXString)
          {
-            clang_disposeString(argumentsAsCXString[jj]);
+            clang_disposeString(cxString);
          }
 
          clang_disposeString(fileNameString);
