@@ -18,9 +18,15 @@
 #include <clang-c/Index.h>
 
 #include <iostream>
+#include <string>
 #include <vector>
 
-static CXChildVisitResult visitTranslationUnit(CXCursor cursor, CXCursor /* parent */, CXClientData /* clientData */)
+struct VisitData
+{
+   unsigned int level = 0;
+};
+
+static void dumpCursorInfo(CXCursor cursor, unsigned int level)
 {
    CXString name = clang_getCursorSpelling(cursor);
 
@@ -35,14 +41,25 @@ static CXChildVisitResult visitTranslationUnit(CXCursor cursor, CXCursor /* pare
 
    clang_getPresumedLocation(location, &fileName, &line, &column);
 
-   std::cout << clang_getCString(fileName) << ':' << line << ':' << column << ':' << clang_getCString(kindName) << ':'
-             << clang_getCString(name) << std::endl;
+   std::cout << clang_getCString(fileName) << ':' << line << ':' << column << ':' << std::string(level, ' ')
+             << clang_getCString(kindName) << ':' << clang_getCString(name) << std::endl;
 
    clang_disposeString(fileName);
    clang_disposeString(kindName);
    clang_disposeString(name);
+}
 
-   return CXChildVisit_Recurse;
+static CXChildVisitResult visitTranslationUnit(CXCursor cursor, CXCursor /* parent */, CXClientData clientData)
+{
+   VisitData* visitData = reinterpret_cast<VisitData*>(clientData);
+
+   dumpCursorInfo(cursor, visitData->level);
+
+   VisitData childrenData;
+   childrenData.level = visitData->level + 1;
+   clang_visitChildren(cursor, visitTranslationUnit, &childrenData);
+
+   return CXChildVisit_Continue;
 }
 
 int main(int argc, char* argv[])
@@ -120,7 +137,9 @@ int main(int argc, char* argv[])
          {
             CXCursor cursor = clang_getTranslationUnitCursor(translationUnit);
 
-            clang_visitChildren(cursor, visitTranslationUnit, nullptr);
+            VisitData visitData;
+
+            clang_visitChildren(cursor, visitTranslationUnit, &visitData);
 
             clang_disposeTranslationUnit(translationUnit);
          }
