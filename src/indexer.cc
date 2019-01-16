@@ -128,8 +128,7 @@ int main(int argc, char* argv[])
                                         /* num_command_line_args = */ static_cast<int>(arguments.size()),
                                         /* unsaved_files         = */ nullptr,
                                         /* num_unsaved_files     = */ 0,
-                                        /* options               = */ CXTranslationUnit_DetailedPreprocessingRecord |
-                                           CXTranslationUnit_SingleFileParse,
+                                        /* options               = */ CXTranslationUnit_DetailedPreprocessingRecord,
                                         /* out_TU                = */ &translationUnit);
 
          std::cout << "   Parse status: " << parseError << std::endl;
