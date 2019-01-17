@@ -35,6 +35,8 @@ static void dumpCursorInfo(CXCursor cursor, unsigned int level)
 
    CXSourceLocation location = clang_getCursorLocation(cursor);
 
+   CXString cursorUSR = clang_getCursorUSR(cursor);
+
    CXString     fileName;
    unsigned int line   = 0;
    unsigned int column = 0;
@@ -42,8 +44,10 @@ static void dumpCursorInfo(CXCursor cursor, unsigned int level)
    clang_getPresumedLocation(location, &fileName, &line, &column);
 
    std::cout << clang_getCString(fileName) << ':' << line << ':' << column << ':' << std::string(level, ' ')
-             << clang_getCString(kindName) << ':' << clang_getCString(name) << std::endl;
+             << clang_getCString(kindName) << ':' << clang_getCString(name) << ':' << clang_getCString(cursorUSR)
+             << std::endl;
 
+   clang_disposeString(cursorUSR);
    clang_disposeString(fileName);
    clang_disposeString(kindName);
    clang_disposeString(name);
