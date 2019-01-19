@@ -52,11 +52,11 @@ public:
 
 class StringTable
 {
-public:
    static constexpr unsigned BucketSizeBits = 24;
    static constexpr size_t   MaxTableSize   = (1u << BucketSizeBits);
    static constexpr size_t   MaxBucketCount = (1u << (32 - BucketSizeBits));
 
+public:
    StringTable()
    {
       addBucket();
