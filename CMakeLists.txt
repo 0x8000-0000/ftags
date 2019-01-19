@@ -58,6 +58,9 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif ()
 endif ()
 
+enable_testing ()
+find_package (GTest REQUIRED)
+
 #
 # Tools
 #
@@ -66,3 +69,15 @@ target_include_directories (indexer PRIVATE ${LIBCLANG_INCLUDEDIR})
 target_link_libraries (indexer PRIVATE project_options project_warnings)
 target_link_libraries (indexer PRIVATE -L${LIBCLANG_LIBDIR})
 target_link_libraries (indexer PRIVATE -lclang)
+
+#
+# Tests
+#
+add_executable (string_table_test test/string_table_test.cc
+   src/string_table.cc)
+target_include_directories (string_table_test PRIVATE
+   ${GTEST_INCLUDE_DIRS} include)
+target_link_libraries (string_table_test PRIVATE project_options project_warnings)
+target_link_libraries (string_table_test PRIVATE ${GTEST_BOTH_LIBRARIES} pthread)
+
+add_test (StringTableTest string_table_test)
