@@ -26,3 +26,31 @@ TEST(StringTableTest, EmptyTableHasNoString)
 
    ASSERT_EQ(keyForInvalidValue, 0);
 }
+
+TEST(StringTableTest, AddOneGetItBack)
+{
+   ftags::StringTable st;
+
+   const char fooString[] = "foo";
+
+   st.addKey(fooString);
+
+   const uint32_t keyForFoo = st.getKey(fooString);
+
+   ASSERT_NE(keyForFoo, 0);
+}
+
+TEST(StringTableTest, DataStructureOwnsIt)
+{
+   ftags::StringTable st;
+
+   {
+      std::string fooString{"foo"};
+
+      st.addKey(fooString.data());
+   }
+
+   const uint32_t keyForFoo = st.getKey("foo");
+
+   ASSERT_NE(keyForFoo, 0);
+}
