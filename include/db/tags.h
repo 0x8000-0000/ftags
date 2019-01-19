@@ -226,7 +226,7 @@ public:
 
    std::vector<uint8_t> serialize() const;
 
-   static Tags deserialize(const std::vector<uint8_t>& buffer);
+   static Tags deserialize(const uint8_t* buffer, size_t size);
 
 private:
    StringTable m_symbolTable;

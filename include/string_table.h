@@ -37,8 +37,10 @@ public:
 
    std::vector<uint8_t> serialize() const;
 
+   static StringTable deserialize(const uint8_t* buffer, size_t size);
+
 private:
-   unsigned m_currentAppend = 0;
+   //unsigned m_currentAppend = 0;
 
    /*
     * Store the strings in continuous ropes; in order to reduce memory
