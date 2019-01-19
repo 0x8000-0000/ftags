@@ -38,6 +38,9 @@ TEST(StringTableTest, AddOneGetItBack)
    const uint32_t keyForFoo = st.getKey(fooString);
 
    ASSERT_NE(keyForFoo, 0);
+
+   const char* key = st.getString(keyForFoo);
+   ASSERT_STREQ(key, fooString);
 }
 
 TEST(StringTableTest, DataStructureOwnsIt)
@@ -53,4 +56,21 @@ TEST(StringTableTest, DataStructureOwnsIt)
    const uint32_t keyForFoo = st.getKey("foo");
 
    ASSERT_NE(keyForFoo, 0);
+}
+
+TEST(StringTableTest, AddTwiceGetSomeIndexBack)
+{
+   ftags::StringTable st;
+
+   const char fooString[] = "foo";
+
+   const uint32_t firstPosition = st.addKey(fooString);
+
+   const uint32_t keyForFoo = st.getKey(fooString);
+
+   ASSERT_EQ(keyForFoo, firstPosition);
+
+   const uint32_t secondPosition = st.addKey(fooString);
+
+   ASSERT_EQ(secondPosition, firstPosition);
 }

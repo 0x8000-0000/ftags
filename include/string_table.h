@@ -17,22 +17,54 @@
 #ifndef STRING_TABLE_H_INCLUDED
 #define STRING_TABLE_H_INCLUDED
 
+#include <functional>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
 #include <cstdint>
+#include <cstring>
 
 namespace ftags
 {
 
+class CharPointerHashingFunctor
+{
+public:
+   size_t operator()(const char* key) const
+   {
+      /*
+       * lazy implementation for now
+       */
+      const std::string asString{key};
+      return std::hash<std::string>()(asString);
+   }
+};
+
+class CharPointerCompareFunctor
+{
+public:
+   bool operator()(const char* leftString, const char* rightString) const
+   {
+      return 0 == strcmp(leftString, rightString);
+   }
+};
+
 class StringTable
 {
 public:
-   static constexpr size_t MaxTableSize = 16 * 1024 * 1024;
+   static constexpr unsigned BucketSizeBits = 24;
+   static constexpr size_t   MaxTableSize   = (1u << BucketSizeBits);
+   static constexpr size_t   MaxBucketCount = (1u << (32 - BucketSizeBits));
 
-   const char* getString(uint32_t stringKey);
+   StringTable()
+   {
+      addBucket();
+   }
 
-   uint32_t getKey(const char* string);
+   const char* getString(uint32_t stringKey) const noexcept;
+
+   uint32_t getKey(const char* string) const noexcept;
    uint32_t addKey(const char* string);
 
    std::vector<uint8_t> serialize() const;
@@ -40,7 +72,7 @@ public:
    static StringTable deserialize(const uint8_t* buffer, size_t size);
 
 private:
-   //unsigned m_currentAppend = 0;
+   void addBucket();
 
    /*
     * Store the strings in continuous ropes; in order to reduce memory
@@ -53,7 +85,7 @@ private:
    /*
     * Lookup table; can be reconstructed from the buckets above.
     */
-   std::unordered_map<const char*, uint32_t> m_registry;
+   std::unordered_map<const char*, uint32_t, CharPointerHashingFunctor, CharPointerCompareFunctor> m_registry;
 };
 
 } // namespace ftags
