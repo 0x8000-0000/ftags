@@ -60,6 +60,7 @@ endif ()
 
 enable_testing ()
 find_package (GTest REQUIRED)
+include (GoogleTest)
 
 #
 # Tools
@@ -80,4 +81,13 @@ target_include_directories (string_table_test PRIVATE
 target_link_libraries (string_table_test PRIVATE project_options project_warnings)
 target_link_libraries (string_table_test PRIVATE ${GTEST_BOTH_LIBRARIES} pthread)
 
-add_test (StringTableTest string_table_test)
+gtest_discover_tests (string_table_test)
+
+add_executable (index_map_test test/index_map_test.cc
+   src/index_map.cc)
+target_include_directories (index_map_test PRIVATE
+   ${GTEST_INCLUDE_DIRS} include)
+target_link_libraries (index_map_test PRIVATE project_options project_warnings)
+target_link_libraries (index_map_test PRIVATE ${GTEST_BOTH_LIBRARIES} pthread)
+
+gtest_discover_tests (index_map_test)

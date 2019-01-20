@@ -14,36 +14,30 @@
    limitations under the License.
 */
 
-#ifndef INDEX_MAP_H_INCLUDED
-#define INDEX_MAP_H_INCLUDED
+#include <index_map.h>
 
-#include <map>
-#include <vector>
+#include <gtest/gtest.h>
 
-#include <cstdint>
-
-namespace ftags
+TEST(IndexMapTest, EmptyTableHasNoValues)
 {
+   ftags::IndexMap im;
 
-/** Maps a non-zero unsigned value to a bag of unsigned values
- */
-class IndexMap
+   const std::vector<uint32_t> resultForInvalidValue = im.getValues(42);
+
+   ASSERT_TRUE(resultForInvalidValue.empty());
+}
+
+TEST(IndexMapTest, AddOneValueThenGetItBack)
 {
-public:
+   ftags::IndexMap im;
 
-   void add(uint32_t key, uint32_t value);
+   im.add(42, 3141);
 
-   std::vector<uint32_t> getValues(uint32_t key) const noexcept;
+   const std::vector<uint32_t> resultForInvalidValue = im.getValues(42);
 
-   void removeKey(uint32_t key);
+   ASSERT_FALSE(resultForInvalidValue.empty());
 
-   void removeValue(uint32_t key, uint32_t value);
+   ASSERT_EQ(resultForInvalidValue.size(), 1);
 
-private:
-
-   std::map<uint32_t, std::vector<uint32_t>> m_index;
-};
-
-} // namespace ftags
-
-#endif // INDEX_MAP_H_INCLUDED
+   ASSERT_EQ(resultForInvalidValue[0], 3141);
+}
