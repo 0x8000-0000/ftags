@@ -17,46 +17,29 @@
 #include <string_table.h>
 
 #include <algorithm>
-#include <iterator>
 #include <stdexcept>
 
 #include <cassert>
 #include <cstring>
 
-void ftags::StringTable::addBucket()
-{
-   if ((m_buckets.size() + 1) >= MaxBucketCount)
-   {
-      throw std::length_error("Exceeded data structure capacity");
-   }
-
-   m_buckets.emplace_back(std::vector<char>());
-   m_buckets.back().reserve(MaxTableSize);
-   m_buckets.back().push_back('\0');
-}
-
 const char* ftags::StringTable::getString(uint32_t stringKey) const noexcept
 {
-   const uint32_t positionMask    = MaxBucketCount - 1;
-   const uint32_t bucketIndexMask = ~positionMask;
+   const auto location = m_store.get(stringKey);
 
-   const auto bucketIndex = (stringKey & bucketIndexMask) >> BucketSizeBits;
-   const auto position    = stringKey & positionMask;
-
-   const auto& bucket = m_buckets.at(bucketIndex);
-   assert(position < bucket.size());
-
-   auto iter = bucket.begin();
-
-   std::advance(iter, position);
-
-   return &*iter;
+   if (location.first == location.second)
+   {
+      return nullptr;
+   }
+   else
+   {
+      return &*location.first;
+   }
 }
 
 uint32_t ftags::StringTable::getKey(const char* inputString) const noexcept
 {
-   auto iter = m_registry.find(inputString);
-   if (m_registry.end() == iter)
+   auto iter = m_index.find(inputString);
+   if (m_index.end() == iter)
    {
       return 0;
    }
@@ -75,37 +58,14 @@ uint32_t ftags::StringTable::addKey(const char* inputString)
    }
 
    const auto inputLength = strlen(inputString);
-   if (inputLength >= MaxTableSize)
-   {
-      throw std::length_error("Can't store strings that large");
-   }
 
-   auto& currentBucket = m_buckets.back();
+   auto allocation = m_store.allocate(inputLength + 1);
 
-   if ((currentBucket.size() + inputLength + 1) <= currentBucket.capacity())
-   {
-      const size_t position = currentBucket.size();
-      assert(position < MaxTableSize);
+   std::copy_n(inputString, inputLength + 1, allocation.second);
 
-      std::copy_n(inputString, inputLength + 1, std::back_inserter(currentBucket));
+   m_index[inputString] = allocation.first;
 
-      const long bucketIndex = std::distance(m_buckets.begin(), m_buckets.end());
-      assert(bucketIndex >= 0);
-      assert(bucketIndex < (1u << (32 - BucketSizeBits)));
-
-      const uint32_t stringKey =
-         (static_cast<uint32_t>(bucketIndex) << (32 - BucketSizeBits)) | static_cast<uint32_t>(position);
-
-      m_registry[inputString] = stringKey;
-
-      return static_cast<uint32_t>(stringKey);
-   }
-   else
-   {
-      addBucket();
-
-      return addKey(inputString);
-   }
+   return allocation.first;
 }
 
 std::vector<uint8_t> ftags::StringTable::serialize() const
