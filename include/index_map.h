@@ -41,6 +41,8 @@ public:
 
 private:
 
+   std::vector<std::vector<uint32_t>> m_store;
+
    std::map<uint32_t, std::vector<uint32_t>> m_index;
 };
 
