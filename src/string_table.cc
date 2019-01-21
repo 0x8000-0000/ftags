@@ -24,7 +24,7 @@
 
 const char* ftags::StringTable::getString(uint32_t stringKey) const noexcept
 {
-   const auto location = m_store.get(stringKey);
+   auto location = m_store.get(stringKey);
 
    if (location.first == location.second)
    {

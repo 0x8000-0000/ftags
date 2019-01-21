@@ -72,6 +72,8 @@ public:
     */
    std::pair<const_iterator, const_iterator> get(K key) const;
 
+   std::pair<iterator, const_iterator> get(K key);
+
 private:
    static constexpr std::size_t MaxSegmentSize      = (1UL << SegmentSizeBits);
    static constexpr std::size_t MaxSegmentCount     = (1UL << ((sizeof(K) * 8) - SegmentSizeBits));
@@ -123,6 +125,12 @@ std::pair<typename Store<T, K, SegmentSizeBits>::const_iterator,
           typename Store<T, K, SegmentSizeBits>::const_iterator>
 Store<T, K, SegmentSizeBits>::get(K key) const
 {
+   if (key == 0)
+   {
+      return std::pair<typename Store<T, K, SegmentSizeBits>::const_iterator,
+                       typename Store<T, K, SegmentSizeBits>::const_iterator>(m_segment[0].end(), m_segment[0].end());
+   }
+
    const std::size_t segmentIndex    = getSegmentIndex(key);
    const std::size_t offsetInSegment = getOffsetInSegment(key);
 
@@ -133,6 +141,29 @@ Store<T, K, SegmentSizeBits>::get(K key) const
    assert(iter < segment.end());
 
    return std::pair<typename Store<T, K, SegmentSizeBits>::const_iterator,
+                    typename Store<T, K, SegmentSizeBits>::const_iterator>(iter, segment.end());
+}
+
+template <typename T, typename K, unsigned SegmentSizeBits>
+std::pair<typename Store<T, K, SegmentSizeBits>::iterator, typename Store<T, K, SegmentSizeBits>::const_iterator>
+Store<T, K, SegmentSizeBits>::get(K key)
+{
+   if (key == 0)
+   {
+      return std::pair<typename Store<T, K, SegmentSizeBits>::iterator,
+                       typename Store<T, K, SegmentSizeBits>::const_iterator>(m_segment[0].end(), m_segment[0].end());
+   }
+
+   const std::size_t segmentIndex    = getSegmentIndex(key);
+   const std::size_t offsetInSegment = getOffsetInSegment(key);
+
+   auto& segment = m_segment.at(segmentIndex);
+   auto  iter    = segment.begin();
+   std::advance(iter, offsetInSegment);
+
+   assert(iter < segment.end());
+
+   return std::pair<typename Store<T, K, SegmentSizeBits>::iterator,
                     typename Store<T, K, SegmentSizeBits>::const_iterator>(iter, segment.end());
 }
 

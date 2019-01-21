@@ -22,9 +22,9 @@ TEST(IndexMapTest, EmptyTableHasNoValues)
 {
    ftags::IndexMap im;
 
-   const std::vector<uint32_t> resultForInvalidValue = im.getValues(42);
+   const auto resultForInvalidValue = im.getValues(42);
 
-   ASSERT_TRUE(resultForInvalidValue.empty());
+   ASSERT_TRUE(resultForInvalidValue.first == resultForInvalidValue.second);
 }
 
 TEST(IndexMapTest, AddOneValueThenGetItBack)
@@ -33,11 +33,13 @@ TEST(IndexMapTest, AddOneValueThenGetItBack)
 
    im.add(42, 3141);
 
-   const std::vector<uint32_t> resultForInvalidValue = im.getValues(42);
+   auto resultForValidValue = im.getValues(42);
 
-   ASSERT_FALSE(resultForInvalidValue.empty());
+   ASSERT_FALSE(resultForValidValue.first == resultForValidValue.second);
 
-   ASSERT_EQ(resultForInvalidValue.size(), 1);
+   ASSERT_EQ(*resultForValidValue.first, 3141);
 
-   ASSERT_EQ(resultForInvalidValue[0], 3141);
+   resultForValidValue.first ++;
+
+   ASSERT_TRUE(resultForValidValue.first == resultForValidValue.second);
 }

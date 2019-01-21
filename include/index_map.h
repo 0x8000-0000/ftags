@@ -17,6 +17,8 @@
 #ifndef INDEX_MAP_H_INCLUDED
 #define INDEX_MAP_H_INCLUDED
 
+#include <store.h>
+
 #include <map>
 #include <vector>
 
@@ -31,9 +33,13 @@ class IndexMap
 {
 public:
 
+   using const_iterator = typename Store<uint32_t, uint32_t, 24>::const_iterator;
+
    void add(uint32_t key, uint32_t value);
 
-   std::vector<uint32_t> getValues(uint32_t key) const noexcept;
+   /** Returns a range via begin and end iterators.
+    */
+   std::pair<const_iterator, const_iterator> getValues(uint32_t key) const noexcept;
 
    void removeKey(uint32_t key);
 
@@ -41,9 +47,25 @@ public:
 
 private:
 
-   std::vector<std::vector<uint32_t>> m_store;
+   // the initial capacity of a bag
+   static constexpr unsigned InitialAllocationSize = 6;
 
-   std::map<uint32_t, std::vector<uint32_t>> m_index;
+   /*
+    * Allocate contiguous blocks, and use the following format:
+    *    * key
+    *    * block-size / block-capacity packed into 32 bits
+    *    * element1, element2...
+    *
+    * If a bag is full, we either re-allocate it, or we reallocate
+    * the next bag and we take over its space.
+    */
+
+   Store<uint32_t, uint32_t, 24> m_store;
+
+   /* Maps from a value to the location in store where its corresponding bag
+    * is stored.
+    */
+   std::map<uint32_t, uint32_t> m_index;
 };
 
 } // namespace ftags
