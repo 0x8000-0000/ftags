@@ -45,8 +45,34 @@ void ftags::IndexMap::add(uint32_t key, uint32_t value)
       }
       else
       {
-         // need to grow
-         assert(false);
+         /*
+          * need to grow
+          */
+
+         std::size_t available = m_store.availableAfter(indexPos->second, capacity);
+         if (available != 0)
+         {
+            /*
+             * can grow in place?
+             */
+            std::size_t newCapacity = capacity + capacity / GrowthFactor;
+            if ((newCapacity - capacity) > available)
+            {
+               newCapacity = capacity + available;
+            }
+
+            // TODO: implement chaining
+            assert(newCapacity <= (1 << 16));
+
+            *iter = (static_cast<uint32_t>(newCapacity) << 16) | (size + 1);
+
+            auto extraUnits = m_store.allocateAfter(indexPos->second, capacity, newCapacity);
+            *extraUnits     = value;
+         }
+         else
+         {
+            assert(false);
+         }
       }
    }
    else

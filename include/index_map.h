@@ -50,6 +50,9 @@ private:
    // the initial capacity of a bag
    static constexpr unsigned InitialAllocationSize = 6;
 
+   // when growing, the new size is (X + X / GrowthFactor)
+   static constexpr unsigned GrowthFactor = 4;
+
    /*
     * Allocate contiguous blocks, and use the following format:
     *    * key

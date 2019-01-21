@@ -49,12 +49,22 @@ public:
       addSegment();
    }
 
-   /** Alocates some units of T
+   /** Allocates some units of T
     *
     * @param size is the number of units of T
-    * @return a pair of key and an interator to the first allocated unit
+    * @return a pair of key and an iterator to the first allocated unit
     */
    std::pair<K, iterator> allocate(std::size_t size);
+
+   /** Requests access to an allocated block by key
+    *
+    * @param key identifies the block of T
+    * @return a pair of an iterator to the first allocated unit and an
+    *    iterator to the last accessible unit in the segment
+    */
+   std::pair<const_iterator, const_iterator> get(K key) const;
+
+   std::pair<iterator, const_iterator> get(K key);
 
    /** Releases s units of T allocated at key
     *
@@ -64,15 +74,28 @@ public:
     */
    void deallocate(K key, std::size_t size);
 
-   /** Requests access to an allocated block by key
+   /** Return the number of units we know can be allocated starting at key
+    *
+    * @param key identifies a block
+    * @param size is the number of units of T
+    *
+    * @note This succeeds if a block starting at K is in the free list or
+    * if K is right at the end of the current allocation.
+    * @see allocateAt
+    */
+   std::size_t availableAfter(K key, std::size_t size);
+
+   /** Allocates a block at key K
     *
     * @param key identifies the block of T
-    * @return a pair of an interator to the first allocated unit and an
-    *    iterator to the last accessible unit in the segment
+    * @param oldSize is the number of units of T currently allocated
+    * @param newSize is the number of units of T desired
+    *
+    * @note For this operation to succeed, availableAt(K, size) should return
+    * more than newSize - size
+    * @see availableAt
     */
-   std::pair<const_iterator, const_iterator> get(K key) const;
-
-   std::pair<iterator, const_iterator> get(K key);
+   iterator allocateAfter(K key, std::size_t oldSize, std::size_t newSize);
 
 private:
    static constexpr std::size_t MaxSegmentSize      = (1UL << SegmentSizeBits);
@@ -199,6 +222,19 @@ std::pair<K, typename Store<T, K, SegmentSizeBits>::iterator> Store<T, K, Segmen
 
       return allocate(size);
    }
+}
+
+template <typename T, typename K, unsigned SegmentSizeBits>
+std::size_t Store<T, K, SegmentSizeBits>::availableAfter(K /* key */, std::size_t /* size */)
+{
+   return 0;
+}
+
+template <typename T, typename K, unsigned SegmentSizeBits>
+typename Store<T, K, SegmentSizeBits>::iterator
+   Store<T, K, SegmentSizeBits>::allocateAfter(K /* key */, std::size_t /* oldSize */, std::size_t /* newSize */)
+{
+   return m_segment[0].end();
 }
 
 } // namespace ftags
