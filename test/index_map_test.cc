@@ -43,3 +43,51 @@ TEST(IndexMapTest, AddOneValueThenGetItBack)
 
    ASSERT_TRUE(resultForValidValue.first == resultForValidValue.second);
 }
+
+TEST(IndexMapTest, AddTwoValuesThenGetThemBack)
+{
+   ftags::IndexMap im;
+
+   im.add(42, 3141);
+   im.add(42, 999);
+
+   auto resultForValidValue = im.getValues(42);
+
+   ASSERT_FALSE(resultForValidValue.first == resultForValidValue.second);
+
+   ASSERT_EQ(*resultForValidValue.first, 3141);
+
+   resultForValidValue.first ++;
+
+   ASSERT_EQ(*resultForValidValue.first, 999);
+
+   resultForValidValue.first ++;
+
+   ASSERT_TRUE(resultForValidValue.first == resultForValidValue.second);
+}
+
+TEST(IndexMapTest, AddValuesToDifferentKeys)
+{
+   ftags::IndexMap im;
+
+   im.add(999, 42);
+
+   im.add(42, 3141);
+   im.add(42, 999);
+
+   im.add(10, 552);
+
+   auto resultForValidValue = im.getValues(42);
+
+   ASSERT_FALSE(resultForValidValue.first == resultForValidValue.second);
+
+   ASSERT_EQ(*resultForValidValue.first, 3141);
+
+   resultForValidValue.first ++;
+
+   ASSERT_EQ(*resultForValidValue.first, 999);
+
+   resultForValidValue.first ++;
+
+   ASSERT_TRUE(resultForValidValue.first == resultForValidValue.second);
+}
