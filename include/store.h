@@ -83,7 +83,7 @@ public:
     * if K is right at the end of the current allocation.
     * @see allocateAt
     */
-   std::size_t availableAfter(K key, std::size_t size);
+   std::size_t availableAfter(K key, std::size_t size) const noexcept;
 
    /** Allocates a block at key K
     *
@@ -225,16 +225,57 @@ std::pair<K, typename Store<T, K, SegmentSizeBits>::iterator> Store<T, K, Segmen
 }
 
 template <typename T, typename K, unsigned SegmentSizeBits>
-std::size_t Store<T, K, SegmentSizeBits>::availableAfter(K /* key */, std::size_t /* size */)
+std::size_t Store<T, K, SegmentSizeBits>::availableAfter(K key, std::size_t size) const noexcept
 {
+   if (key == 0)
+   {
+      return 0;
+   }
+
+   const std::size_t segmentIndex    = getSegmentIndex(key);
+   const std::size_t offsetInSegment = getOffsetInSegment(key);
+
+   const auto& segment = m_segment.at(segmentIndex);
+
+   if ((offsetInSegment + size) == segment.size())
+   {
+      return segment.capacity() - (offsetInSegment + size);
+   }
+
    return 0;
 }
 
 template <typename T, typename K, unsigned SegmentSizeBits>
 typename Store<T, K, SegmentSizeBits>::iterator
-   Store<T, K, SegmentSizeBits>::allocateAfter(K /* key */, std::size_t /* oldSize */, std::size_t /* newSize */)
+   Store<T, K, SegmentSizeBits>::allocateAfter(K key, std::size_t oldSize, std::size_t newSize)
 {
-   return m_segment[0].end();
+   if (key == 0)
+   {
+      throw std::invalid_argument("Key 0 is invalid");
+   }
+
+   const std::size_t segmentIndex    = getSegmentIndex(key);
+   const std::size_t offsetInSegment = getOffsetInSegment(key);
+
+   auto& segment = m_segment.at(segmentIndex);
+
+   if ((offsetInSegment + oldSize) == segment.size())
+   {
+      if ((offsetInSegment + newSize) <= segment.capacity())
+      {
+         auto iter = segment.end();
+         segment.resize(offsetInSegment + newSize);
+         return iter;
+      }
+      else
+      {
+         throw std::length_error("Can't extend using requested size");
+      }
+   }
+   else
+   {
+      throw std::logic_error("Can't extend allocation; this is not the last element");
+   }
 }
 
 } // namespace ftags

@@ -53,6 +53,11 @@ private:
    // when growing, the new size is (X + X / GrowthFactor)
    static constexpr unsigned GrowthFactor = 4;
 
+   /* we use two extra elements, one to store the key copy and one to
+    * store the capacity, size pair
+    */
+   static constexpr unsigned MetadataSize = 2;
+
    /*
     * Allocate contiguous blocks, and use the following format:
     *    * key

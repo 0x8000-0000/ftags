@@ -49,13 +49,21 @@ void ftags::IndexMap::add(uint32_t key, uint32_t value)
           * need to grow
           */
 
-         std::size_t available = m_store.availableAfter(indexPos->second, capacity);
+         std::size_t available = m_store.availableAfter(indexPos->second, capacity + MetadataSize);
          if (available != 0)
          {
             /*
              * can grow in place?
              */
-            std::size_t newCapacity = capacity + capacity / GrowthFactor;
+            std::size_t newCapacity = capacity;
+            if ((capacity / GrowthFactor) < GrowthFactor)
+            {
+               newCapacity += GrowthFactor;
+            }
+            else
+            {
+               newCapacity += capacity / GrowthFactor;
+            }
             if ((newCapacity - capacity) > available)
             {
                newCapacity = capacity + available;
@@ -66,8 +74,9 @@ void ftags::IndexMap::add(uint32_t key, uint32_t value)
 
             *iter = (static_cast<uint32_t>(newCapacity) << 16) | (size + 1);
 
-            auto extraUnits = m_store.allocateAfter(indexPos->second, capacity, newCapacity);
-            *extraUnits     = value;
+            auto extraUnits =
+               m_store.allocateAfter(indexPos->second, capacity + MetadataSize, newCapacity + MetadataSize);
+            *extraUnits = value;
          }
          else
          {
@@ -78,7 +87,7 @@ void ftags::IndexMap::add(uint32_t key, uint32_t value)
    else
    {
       uint32_t capacity = InitialAllocationSize;
-      auto     location = m_store.allocate(2 + capacity);
+      auto     location = m_store.allocate(capacity + MetadataSize);
       auto     iter     = location.second;
       *iter             = key;
       iter++;
