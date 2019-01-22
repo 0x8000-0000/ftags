@@ -96,7 +96,7 @@ TEST(IndexMapTest, CanExtendLastElement)
 {
    ftags::IndexMap im;
 
-   im.add(999, 42);
+   im.add(999, 555);
 
    im.add(10, 552);
 
@@ -114,7 +114,7 @@ TEST(IndexMapTest, CanExtendOtherThanLastElement)
 {
    ftags::IndexMap im;
 
-   im.add(999, 42);
+   im.add(999, 555);
 
    im.add(42, 100);
 
@@ -128,4 +128,31 @@ TEST(IndexMapTest, CanExtendOtherThanLastElement)
    auto resultForValidValue = im.getValues(42);
 
    ASSERT_EQ(std::distance(resultForValidValue.first, resultForValidValue.second), 17);
+}
+
+TEST(IndexMapTest, ExtendIntoFreedSpace)
+{
+   ftags::IndexMap im;
+
+   im.add(999, 555);
+
+   im.add(42, 100);
+
+   im.add(10, 777);
+
+   for (uint32_t ii = 0; ii < 3; ii ++)
+   {
+      im.add(42, ii);
+   }
+
+   im.removeKey(10);
+
+   for (uint32_t ii = 10; ii < 20; ii ++)
+   {
+      im.add(42, ii);
+   }
+
+   auto resultForValidValue = im.getValues(42);
+
+   ASSERT_EQ(std::distance(resultForValidValue.first, resultForValidValue.second), 14);
 }

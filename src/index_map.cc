@@ -190,16 +190,19 @@ ftags::IndexMap::iterator ftags::IndexMap::allocateBag(uint32_t key, std::size_t
    return iter;
 }
 
-ftags::IndexMap::iterator ftags::IndexMap::reallocateBag(uint32_t                        key,
-                                                         std::size_t                     capacity,
-                                                         std::size_t                     size,
-                                                         uint32_t                        oldStorageKey,
-                                                         ftags::IndexMap::const_iterator oldData)
+ftags::IndexMap::iterator ftags::IndexMap::reallocateBag(
+   uint32_t key, std::size_t capacity, std::size_t size, uint32_t oldStorageKey, ftags::IndexMap::iterator oldData)
 {
    auto iter{allocateBag(key, capacity, size)};
 
    // copy the data elements
    std::copy_n(oldData, size, iter);
+
+   // reset old bag metadata
+   oldData--; // now points to the old size / capacity
+   *oldData = 0;
+   oldData--; // now points to the old key
+   *oldData = 0;
 
    // release old bag
    m_store.deallocate(oldStorageKey, capacity + MetadataSize);
@@ -248,8 +251,34 @@ ftags::IndexMap::getValues(uint32_t key) const noexcept
 
 void ftags::IndexMap::removeKey(uint32_t key)
 {
-   // TODO: deallocate
-   m_index.erase(key);
+   auto indexPos{m_index.find(key)};
+   if (indexPos != m_index.end())
+   {
+      const auto storageKey{indexPos->second};
+      const auto location{m_store.get(storageKey)};
+      // unpack location
+      auto       iter{location.first};
+      const auto segmentEnd{location.second};
+      assert(iter != segmentEnd);
+
+      // verify key
+      assert(key == *iter);
+
+      *iter = 0; // erase key
+
+      iter++; // iter now points to size / capacity
+
+      uint32_t capacity{*iter >> 16};
+      uint32_t size{*iter & 0xffff};
+      assert(size <= capacity);
+
+      *iter = 0; // erase size / capacity
+
+      // deallocate
+      m_store.deallocate(storageKey, capacity + MetadataSize);
+
+      m_index.erase(indexPos);
+   }
 }
 
 void ftags::IndexMap::removeValue(uint32_t key, uint32_t value)

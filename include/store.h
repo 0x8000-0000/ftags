@@ -85,7 +85,7 @@ public:
     */
    std::size_t availableAfter(K key, std::size_t size) const noexcept;
 
-   /** Allocates a block at key K
+   /** Extends the block at key K
     *
     * @param key identifies the block of T
     * @param oldSize is the number of units of T currently allocated
@@ -242,12 +242,21 @@ std::size_t Store<T, K, SegmentSizeBits>::availableAfter(K key, std::size_t size
       return segment.capacity() - (offsetInSegment + size);
    }
 
+   const K candidateKey{makeKey(segmentIndex, offsetInSegment + size)};
+
+   auto blockIter{std::find_if(
+      m_freeBlocks.begin(), m_freeBlocks.end(), [candidateKey](const std::pair<K, std::size_t>& pp) { return pp.first == candidateKey; })};
+   if (blockIter != m_freeBlocks.end())
+   {
+      return blockIter->second;
+   }
+
    return 0;
 }
 
 template <typename T, typename K, unsigned SegmentSizeBits>
 typename Store<T, K, SegmentSizeBits>::iterator
-   Store<T, K, SegmentSizeBits>::allocateAfter(K key, std::size_t oldSize, std::size_t newSize)
+Store<T, K, SegmentSizeBits>::allocateAfter(K key, std::size_t oldSize, std::size_t newSize)
 {
    if (key == 0)
    {
@@ -274,14 +283,34 @@ typename Store<T, K, SegmentSizeBits>::iterator
    }
    else
    {
+      const K candidateKey{makeKey(segmentIndex, offsetInSegment + oldSize)};
+
+      auto blockIter{std::remove_if(
+         m_freeBlocks.begin(), m_freeBlocks.end(), [candidateKey](const std::pair<K, std::size_t>& pp) { return pp.first == candidateKey; })};
+      if (blockIter != m_freeBlocks.end())
+      {
+         if (newSize != (oldSize + blockIter->second))
+         {
+            throw std::logic_error("Can't allocate less than the entire block");
+         }
+
+         m_freeBlocks.erase(blockIter, m_freeBlocks.end());
+
+         auto iter{segment.begin()};
+         std::advance(iter, offsetInSegment + oldSize);
+
+         return iter;
+      }
+
       throw std::logic_error("Can't extend allocation; this is not the last element");
    }
 }
 
 template <typename T, typename K, unsigned SegmentSizeBits>
-void Store<T, K, SegmentSizeBits>::deallocate(K /* key */, std::size_t /* size */)
+void Store<T, K, SegmentSizeBits>::deallocate(K key, std::size_t size)
 {
    // leak it
+   m_freeBlocks.emplace_back(key, size);
 }
 
 } // namespace ftags
