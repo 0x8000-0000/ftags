@@ -116,19 +116,12 @@ void ftags::IndexMap::add(uint32_t key, uint32_t value)
       assert(newCapacity <= (1 << 16));
 
       /*
-       * allocate the new bag
+       * move this bag to a new location
        */
-      auto newIter{allocateBag(key, newCapacity, size + 1)};
+      auto newIter{reallocateBag(key, newCapacity, size + 1, storageKey, iter)};
 
-      // copy the data elements
-      std::copy_n(iter, size, newIter);
-
-      // add the latest element
-      std::advance(newIter, size);
+      // save the new value
       *newIter = value;
-
-      // release old bag
-      m_store.deallocate(storageKey, capacity + MetadataSize);
 
       return;
    }
@@ -145,17 +138,39 @@ void ftags::IndexMap::add(uint32_t key, uint32_t value)
    uint32_t nextBagSize{*nextBagIter & 0xffff};
    assert(nextBagSize <= nextBagCapacity);
 
-   if (nextBagCapacity < capacity)
+   nextBagIter++; // now points to next bag data
+
+   if (nextBagCapacity <= newCapacity)
    {
-      // move the next bag out of the way and take over its space
+      /*
+       * next bag is smaller than the intended capacity of the current bag
+       * move it out of the way and take over its space
+       */
+
+      auto nextBagIndexPos{m_index.find(nextBagKey)};
+      assert(nextBagIndexPos != m_index.end());
+      const auto nextBagStorageKey{nextBagIndexPos->second};
+
+      reallocateBag(nextBagKey, nextBagCapacity, nextBagSize, nextBagStorageKey, nextBagIter);
+
+      *sizeCapacityIter = (static_cast<uint32_t>(capacity + nextBagCapacity + MetadataSize) << 16) | (size + 1);
+
+      // move to the end of the current bag
+      std::advance(iter, size);
+
+      // save the new value
+      *iter = value;
+
+      return;
    }
 
    /*
-    * is this bag that we're trying to expand larger than the next bag?
-    * is the size of the next bag not too large?
+    * move this bag to a new location
     */
+   auto newIter{reallocateBag(key, newCapacity, size + 1, storageKey, iter)};
 
-   assert(false);
+   // save the new value
+   *newIter = value;
 }
 
 ftags::IndexMap::iterator ftags::IndexMap::allocateBag(uint32_t key, std::size_t capacity, std::size_t size)
@@ -172,6 +187,25 @@ ftags::IndexMap::iterator ftags::IndexMap::allocateBag(uint32_t key, std::size_t
    m_index[key] = location.first;
 
    iter++; // iter now points to first value
+   return iter;
+}
+
+ftags::IndexMap::iterator ftags::IndexMap::reallocateBag(uint32_t                        key,
+                                                         std::size_t                     capacity,
+                                                         std::size_t                     size,
+                                                         uint32_t                        oldStorageKey,
+                                                         ftags::IndexMap::const_iterator oldData)
+{
+   auto iter{allocateBag(key, capacity, size)};
+
+   // copy the data elements
+   std::copy_n(oldData, size, iter);
+
+   // release old bag
+   m_store.deallocate(oldStorageKey, capacity + MetadataSize);
+
+   // advance iterator after the moved data
+   std::advance(iter, size);
    return iter;
 }
 

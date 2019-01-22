@@ -63,6 +63,9 @@ private:
 
    iterator allocateBag(uint32_t key, std::size_t capacity, std::size_t size);
 
+   iterator reallocateBag(
+      uint32_t key, std::size_t capacity, std::size_t size, uint32_t oldStorageKey, const_iterator oldData);
+
    /*
     * Allocate contiguous blocks, and use the following format:
     *    * key

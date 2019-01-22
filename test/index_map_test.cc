@@ -127,5 +127,5 @@ TEST(IndexMapTest, CanExtendOtherThanLastElement)
 
    auto resultForValidValue = im.getValues(42);
 
-   ASSERT_EQ(std::distance(resultForValidValue.first, resultForValidValue.second), 16);
+   ASSERT_EQ(std::distance(resultForValidValue.first, resultForValidValue.second), 17);
 }
