@@ -35,7 +35,6 @@ namespace ftags
 class IndexMap
 {
 public:
-
    using const_iterator = typename Store<uint32_t, uint32_t, 24>::const_iterator;
 
    void add(uint32_t key, uint32_t value);
@@ -49,7 +48,6 @@ public:
    void removeValue(uint32_t key, uint32_t value);
 
 private:
-
    // the initial capacity of a bag
    static constexpr unsigned InitialAllocationSize = 6;
 
@@ -60,6 +58,10 @@ private:
     * store the capacity, size pair
     */
    static constexpr unsigned MetadataSize = 2;
+
+   using iterator = typename Store<uint32_t, uint32_t, 24>::iterator;
+
+   iterator allocateBag(uint32_t key, std::size_t capacity, std::size_t size);
 
    /*
     * Allocate contiguous blocks, and use the following format:

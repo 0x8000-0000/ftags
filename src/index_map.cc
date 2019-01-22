@@ -21,87 +21,158 @@
 void ftags::IndexMap::add(uint32_t key, uint32_t value)
 {
    auto indexPos{m_index.find(key)};
-   if (indexPos != m_index.end())
+   if (indexPos == m_index.end())
    {
-      const auto storageKey{indexPos->second};
-      auto       location{m_store.get(storageKey)};
-      // unpack location
-      auto       iter{location.first};
-      const auto segmentEnd{location.second};
-      assert(iter != segmentEnd);
+      /*
+       * first time we see this key; allocate new bag
+       */
+      auto iter{allocateBag(key, InitialAllocationSize, 1)};
+      *iter = value;
 
-      // verify key
-      assert(key == *iter);
+      return;
+   }
 
-      // advance iter to size / capacity
-      iter++;
-      uint32_t capacity{*iter >> 16};
-      uint32_t size{*iter & 0xffff};
-      assert(size <= capacity);
+   const auto storageKey{indexPos->second};
+   auto       location{m_store.get(storageKey)};
+   // unpack location
+   auto       iter{location.first};
+   const auto segmentEnd{location.second};
+   assert(iter != segmentEnd);
 
-      if (size < capacity)
-      {
-         *iter = (capacity << 16) | (size + 1);
+   // verify key
+   assert(key == *iter);
 
-         std::advance(iter, size + 1);
-         *iter = value;
-      }
-      else
-      {
-         /*
-          * need to grow
-          */
-         std::size_t newCapacity{capacity};
-         if ((capacity / GrowthFactor) < GrowthFactor)
-         {
-            newCapacity += GrowthFactor;
-         }
-         else
-         {
-            newCapacity += capacity / GrowthFactor;
-         }
+   iter++; // iter now points to size / capacity
+   auto     sizeCapacityIter{iter};
+   uint32_t capacity{*sizeCapacityIter >> 16};
+   uint32_t size{*sizeCapacityIter & 0xffff};
+   assert(size <= capacity);
 
-         std::size_t available{m_store.availableAfter(storageKey, capacity + MetadataSize)};
-         if (available != 0)
-         {
-            /*
-             * can grow in place
-             */
-            if ((newCapacity - capacity) > available)
-            {
-               newCapacity = capacity + available;
-            }
+   iter++; // iter now points to first value
 
-            // TODO: implement chaining
-            assert(newCapacity <= (1 << 16));
+   if (size < capacity)
+   {
+      *sizeCapacityIter = (capacity << 16) | (size + 1);
 
-            *iter = (static_cast<uint32_t>(newCapacity) << 16) | (size + 1);
+      std::advance(iter, size);
+      *iter = value;
 
-            auto extraUnits{m_store.allocateAfter(storageKey, capacity + MetadataSize, newCapacity + MetadataSize)};
-            *extraUnits = value;
-         }
-         else
-         {
-            /*
-             * cannot grow in place
-             */
+      return;
+   }
 
-            assert(false);
-         }
-      }
+   /*
+    * no more room in this bag; need to grow
+    */
+   std::size_t newCapacity{capacity};
+   if ((capacity / GrowthFactor) < GrowthFactor)
+   {
+      newCapacity += GrowthFactor;
    }
    else
    {
-      uint32_t capacity{InitialAllocationSize};
-      auto     location{m_store.allocate(capacity + MetadataSize)};
-      auto     iter{location.second};
-      *iter = key;
-      iter++;
-      *iter = (capacity << 16) | (1);
-      iter++;
-      *iter        = value;
-      m_index[key] = location.first;
+      newCapacity += capacity / GrowthFactor;
    }
+
+   const std::size_t available{m_store.availableAfter(storageKey, capacity + MetadataSize)};
+   if (available != 0)
+   {
+      /*
+       * can grow in place
+       */
+      if ((newCapacity - capacity) > available)
+      {
+         newCapacity = capacity + available;
+      }
+
+      // TODO: implement chaining if we need more than 1<<16 elements
+      assert(newCapacity <= (1 << 16));
+
+      *sizeCapacityIter = (static_cast<uint32_t>(newCapacity) << 16) | (size + 1);
+
+      auto extraUnits{m_store.allocateAfter(storageKey, capacity + MetadataSize, newCapacity + MetadataSize)};
+      *extraUnits = value;
+
+      return;
+   }
+
+   /*
+    * cannot grow in place, for one of the two reasons
+    * 1. this is the last bag in the segment and its extent is right at the end
+    * 2. there is another bag after this one
+    */
+
+   /*
+    * first see if there is a next bag (then if we can push it out of the way)
+    */
+   auto nextBagIter{iter};
+   std::advance(nextBagIter, size);
+   if (nextBagIter == segmentEnd)
+   {
+      /*
+       * this is the last bag in this segment
+       */
+
+      // TODO: implement chaining if we need more than 1<<16 elements
+      assert(newCapacity <= (1 << 16));
+
+      /*
+       * allocate the new bag
+       */
+      auto newIter{allocateBag(key, newCapacity, size + 1)};
+
+      // copy the data elements
+      std::copy_n(iter, size, newIter);
+
+      // add the latest element
+      std::advance(newIter, size);
+      *newIter = value;
+
+      // release old bag
+      m_store.deallocate(storageKey, capacity + MetadataSize);
+
+      return;
+   }
+
+   /*
+    * there is another bag after this one
+    */
+
+   uint32_t nextBagKey{*nextBagIter};
+   assert(nextBagKey != 0);
+
+   nextBagIter++; // now points to size / capacity
+   uint32_t nextBagCapacity{*nextBagIter >> 16};
+   uint32_t nextBagSize{*nextBagIter & 0xffff};
+   assert(nextBagSize <= nextBagCapacity);
+
+   if (nextBagCapacity < capacity)
+   {
+      // move the next bag out of the way and take over its space
+   }
+
+   /*
+    * is this bag that we're trying to expand larger than the next bag?
+    * is the size of the next bag not too large?
+    */
+
+   assert(false);
+}
+
+ftags::IndexMap::iterator ftags::IndexMap::allocateBag(uint32_t key, std::size_t capacity, std::size_t size)
+{
+   auto location{m_store.allocate(capacity + MetadataSize)};
+   auto iter{location.second};
+
+   *iter = key;
+
+   iter++; // iter now points to size / capacity
+   *iter = (static_cast<uint32_t>(capacity) << 16) | static_cast<uint32_t>(size);
+
+   // record new location for bag
+   m_index[key] = location.first;
+
+   iter++; // iter now points to first value
+   return iter;
 }
 
 std::pair<ftags::IndexMap::const_iterator, ftags::IndexMap::const_iterator>
@@ -122,8 +193,9 @@ ftags::IndexMap::getValues(uint32_t key) const noexcept
 
       // advance iter to size / capacity
       iter++;
-      uint32_t capacity{*iter >> 16};
-      uint32_t size{*iter & 0xffff};
+      auto     sizeCapacityIter{iter};
+      uint32_t capacity{*sizeCapacityIter >> 16};
+      uint32_t size{*sizeCapacityIter & 0xffff};
       assert(size <= capacity);
 
       // advance iter to first value

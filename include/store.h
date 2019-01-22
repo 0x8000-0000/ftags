@@ -278,6 +278,12 @@ typename Store<T, K, SegmentSizeBits>::iterator
    }
 }
 
+template <typename T, typename K, unsigned SegmentSizeBits>
+void Store<T, K, SegmentSizeBits>::deallocate(K /* key */, std::size_t /* size */)
+{
+   // leak it
+}
+
 } // namespace ftags
 
 #endif // STORE_H_INCLUDED
