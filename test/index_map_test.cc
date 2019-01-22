@@ -109,3 +109,23 @@ TEST(IndexMapTest, CanExtendLastElement)
 
    ASSERT_EQ(std::distance(resultForValidValue.first, resultForValidValue.second), 16);
 }
+
+TEST(IndexMapTest, CanExtendOtherThanLastElement)
+{
+   ftags::IndexMap im;
+
+   im.add(999, 42);
+
+   im.add(42, 100);
+
+   im.add(10, 552);
+
+   for (uint32_t ii = 0; ii < 16; ii ++)
+   {
+      im.add(42, ii);
+   }
+
+   auto resultForValidValue = im.getValues(42);
+
+   ASSERT_EQ(std::distance(resultForValidValue.first, resultForValidValue.second), 16);
+}

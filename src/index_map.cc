@@ -20,20 +20,23 @@
 
 void ftags::IndexMap::add(uint32_t key, uint32_t value)
 {
-   auto indexPos = m_index.find(key);
-
+   auto indexPos{m_index.find(key)};
    if (indexPos != m_index.end())
    {
-      auto location = m_store.get(indexPos->second);
-      assert(location.first != location.second);
+      const auto storageKey{indexPos->second};
+      auto       location{m_store.get(storageKey)};
+      // unpack location
+      auto       iter{location.first};
+      const auto segmentEnd{location.second};
+      assert(iter != segmentEnd);
 
-      auto iter = location.first;
-
+      // verify key
       assert(key == *iter);
-      iter++;
 
-      uint32_t capacity = *iter >> 16;
-      uint32_t size     = *iter & 0xffff;
+      // advance iter to size / capacity
+      iter++;
+      uint32_t capacity{*iter >> 16};
+      uint32_t size{*iter & 0xffff};
       assert(size <= capacity);
 
       if (size < capacity)
@@ -48,22 +51,22 @@ void ftags::IndexMap::add(uint32_t key, uint32_t value)
          /*
           * need to grow
           */
+         std::size_t newCapacity{capacity};
+         if ((capacity / GrowthFactor) < GrowthFactor)
+         {
+            newCapacity += GrowthFactor;
+         }
+         else
+         {
+            newCapacity += capacity / GrowthFactor;
+         }
 
-         std::size_t available = m_store.availableAfter(indexPos->second, capacity + MetadataSize);
+         std::size_t available{m_store.availableAfter(storageKey, capacity + MetadataSize)};
          if (available != 0)
          {
             /*
-             * can grow in place?
+             * can grow in place
              */
-            std::size_t newCapacity = capacity;
-            if ((capacity / GrowthFactor) < GrowthFactor)
-            {
-               newCapacity += GrowthFactor;
-            }
-            else
-            {
-               newCapacity += capacity / GrowthFactor;
-            }
             if ((newCapacity - capacity) > available)
             {
                newCapacity = capacity + available;
@@ -74,22 +77,25 @@ void ftags::IndexMap::add(uint32_t key, uint32_t value)
 
             *iter = (static_cast<uint32_t>(newCapacity) << 16) | (size + 1);
 
-            auto extraUnits =
-               m_store.allocateAfter(indexPos->second, capacity + MetadataSize, newCapacity + MetadataSize);
+            auto extraUnits{m_store.allocateAfter(storageKey, capacity + MetadataSize, newCapacity + MetadataSize)};
             *extraUnits = value;
          }
          else
          {
+            /*
+             * cannot grow in place
+             */
+
             assert(false);
          }
       }
    }
    else
    {
-      uint32_t capacity = InitialAllocationSize;
-      auto     location = m_store.allocate(capacity + MetadataSize);
-      auto     iter     = location.second;
-      *iter             = key;
+      uint32_t capacity{InitialAllocationSize};
+      auto     location{m_store.allocate(capacity + MetadataSize)};
+      auto     iter{location.second};
+      *iter = key;
       iter++;
       *iter = (capacity << 16) | (1);
       iter++;
@@ -101,25 +107,29 @@ void ftags::IndexMap::add(uint32_t key, uint32_t value)
 std::pair<ftags::IndexMap::const_iterator, ftags::IndexMap::const_iterator>
 ftags::IndexMap::getValues(uint32_t key) const noexcept
 {
-   auto keyPos = m_index.find(key);
-   if (keyPos != m_index.end())
+   auto indexPos{m_index.find(key)};
+   if (indexPos != m_index.end())
    {
-      auto location = m_store.get(keyPos->second);
+      const auto storageKey{indexPos->second};
+      auto       location{m_store.get(storageKey)};
+      // unpack location
+      auto       iter{location.first};
+      const auto segmentEnd{location.second};
+      assert(iter != segmentEnd);
 
-      assert(location.first != location.second);
-
-      auto iter = location.first;
-
+      // verify key
       assert(key == *iter);
-      iter++;
 
-      uint32_t capacity = *iter >> 16;
-      uint32_t size     = *iter & 0xffff;
+      // advance iter to size / capacity
+      iter++;
+      uint32_t capacity{*iter >> 16};
+      uint32_t size{*iter & 0xffff};
       assert(size <= capacity);
 
+      // advance iter to first value
       iter++;
 
-      auto begin = iter;
+      auto begin{iter};
       std::advance(iter, size);
 
       return std::pair<ftags::IndexMap::const_iterator, ftags::IndexMap::const_iterator>(begin, iter);
@@ -138,29 +148,34 @@ void ftags::IndexMap::removeKey(uint32_t key)
 
 void ftags::IndexMap::removeValue(uint32_t key, uint32_t value)
 {
-   auto indexPos = m_index.find(key);
+   auto indexPos{m_index.find(key)};
    if (indexPos != m_index.end())
    {
-      const auto location = m_store.get(indexPos->second);
-      assert(location.first != location.second);
+      const auto storageKey{indexPos->second};
+      const auto location{m_store.get(storageKey)};
+      // unpack location
+      auto       iter{location.first};
+      const auto segmentEnd{location.second};
+      assert(iter != segmentEnd);
 
-      auto iter = location.first;
-
+      // verify key
       assert(key == *iter);
+
+      // advance iter to size / capacity
       iter++;
+      auto sizeCapacityIter{iter};
 
-      auto sizeCapacityIter = iter;
-
-      uint32_t capacity = *iter >> 16;
-      uint32_t size     = *iter & 0xffff;
+      uint32_t capacity{*iter >> 16};
+      uint32_t size{*iter & 0xffff};
       assert(size <= capacity);
 
+      // advance iter to first value
       iter++;
 
-      auto rangeEnd = iter;
+      auto rangeEnd{iter};
       std::advance(rangeEnd, size);
 
-      auto pos = std::find(iter, rangeEnd, value);
+      auto pos{std::find(iter, rangeEnd, value)};
       if (pos != rangeEnd)
       {
          rangeEnd--;
