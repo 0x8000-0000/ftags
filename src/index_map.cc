@@ -84,6 +84,11 @@ void ftags::IndexMap::add(uint32_t key, uint32_t value)
          newCapacity = capacity + available;
       }
 
+      if ((available - (newCapacity - capacity)) <= (InitialAllocationSize + MetadataSize))
+      {
+         newCapacity = capacity + available;
+      }
+
       // TODO: implement chaining if we need more than 1<<16 elements
       assert(newCapacity <= (1 << 16));
 
