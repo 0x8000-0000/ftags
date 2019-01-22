@@ -52,6 +52,13 @@ public:
    }
 };
 
+/** Space optimized and serializable symbol table
+ *
+ * Conceptually, this contains a std::map<std::string, uint32_t> and a
+ * std::vector<std::string> where the contents of the map is the index where
+ * a string is stored. So given either an id or a string you can efficiently
+ * retrieve the other.
+ */
 class StringTable
 {
 public:

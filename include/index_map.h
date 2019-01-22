@@ -28,6 +28,9 @@ namespace ftags
 {
 
 /** Maps a non-zero unsigned value to a bag of unsigned values
+ *
+ * Conceptually, consider this an optimized implementation of
+ *    std::map<uint32_t, std::vector<uint32_t>>
  */
 class IndexMap
 {
