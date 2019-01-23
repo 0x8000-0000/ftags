@@ -61,11 +61,11 @@ uint32_t ftags::StringTable::addKey(const char* inputString)
 
    auto allocation = m_store.allocate(inputLength + 1);
 
-   std::copy_n(inputString, inputLength + 1, allocation.second);
+   std::copy_n(inputString, inputLength + 1, allocation.iterator);
 
-   m_index[inputString] = allocation.first;
+   m_index[inputString] = allocation.key;
 
-   return allocation.first;
+   return allocation.key;
 }
 
 std::vector<uint8_t> ftags::StringTable::serialize() const

@@ -30,7 +30,7 @@ TEST(StoreMapTest, FirstAllocationReturnsKey1)
 
    const auto blockOne = store.allocate(8);
 
-   ASSERT_EQ(blockOne.first, 1);
+   ASSERT_EQ(blockOne.key, 1);
 }
 
 TEST(StoreMapTest, BlockIsRecycled)
@@ -41,15 +41,15 @@ TEST(StoreMapTest, BlockIsRecycled)
 
    const auto blockOne = store.allocate(blockSize);
 
-   std::fill_n(blockOne.second, blockSize, 1);
+   std::fill_n(blockOne.iterator, blockSize, 1);
 
-   store.deallocate(blockOne.first, blockSize);
+   store.deallocate(blockOne.key, blockSize);
 
    const auto blockTwo = store.allocate(blockSize);
 
-   std::fill_n(blockTwo.second, blockSize, 2);
+   std::fill_n(blockTwo.iterator, blockSize, 2);
 
-   ASSERT_EQ(blockTwo.first, 1);
+   ASSERT_EQ(blockTwo.key, 1);
 }
 
 TEST(StoreMapTest, DeletedBlocksAreCoalesced1)
@@ -59,18 +59,18 @@ TEST(StoreMapTest, DeletedBlocksAreCoalesced1)
    const std::size_t blockSize = 8;
 
    const auto blockOne = store.allocate(blockSize);
-   std::fill_n(blockOne.second, blockSize, 1);
+   std::fill_n(blockOne.iterator, blockSize, 1);
 
    const auto blockTwo = store.allocate(blockSize);
-   std::fill_n(blockTwo.second, blockSize, 2);
+   std::fill_n(blockTwo.iterator, blockSize, 2);
 
-   store.deallocate(blockOne.first, blockSize);
-   store.deallocate(blockTwo.first, blockSize);
+   store.deallocate(blockOne.key, blockSize);
+   store.deallocate(blockTwo.key, blockSize);
 
    const auto blockThree = store.allocate(blockSize);
-   std::fill_n(blockThree.second, blockSize, 3);
+   std::fill_n(blockThree.iterator, blockSize, 3);
 
-   ASSERT_EQ(blockThree.first, 1);
+   ASSERT_EQ(blockThree.key, 1);
 }
 
 TEST(StoreMapTest, DeletedBlocksAreCoalesced2)
@@ -80,18 +80,18 @@ TEST(StoreMapTest, DeletedBlocksAreCoalesced2)
    const std::size_t blockSize = 8;
 
    const auto blockOne = store.allocate(blockSize);
-   std::fill_n(blockOne.second, blockSize, 1);
+   std::fill_n(blockOne.iterator, blockSize, 1);
 
    const auto blockTwo = store.allocate(blockSize);
-   std::fill_n(blockTwo.second, blockSize, 2);
+   std::fill_n(blockTwo.iterator, blockSize, 2);
 
-   store.deallocate(blockOne.first, blockSize);
-   store.deallocate(blockTwo.first, blockSize);
+   store.deallocate(blockOne.key, blockSize);
+   store.deallocate(blockTwo.key, blockSize);
 
    const auto blockThree = store.allocate(2 * blockSize);
-   std::fill_n(blockThree.second, 2 * blockSize, 3);
+   std::fill_n(blockThree.iterator, 2 * blockSize, 3);
 
-   ASSERT_EQ(blockThree.first, 1);
+   ASSERT_EQ(blockThree.key, 1);
 }
 
 TEST(StoreMapTest, DeletedBlocksAreCoalesced3)
@@ -101,18 +101,18 @@ TEST(StoreMapTest, DeletedBlocksAreCoalesced3)
    const std::size_t blockSize = 8;
 
    const auto blockOne = store.allocate(blockSize);
-   std::fill_n(blockOne.second, blockSize, 1);
+   std::fill_n(blockOne.iterator, blockSize, 1);
 
    const auto blockTwo = store.allocate(blockSize);
-   std::fill_n(blockTwo.second, blockSize, 2);
+   std::fill_n(blockTwo.iterator, blockSize, 2);
 
-   store.deallocate(blockOne.first, blockSize);
-   store.deallocate(blockTwo.first, blockSize);
+   store.deallocate(blockOne.key, blockSize);
+   store.deallocate(blockTwo.key, blockSize);
 
    const auto blockThree = store.allocate(3 * blockSize);
-   std::fill_n(blockThree.second, 3 * blockSize, 3);
+   std::fill_n(blockThree.iterator, 3 * blockSize, 3);
 
-   ASSERT_EQ(blockThree.first, 1);
+   ASSERT_EQ(blockThree.key, 1);
 }
 
 TEST(StoreMapTest, DeletedBlocksAreCoalesced4)
@@ -122,23 +122,23 @@ TEST(StoreMapTest, DeletedBlocksAreCoalesced4)
    const std::size_t blockSize = 8;
 
    const auto blockOne = store.allocate(blockSize);
-   ASSERT_EQ(blockOne.first, 1);
-   std::fill_n(blockOne.second, blockSize, 1);
+   ASSERT_EQ(blockOne.key, 1);
+   std::fill_n(blockOne.iterator, blockSize, 1);
 
    const auto blockTwo = store.allocate(blockSize);
-   ASSERT_EQ(blockTwo.first, 1 + blockSize);
-   std::fill_n(blockTwo.second, blockSize, 2);
+   ASSERT_EQ(blockTwo.key, 1 + blockSize);
+   std::fill_n(blockTwo.iterator, blockSize, 2);
 
    const auto blockThree = store.allocate(3 * blockSize);
-   ASSERT_EQ(blockThree.first, 1 + 2 * blockSize);
-   std::fill_n(blockThree.second, 3 * blockSize, 3);
+   ASSERT_EQ(blockThree.key, 1 + 2 * blockSize);
+   std::fill_n(blockThree.iterator, 3 * blockSize, 3);
 
-   store.deallocate(blockTwo.first, blockSize);
-   store.deallocate(blockOne.first, blockSize);
+   store.deallocate(blockTwo.key, blockSize);
+   store.deallocate(blockOne.key, blockSize);
 
    const auto blockFour = store.allocate(2 * blockSize);
-   ASSERT_EQ(blockFour.first, 1);
-   std::fill_n(blockFour.second, blockSize, 4);
+   ASSERT_EQ(blockFour.key, 1);
+   std::fill_n(blockFour.iterator, blockSize, 4);
 }
 
 TEST(StoreMapTest, ExtendAllocatedBlock1)
@@ -148,16 +148,16 @@ TEST(StoreMapTest, ExtendAllocatedBlock1)
    const std::size_t blockSize = 8;
 
    const auto blockOne = store.allocate(blockSize);
-   ASSERT_EQ(blockOne.first, 1);
-   std::fill_n(blockOne.second, blockSize, 1);
+   ASSERT_EQ(blockOne.key, 1);
+   std::fill_n(blockOne.iterator, blockSize, 1);
 
-   const std::size_t availableSize = store.availableAfter(blockOne.first, blockSize);
+   const std::size_t availableSize = store.availableAfter(blockOne.key, blockSize);
    ASSERT_EQ(availableSize, (1 << 24) - 1 - blockSize);
 
-   auto iter = store.extend(blockOne.first, blockSize, 2 * blockSize);
+   auto iter = store.extend(blockOne.key, blockSize, 2 * blockSize);
    std::fill_n(iter, blockSize, 2);
 
-   ASSERT_EQ(std::distance(blockOne.second, iter), blockSize);
+   ASSERT_EQ(std::distance(blockOne.iterator, iter), blockSize);
 }
 
 TEST(StoreMapTest, ExtendAllocatedBlock2)
@@ -167,20 +167,20 @@ TEST(StoreMapTest, ExtendAllocatedBlock2)
    const std::size_t blockSize = 8;
 
    const auto blockOne = store.allocate(blockSize);
-   ASSERT_EQ(blockOne.first, 1);
-   std::fill_n(blockOne.second, blockSize, 1);
+   ASSERT_EQ(blockOne.key, 1);
+   std::fill_n(blockOne.iterator, blockSize, 1);
 
    const auto blockTwo = store.allocate(2 * blockSize);
-   std::fill_n(blockTwo.second, 2 * blockSize, 2);
-   store.deallocate(blockTwo.first, 2 * blockSize);
+   std::fill_n(blockTwo.iterator, 2 * blockSize, 2);
+   store.deallocate(blockTwo.key, 2 * blockSize);
 
-   const std::size_t availableSize = store.availableAfter(blockOne.first, blockSize);
+   const std::size_t availableSize = store.availableAfter(blockOne.key, blockSize);
    ASSERT_EQ(availableSize, (1 << 24) - 1 - blockSize);
 
-   auto iter = store.extend(blockOne.first, blockSize, 2 * blockSize);
+   auto iter = store.extend(blockOne.key, blockSize, 2 * blockSize);
    std::fill_n(iter, blockSize, 2);
 
-   ASSERT_EQ(std::distance(blockOne.second, iter), blockSize);
+   ASSERT_EQ(std::distance(blockOne.iterator, iter), blockSize);
 }
 
 TEST(StoreMapTest, ExtendAllocatedBlock3)
@@ -190,24 +190,24 @@ TEST(StoreMapTest, ExtendAllocatedBlock3)
    const std::size_t blockSize = 8;
 
    const auto blockOne = store.allocate(blockSize);
-   ASSERT_EQ(blockOne.first, 1);
-   std::fill_n(blockOne.second, blockSize, 1);
+   ASSERT_EQ(blockOne.key, 1);
+   std::fill_n(blockOne.iterator, blockSize, 1);
 
    const auto blockTwo = store.allocate(2 * blockSize);
-   std::fill_n(blockTwo.second, 2 * blockSize, 2);
+   std::fill_n(blockTwo.iterator, 2 * blockSize, 2);
 
    const auto blockThree = store.allocate(blockSize);
-   std::fill_n(blockThree.second, blockSize, 3);
+   std::fill_n(blockThree.iterator, blockSize, 3);
 
-   store.deallocate(blockTwo.first, 2 * blockSize);
+   store.deallocate(blockTwo.key, 2 * blockSize);
 
-   const std::size_t availableSize = store.availableAfter(blockOne.first, blockSize);
+   const std::size_t availableSize = store.availableAfter(blockOne.key, blockSize);
    ASSERT_EQ(availableSize, 2 * blockSize);
 
-   auto iter = store.extend(blockOne.first, blockSize, 2 * blockSize);
+   auto iter = store.extend(blockOne.key, blockSize, 2 * blockSize);
    std::fill_n(iter, blockSize, 5);
 
-   ASSERT_EQ(std::distance(blockOne.second, iter), blockSize);
+   ASSERT_EQ(std::distance(blockOne.iterator, iter), blockSize);
 }
 
 TEST(StoreMapTest, ExtendAllocatedBlock4)
@@ -217,24 +217,24 @@ TEST(StoreMapTest, ExtendAllocatedBlock4)
    const std::size_t blockSize = 8;
 
    const auto blockOne = store.allocate(blockSize);
-   ASSERT_EQ(blockOne.first, 1);
-   std::fill_n(blockOne.second, blockSize, 1);
+   ASSERT_EQ(blockOne.key, 1);
+   std::fill_n(blockOne.iterator, blockSize, 1);
 
    const auto blockTwo = store.allocate(2 * blockSize);
-   std::fill_n(blockTwo.second, 2 * blockSize, 2);
+   std::fill_n(blockTwo.iterator, 2 * blockSize, 2);
 
    const auto blockThree = store.allocate(blockSize);
-   std::fill_n(blockThree.second, blockSize, 3);
+   std::fill_n(blockThree.iterator, blockSize, 3);
 
-   store.deallocate(blockTwo.first, 2 * blockSize);
+   store.deallocate(blockTwo.key, 2 * blockSize);
 
-   const std::size_t availableSize = store.availableAfter(blockOne.first, blockSize);
+   const std::size_t availableSize = store.availableAfter(blockOne.key, blockSize);
    ASSERT_EQ(availableSize, 2 * blockSize);
 
-   auto iter = store.extend(blockOne.first, blockSize, 3 * blockSize);
+   auto iter = store.extend(blockOne.key, blockSize, 3 * blockSize);
    std::fill_n(iter, blockSize, 5);
 
-   ASSERT_EQ(std::distance(blockOne.second, iter), blockSize);
+   ASSERT_EQ(std::distance(blockOne.iterator, iter), blockSize);
 }
 
 TEST(StoreMapTest, ExtendAllocatedBlock5)
@@ -244,28 +244,28 @@ TEST(StoreMapTest, ExtendAllocatedBlock5)
    const std::size_t blockSize = 8;
 
    const auto blockOne = store.allocate(blockSize);
-   ASSERT_EQ(blockOne.first, 1);
-   std::fill_n(blockOne.second, blockSize, 1);
+   ASSERT_EQ(blockOne.key, 1);
+   std::fill_n(blockOne.iterator, blockSize, 1);
 
    const auto blockTwo = store.allocate(2 * blockSize);
-   ASSERT_EQ(blockTwo.first, 1 + blockSize);
-   std::fill_n(blockTwo.second, 2 * blockSize, 2);
+   ASSERT_EQ(blockTwo.key, 1 + blockSize);
+   std::fill_n(blockTwo.iterator, 2 * blockSize, 2);
 
    const auto blockThree = store.allocate(blockSize);
-   ASSERT_EQ(blockThree.first, 1 + 3 * blockSize);
-   std::fill_n(blockThree.second, blockSize, 3);
+   ASSERT_EQ(blockThree.key, 1 + 3 * blockSize);
+   std::fill_n(blockThree.iterator, blockSize, 3);
 
-   store.deallocate(blockTwo.first, 2 * blockSize);
+   store.deallocate(blockTwo.key, 2 * blockSize);
 
-   const std::size_t availableSize = store.availableAfter(blockOne.first, blockSize);
+   const std::size_t availableSize = store.availableAfter(blockOne.key, blockSize);
    ASSERT_EQ(availableSize, 2 * blockSize);
 
-   auto iter = store.extend(blockOne.first, blockSize, 2 * blockSize);
+   auto iter = store.extend(blockOne.key, blockSize, 2 * blockSize);
    std::fill_n(iter, blockSize, 9);
 
-   ASSERT_EQ(std::distance(blockOne.second, iter), blockSize);
+   ASSERT_EQ(std::distance(blockOne.iterator, iter), blockSize);
 
    const auto blockFour = store.allocate(blockSize);
-   ASSERT_EQ(blockFour.first, 1 + 2 * blockSize);
-   std::fill_n(blockFour.second, blockSize, 4);
+   ASSERT_EQ(blockFour.key, 1 + 2 * blockSize);
+   std::fill_n(blockFour.iterator, blockSize, 4);
 }

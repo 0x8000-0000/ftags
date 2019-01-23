@@ -44,6 +44,12 @@ public:
    using iterator       = typename std::vector<T>::iterator;
    using const_iterator = typename std::vector<T>::const_iterator;
 
+   struct Allocation
+   {
+      K                                 key;
+      typename std::vector<T>::iterator iterator;
+   };
+
    Store()
    {
       addSegment();
@@ -54,7 +60,7 @@ public:
     * @param size is the number of units of T
     * @return a pair of key and an iterator to the first allocated unit
     */
-   std::pair<K, iterator> allocate(std::size_t size);
+   Allocation allocate(std::size_t size);
 
    /** Requests access to an allocated block by key
     *
@@ -220,7 +226,7 @@ Store<T, K, SegmentSizeBits>::get(K key)
 }
 
 template <typename T, typename K, unsigned SegmentSizeBits>
-std::pair<K, typename Store<T, K, SegmentSizeBits>::iterator> Store<T, K, SegmentSizeBits>::allocate(std::size_t size)
+typename Store<T, K, SegmentSizeBits>::Allocation Store<T, K, SegmentSizeBits>::allocate(std::size_t size)
 {
    if (size >= MaxSegmentSize)
    {
@@ -265,7 +271,7 @@ std::pair<K, typename Store<T, K, SegmentSizeBits>::iterator> Store<T, K, Segmen
       auto iter{m_segment[segmentIndex].begin()};
       std::advance(iter, offsetInSegment);
 
-      return std::pair<K, typename Store<T, K, SegmentSizeBits>::iterator>(key, iter);
+      return Allocation{key, iter};
    }
 
    /*

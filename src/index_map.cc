@@ -181,7 +181,7 @@ void ftags::IndexMap::add(uint32_t key, uint32_t value)
 ftags::IndexMap::iterator ftags::IndexMap::allocateBag(uint32_t key, std::size_t capacity, std::size_t size)
 {
    auto location{m_store.allocate(capacity + MetadataSize)};
-   auto iter{location.second};
+   auto iter{location.iterator};
 
    *iter = key;
 
@@ -189,7 +189,7 @@ ftags::IndexMap::iterator ftags::IndexMap::allocateBag(uint32_t key, std::size_t
    *iter = (static_cast<uint32_t>(capacity) << 16) | static_cast<uint32_t>(size);
 
    // record new location for bag
-   m_index[key] = location.first;
+   m_index[key] = location.key;
 
    iter++; // iter now points to first value
    return iter;
