@@ -156,3 +156,37 @@ TEST(IndexMapTest, ExtendIntoFreedSpace)
 
    ASSERT_EQ(std::distance(resultForValidValue.first, resultForValidValue.second), 14);
 }
+
+TEST(IndexMapTest, AllocateThenDeleteThreeBlocks)
+{
+   ftags::IndexMap im;
+
+   for (uint32_t ii = 0; ii < 15; ii ++)
+   {
+      im.add(10, ii);
+   }
+
+   for (uint32_t ii = 0; ii < 9; ii ++)
+   {
+      im.add(20, ii);
+   }
+
+   for (uint32_t ii = 0; ii < 4; ii ++)
+   {
+      im.add(30, ii);
+   }
+
+   for (uint32_t ii = 0; ii < 8; ii ++)
+   {
+      im.add(40, ii);
+   }
+
+   im.removeKey(10);
+   im.removeKey(30);
+   im.removeKey(20);
+
+   for (uint32_t ii = 0; ii < 4; ii ++)
+   {
+      im.add(50, ii);
+   }
+}
