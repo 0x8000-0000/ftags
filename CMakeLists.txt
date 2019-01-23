@@ -62,6 +62,8 @@ enable_testing ()
 find_package (GTest REQUIRED)
 include (GoogleTest)
 
+find_package (benchmark)
+
 #
 # Tools
 #
@@ -91,3 +93,8 @@ target_link_libraries (index_map_test PRIVATE project_options project_warnings)
 target_link_libraries (index_map_test PRIVATE ${GTEST_BOTH_LIBRARIES} pthread)
 
 gtest_discover_tests (index_map_test)
+
+add_executable (ftags_benchmark benchmark/index_map_benchmark.cc
+   src/index_map.cc)
+target_include_directories (ftags_benchmark PRIVATE include)
+target_link_libraries(ftags_benchmark PRIVATE benchmark::benchmark_main)
