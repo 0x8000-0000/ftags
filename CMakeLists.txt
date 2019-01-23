@@ -76,6 +76,14 @@ target_link_libraries (indexer PRIVATE -lclang)
 #
 # Tests
 #
+add_executable (store_test test/store_test.cc)
+target_include_directories (store_test PRIVATE
+   ${GTEST_INCLUDE_DIRS} include)
+target_link_libraries (store_test PRIVATE project_options project_warnings)
+target_link_libraries (store_test PRIVATE ${GTEST_BOTH_LIBRARIES} pthread)
+
+gtest_discover_tests (store_test)
+
 add_executable (string_table_test test/string_table_test.cc
    src/string_table.cc)
 target_include_directories (string_table_test PRIVATE
@@ -94,6 +102,9 @@ target_link_libraries (index_map_test PRIVATE ${GTEST_BOTH_LIBRARIES} pthread)
 
 gtest_discover_tests (index_map_test)
 
+#
+# Benchmarks
+#
 add_executable (ftags_benchmark benchmark/index_map_benchmark.cc
    src/index_map.cc)
 target_include_directories (ftags_benchmark PRIVATE include)

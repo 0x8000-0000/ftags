@@ -225,7 +225,7 @@ std::pair<K, typename Store<T, K, SegmentSizeBits>::iterator> Store<T, K, Segmen
     */
    auto suitableBlockIter{
       std::lower_bound(m_freeBlocks.begin(), m_freeBlocks.end(), size, [](const Block& pp, std::size_t ss) -> bool {
-         return pp.size <= ss;
+         return pp.size < ss;
       })};
 
    if (suitableBlockIter != m_freeBlocks.end())
