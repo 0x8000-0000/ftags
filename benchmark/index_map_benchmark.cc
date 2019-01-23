@@ -41,7 +41,8 @@ static void BM_STL_Implementation(benchmark::State& state)
    }
 }
 
-BENCHMARK(BM_STL_Implementation)->Arg(1024)->Arg(16384);
+BENCHMARK(BM_STL_Implementation)->Arg(128)->Arg(256);
+
 
 static void BM_IndexMap_Implementation(benchmark::State& state)
 {
@@ -61,6 +62,6 @@ static void BM_IndexMap_Implementation(benchmark::State& state)
    }
 }
 
-BENCHMARK(BM_IndexMap_Implementation)->Arg(1024)->Arg(16384);
+BENCHMARK(BM_IndexMap_Implementation)->Arg(128)->Arg(256);
 
 BENCHMARK_MAIN();

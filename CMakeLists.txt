@@ -102,6 +102,10 @@ target_link_libraries (index_map_test PRIVATE ${GTEST_BOTH_LIBRARIES} pthread)
 
 gtest_discover_tests (index_map_test)
 
+add_executable (sandbox_test test/sandbox.cc src/index_map.cc)
+target_include_directories (sandbox_test PRIVATE include)
+target_link_libraries (sandbox_test PRIVATE project_options project_warnings)
+
 #
 # Benchmarks
 #
