@@ -95,7 +95,7 @@ public:
     * more than newSize - size
     * @see availableAt
     */
-   iterator allocateAfter(K key, std::size_t oldSize, std::size_t newSize);
+   iterator extend(K key, std::size_t oldSize, std::size_t newSize);
 
 private:
    static constexpr std::size_t MaxSegmentSize      = (1UL << SegmentSizeBits);
@@ -145,14 +145,21 @@ private:
 
    void addSegment()
    {
-      if ((m_segment.size() + 1) >= MaxSegmentCount)
+      const std::size_t segmentsInUse{m_segment.size()};
+
+      if ((segmentsInUse + 1) >= MaxSegmentCount)
       {
          throw std::length_error("Exceeded data structure capacity");
       }
 
-      m_segment.emplace_back(std::vector<T>());
-      m_segment.back().reserve(MaxSegmentSize);
+      m_segment.emplace_back(std::vector<T>(MaxSegmentSize));
       m_segment.back().push_back(T());
+
+      K key{makeKey(segmentsInUse, 1)};
+
+      const Block newBlock{key, MaxSegmentSize - 1};
+
+      m_freeBlocks.push_back(newBlock);
    }
 
    /** Segment of contiguous T, up to (1<<B) elements in size.
@@ -239,14 +246,21 @@ std::pair<K, typename Store<T, K, SegmentSizeBits>::iterator> Store<T, K, Segmen
 
       if (suitableBlockIter->size == size)
       {
+         // free block is allocated entirely
          m_freeBlocks.erase(suitableBlockIter);
       }
       else
       {
+         // shrink the leftover block
          const std::size_t leftOverOffsetInSegment{offsetInSegment + size};
          suitableBlockIter->key = makeKey(segmentIndex, leftOverOffsetInSegment);
          suitableBlockIter->size -= size;
       }
+
+      // sort free blocks by size so we can quickly find a suitable block
+      std::sort(m_freeBlocks.begin(), m_freeBlocks.end(), [](const Block& left, const Block& right) -> bool {
+         return left.size < right.size;
+      });
 
       auto iter{m_segment[segmentIndex].begin()};
       std::advance(iter, offsetInSegment);
@@ -258,33 +272,9 @@ std::pair<K, typename Store<T, K, SegmentSizeBits>::iterator> Store<T, K, Segmen
     * no free block of the requisite size
     */
 
-   auto& currentSegment = m_segment.back();
+   addSegment();
 
-   if ((currentSegment.size() + size) <= currentSegment.capacity())
-   {
-      /*
-       * we still have room to expand in this current segment
-       */
-      const std::ptrdiff_t segmentIndex = std::distance(m_segment.begin(), m_segment.end()) - 1;
-      assert(segmentIndex >= 0);
-      const std::size_t offsetInSegment = currentSegment.size();
-      currentSegment.resize(currentSegment.size() + size);
-
-      const K key = makeKey(static_cast<size_t>(segmentIndex), offsetInSegment);
-
-      auto iter = currentSegment.begin();
-      std::advance(iter, offsetInSegment);
-
-      // TODO: consider adding the reminder of this segment to the free list
-
-      return std::pair<K, typename Store<T, K, SegmentSizeBits>::iterator>(key, iter);
-   }
-   else
-   {
-      addSegment();
-
-      return allocate(size);
-   }
+   return allocate(size);
 }
 
 template <typename T, typename K, unsigned SegmentSizeBits>
@@ -297,13 +287,6 @@ std::size_t Store<T, K, SegmentSizeBits>::availableAfter(K key, std::size_t size
 
    const std::size_t segmentIndex{getSegmentIndex(key)};
    const std::size_t offsetInSegment{getOffsetInSegment(key)};
-
-   const auto& segment = m_segment.at(segmentIndex);
-
-   if ((offsetInSegment + size) == segment.size())
-   {
-      return segment.capacity() - (offsetInSegment + size);
-   }
 
    const K candidateKey{makeKey(segmentIndex, offsetInSegment + size)};
 
@@ -319,54 +302,61 @@ std::size_t Store<T, K, SegmentSizeBits>::availableAfter(K key, std::size_t size
 
 template <typename T, typename K, unsigned SegmentSizeBits>
 typename Store<T, K, SegmentSizeBits>::iterator
-Store<T, K, SegmentSizeBits>::allocateAfter(K key, std::size_t oldSize, std::size_t newSize)
+Store<T, K, SegmentSizeBits>::extend(K key, std::size_t oldSize, std::size_t newSize)
 {
    if (key == 0)
    {
       throw std::invalid_argument("Key 0 is invalid");
    }
 
+   if (oldSize == newSize)
+   {
+      throw std::invalid_argument("Nothing to extend; old size and new size are the same");
+   }
+
    const std::size_t segmentIndex    = getSegmentIndex(key);
    const std::size_t offsetInSegment = getOffsetInSegment(key);
 
-   auto& segment = m_segment.at(segmentIndex);
+   const K candidateKey{makeKey(segmentIndex, offsetInSegment + oldSize)};
 
-   if ((offsetInSegment + oldSize) == segment.size())
+   auto blockIter{std::find_if(
+      m_freeBlocks.begin(), m_freeBlocks.end(), [candidateKey](const Block& pp) { return pp.key == candidateKey; })};
+   if (blockIter != m_freeBlocks.end())
    {
-      if ((offsetInSegment + newSize) <= segment.capacity())
+      if (newSize > (oldSize + blockIter->size))
       {
-         auto iter = segment.end();
-         segment.resize(offsetInSegment + newSize);
-         return iter;
+         throw std::logic_error("Can't allocate more than what's available");
+      }
+
+      const std::size_t sizeIncrease = newSize - oldSize;
+
+      if (sizeIncrease == blockIter->size)
+      {
+         // free block is allocated entirely
+         m_freeBlocks.erase(blockIter);
       }
       else
       {
-         throw std::length_error("Can't extend using requested size");
+         // shrink the leftover block
+         const std::size_t leftOverOffsetInSegment{offsetInSegment + newSize};
+         blockIter->key = makeKey(segmentIndex, leftOverOffsetInSegment);
+         blockIter->size -= sizeIncrease;
       }
+
+      // sort free blocks by size so we can quickly find a suitable block
+      std::sort(m_freeBlocks.begin(), m_freeBlocks.end(), [](const Block& left, const Block& right) -> bool {
+         return left.size < right.size;
+      });
+
+      auto& segment = m_segment.at(segmentIndex);
+      auto  iter{segment.begin()};
+      std::advance(iter, offsetInSegment + oldSize);
+
+      return iter;
    }
    else
    {
-      const K candidateKey{makeKey(segmentIndex, offsetInSegment + oldSize)};
-
-      auto blockIter{std::remove_if(m_freeBlocks.begin(), m_freeBlocks.end(), [candidateKey](const Block& pp) {
-         return pp.key == candidateKey;
-      })};
-      if (blockIter != m_freeBlocks.end())
-      {
-         if (newSize != (oldSize + blockIter->size))
-         {
-            throw std::logic_error("Can't allocate less than the entire block");
-         }
-
-         m_freeBlocks.erase(blockIter, m_freeBlocks.end());
-
-         auto iter{segment.begin()};
-         std::advance(iter, offsetInSegment + oldSize);
-
-         return iter;
-      }
-
-      throw std::logic_error("Can't extend allocation; this is not the last element");
+      throw std::logic_error("Can't extend allocation; no free block follows");
    }
 }
 

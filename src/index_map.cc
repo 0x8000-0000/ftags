@@ -94,7 +94,7 @@ void ftags::IndexMap::add(uint32_t key, uint32_t value)
 
       *sizeCapacityIter = (static_cast<uint32_t>(newCapacity) << 16) | (size + 1);
 
-      auto extraUnits{m_store.allocateAfter(storageKey, capacity + MetadataSize, newCapacity + MetadataSize)};
+      auto extraUnits{m_store.extend(storageKey, capacity + MetadataSize, newCapacity + MetadataSize)};
       *extraUnits = value;
 
       return;
