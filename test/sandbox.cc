@@ -26,8 +26,11 @@
 // const uint32_t loopCount = 11;      // 10 is ok
 // const uint32_t bucketCount = 4;
 
-const uint32_t loopCount = 23;      // 22 is ok
-const uint32_t bucketCount = 5;
+//const uint32_t loopCount = 23;      // 22 is ok
+//const uint32_t bucketCount = 5;
+
+const uint32_t loopCount = 32;
+const uint32_t bucketCount = 1024;
 
 int main(void)
 {

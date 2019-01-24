@@ -38,8 +38,10 @@ void ftags::IndexMap::add(uint32_t key, uint32_t value)
    auto       location{m_store.get(storageKey)};
    // unpack location
    auto       iter{location.first};
+#ifndef NDEBUG
    const auto segmentEnd{location.second};
    assert(iter != segmentEnd);
+#endif
 
    // verify key
    assert(key == *iter);
@@ -74,7 +76,7 @@ void ftags::IndexMap::add(uint32_t key, uint32_t value)
       /*
        * can grow in place
        */
-      if ((newCapacity - capacity) > available)
+      if ((newCapacity - capacity) >= available)
       {
          newCapacity = capacity + available;
       }
@@ -97,90 +99,11 @@ void ftags::IndexMap::add(uint32_t key, uint32_t value)
    }
 
    /*
-    * cannot grow in place, for one of the two reasons
-    * 1. this is the last bag in the segment and its extent is right at the end
-    * 2. there is another bag after this one
-    */
-
-   /*
-    * first see if there is a next bag (then if we can push it out of the way)
-    */
-   auto nextBagIter{iter};
-   std::advance(nextBagIter, size);
-   if (nextBagIter == segmentEnd)
-   {
-      /*
-       * this is the last bag in this segment
-       */
-
-      // TODO: implement chaining if we need more than 1<<16 elements
-      assert(newCapacity <= (1 << 16));
-
-      /*
-       * move this bag to a new location
-       */
-      reallocateBag(key, newCapacity, size, storageKey, iter);
-
-      // call ourselves
-      add(key, value);
-
-      return;
-   }
-
-   /*
-    * there is another bag after this one
-    */
-
-   uint32_t nextBagKey{*nextBagIter};
-   assert(nextBagKey != 0);
-
-   nextBagIter++; // now points to size / capacity
-   uint32_t nextBagCapacity{*nextBagIter >> 16};
-   uint32_t nextBagSize{*nextBagIter & 0xffff};
-   assert(nextBagSize <= nextBagCapacity);
-
-   nextBagIter++; // now points to next bag data
-
-   if (nextBagCapacity <= newCapacity)
-   {
-      /*
-       * next bag is smaller than the intended capacity of the current bag
-       * move it out of the way and take over its space
-       */
-
-      auto nextBagIndexPos{m_index.find(nextBagKey)};
-      assert(nextBagIndexPos != m_index.end());
-      const auto nextBagStorageKey{nextBagIndexPos->second};
-
-      const auto nextBagIterCheck{m_store.get(nextBagStorageKey).first};
-      assert(nextBagIterCheck == nextBagIter);
-
-      reallocateBag(nextBagKey, nextBagCapacity, nextBagSize, nextBagStorageKey, nextBagIter);
-
-      validateInternalState();
-
-      const std::size_t availableAfterMove{m_store.availableAfter(storageKey, size + MetadataSize)};
-      assert(availableAfterMove >= (nextBagCapacity + MetadataSize));
-      auto extraUnits{m_store.extend(
-         storageKey, capacity + MetadataSize, (capacity + MetadataSize) + (nextBagCapacity + MetadataSize))};
-
-      *sizeCapacityIter = (static_cast<uint32_t>(capacity + (nextBagCapacity + MetadataSize)) << 16) | (size + 1);
-
-      // move to the end of the current bag
-      std::advance(iter, size);
-      assert(iter == extraUnits);
-
-      // save the new value
-      *extraUnits = value;
-
-      validateInternalState();
-      return;
-   }
-
-   /*
     * move this bag to a new location
     */
-   reallocateBag(key, newCapacity, size, storageKey, iter);
+   reallocateBag(key, newCapacity, size, storageKey, size, iter);
+
+   validateInternalState();
 
    add(key, value);
 }
@@ -208,29 +131,29 @@ ftags::IndexMap::iterator ftags::IndexMap::allocateBag(uint32_t key, std::size_t
 }
 
 ftags::IndexMap::iterator ftags::IndexMap::reallocateBag(
-   uint32_t key, std::size_t capacity, std::size_t size, uint32_t oldStorageKey, ftags::IndexMap::iterator oldData)
+   uint32_t key, std::size_t capacity, std::size_t copySize, uint32_t oldStorageKey, std::size_t blockSize, ftags::IndexMap::iterator oldData)
 {
    // assert(capacity != size); // move as-is for now
-   auto iter{allocateBag(key, capacity, size)};
+   auto iter{allocateBag(key, capacity, copySize)};
 
    // copy the data elements
-   std::copy_n(oldData, size, iter);
+   std::copy_n(oldData, copySize, iter);
 
 #ifndef NDEBUG
-   std::fill_n(oldData, size, 9);
+   std::fill_n(oldData, copySize, 9);
 #endif
 
    // reset old bag metadata
    oldData--; // now points to the old size / capacity
-   *oldData = 0;
+   *oldData = 9;
    oldData--; // now points to the old key
-   *oldData = 0;
+   *oldData = 9;
 
    // release old bag
-   m_store.deallocate(oldStorageKey, capacity + MetadataSize);
+   m_store.deallocate(oldStorageKey, blockSize + MetadataSize);
 
    // advance iterator after the moved data
-   std::advance(iter, size);
+   std::advance(iter, copySize);
    return iter;
 }
 
@@ -244,8 +167,10 @@ ftags::IndexMap::getValues(uint32_t key) const noexcept
       auto       location{m_store.get(storageKey)};
       // unpack location
       auto       iter{location.first};
+#ifndef NDEBUG
       const auto segmentEnd{location.second};
       assert(iter != segmentEnd);
+#endif
 
       // verify key
       assert(key == *iter);
@@ -253,7 +178,9 @@ ftags::IndexMap::getValues(uint32_t key) const noexcept
       // advance iter to size / capacity
       iter++;
       auto     sizeCapacityIter{iter};
+#ifndef NDEBUG
       uint32_t capacity{*sizeCapacityIter >> 16};
+#endif
       uint32_t size{*sizeCapacityIter & 0xffff};
       assert(size <= capacity);
 
@@ -280,8 +207,10 @@ void ftags::IndexMap::removeKey(uint32_t key)
       const auto location{m_store.get(storageKey)};
       // unpack location
       auto       iter{location.first};
+#ifndef NDEBUG
       const auto segmentEnd{location.second};
       assert(iter != segmentEnd);
+#endif
 
       // verify key
       assert(key == *iter);
@@ -291,8 +220,10 @@ void ftags::IndexMap::removeKey(uint32_t key)
       iter++; // iter now points to size / capacity
 
       uint32_t capacity{*iter >> 16};
+#ifndef NDEBUG
       uint32_t size{*iter & 0xffff};
       assert(size <= capacity);
+#endif
 
       *iter = 0; // erase size / capacity
 
@@ -312,8 +243,10 @@ void ftags::IndexMap::removeValue(uint32_t key, uint32_t value)
       const auto location{m_store.get(storageKey)};
       // unpack location
       auto       iter{location.first};
+#ifndef NDEBUG
       const auto segmentEnd{location.second};
       assert(iter != segmentEnd);
+#endif
 
       // verify key
       assert(key == *iter);
@@ -348,6 +281,7 @@ void ftags::IndexMap::removeValue(uint32_t key, uint32_t value)
    }
 }
 
+#ifndef NDEBUG
 bool ftags::IndexMap::validateInternalState() const
 {
    std::size_t capacityAllocated = 0;
@@ -378,3 +312,4 @@ bool ftags::IndexMap::validateInternalState() const
 
    return true;
 }
+#endif

@@ -47,7 +47,14 @@ public:
 
    void removeValue(uint32_t key, uint32_t value);
 
-   bool validateInternalState() const;
+   bool validateInternalState() const
+#ifndef NDEBUG
+   ;
+#else
+   {
+      return true;
+   }
+#endif
 
 private:
    // the initial capacity of a bag
@@ -65,8 +72,12 @@ private:
 
    iterator allocateBag(uint32_t key, std::size_t capacity, std::size_t size);
 
-   iterator reallocateBag(
-      uint32_t key, std::size_t capacity, std::size_t size, uint32_t oldStorageKey, iterator oldData);
+   iterator reallocateBag(uint32_t    key,
+                          std::size_t capacity,
+                          std::size_t copySize,
+                          uint32_t    oldStorageKey,
+                          std::size_t oldBlockSize,
+                          iterator    oldData);
 
    static uint32_t nextCapacity(uint32_t capacity)
    {
