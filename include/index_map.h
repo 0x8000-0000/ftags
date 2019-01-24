@@ -47,6 +47,8 @@ public:
 
    void removeValue(uint32_t key, uint32_t value);
 
+   bool validateInternalState() const;
+
 private:
    // the initial capacity of a bag
    static constexpr unsigned InitialAllocationSize = 6;

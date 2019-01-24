@@ -18,13 +18,15 @@
 
 #include <algorithm>
 
+#include <cassert>
+
 // const uint32_t loopCount = 42;      // 41 is ok
 // const uint32_t bucketCount = 3;
 
 // const uint32_t loopCount = 11;      // 10 is ok
 // const uint32_t bucketCount = 4;
 
-const uint32_t loopCount = 8;      // 7 is ok
+const uint32_t loopCount = 23;      // 22 is ok
 const uint32_t bucketCount = 5;
 
 int main(void)
@@ -35,7 +37,18 @@ int main(void)
    {
       for (uint32_t ii = 1; ii <= bucketCount; ii++)
       {
+         auto range = indexMap.getValues(ii);
+
+         uint32_t vv = 0;
+         for (auto iter = range.first; iter != range.second; ++ iter)
+         {
+            assert(*iter == (ii * 100 + vv));
+            vv++;
+         }
+
          indexMap.add(ii, ii * 100 + kk);
+
+         indexMap.validateInternalState();
       }
    }
 
