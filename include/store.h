@@ -158,8 +158,8 @@ private:
          throw std::length_error("Exceeded data structure capacity");
       }
 
-      m_segment.emplace_back(std::vector<T>(MaxSegmentSize));
-      m_segment.back().push_back(T());
+      m_segment.emplace_back(std::vector<T>());
+      m_segment.back().resize(MaxSegmentSize);
 
       K key{makeKey(segmentsInUse, 1)};
 

@@ -18,17 +18,24 @@
 
 #include <algorithm>
 
-const uint32_t bucketCount = 128;
+// const uint32_t loopCount = 42;      // 41 is ok
+// const uint32_t bucketCount = 3;
+
+// const uint32_t loopCount = 11;      // 10 is ok
+// const uint32_t bucketCount = 4;
+
+const uint32_t loopCount = 8;      // 7 is ok
+const uint32_t bucketCount = 5;
 
 int main(void)
 {
    ftags::IndexMap indexMap;
 
-   for (uint32_t kk = 0; kk < 1024; kk++)
+   for (uint32_t kk = 0; kk < loopCount; kk++)
    {
       for (uint32_t ii = 1; ii <= bucketCount; ii++)
       {
-         indexMap.add(ii, ii + kk);
+         indexMap.add(ii, ii * 100 + kk);
       }
    }
 

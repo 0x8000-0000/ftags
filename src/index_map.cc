@@ -63,15 +63,7 @@ void ftags::IndexMap::add(uint32_t key, uint32_t value)
    /*
     * no more room in this bag; need to grow
     */
-   std::size_t newCapacity{capacity};
-   if ((capacity / GrowthFactor) < GrowthFactor)
-   {
-      newCapacity += GrowthFactor;
-   }
-   else
-   {
-      newCapacity += capacity / GrowthFactor;
-   }
+   std::size_t newCapacity{nextCapacity(capacity)};
 
    const std::size_t available{m_store.availableAfter(storageKey, capacity + MetadataSize)};
    if (available != 0)
@@ -123,7 +115,7 @@ void ftags::IndexMap::add(uint32_t key, uint32_t value)
       /*
        * move this bag to a new location
        */
-      auto newIter{reallocateBag(key, newCapacity, size + 1, storageKey, iter)};
+      auto newIter{reallocateBag(key, newCapacity + MetadataSize, size + 1, storageKey, iter)};
 
       // save the new value
       *newIter = value;
@@ -158,13 +150,19 @@ void ftags::IndexMap::add(uint32_t key, uint32_t value)
 
       reallocateBag(nextBagKey, nextBagCapacity, nextBagSize, nextBagStorageKey, nextBagIter);
 
+      const std::size_t availableAfterMove{m_store.availableAfter(storageKey, size + MetadataSize)};
+      assert(availableAfterMove == (nextBagCapacity + MetadataSize));
+      auto extraUnits{m_store.extend(
+         storageKey, capacity + MetadataSize, capacity + MetadataSize + nextBagCapacity + MetadataSize)};
+
       *sizeCapacityIter = (static_cast<uint32_t>(capacity + nextBagCapacity + MetadataSize) << 16) | (size + 1);
 
       // move to the end of the current bag
       std::advance(iter, size);
+      assert(iter == extraUnits);
 
       // save the new value
-      *iter = value;
+      *extraUnits = value;
 
       return;
    }
@@ -198,6 +196,7 @@ ftags::IndexMap::iterator ftags::IndexMap::allocateBag(uint32_t key, std::size_t
 ftags::IndexMap::iterator ftags::IndexMap::reallocateBag(
    uint32_t key, std::size_t capacity, std::size_t size, uint32_t oldStorageKey, ftags::IndexMap::iterator oldData)
 {
+   // assert(capacity != size); // move as-is for now
    auto iter{allocateBag(key, capacity, size)};
 
    // copy the data elements

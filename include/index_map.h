@@ -66,6 +66,18 @@ private:
    iterator reallocateBag(
       uint32_t key, std::size_t capacity, std::size_t size, uint32_t oldStorageKey, iterator oldData);
 
+   static uint32_t nextCapacity(uint32_t capacity)
+   {
+      if ((capacity / GrowthFactor) < GrowthFactor)
+      {
+         return capacity + GrowthFactor;
+      }
+      else
+      {
+         return capacity + capacity / GrowthFactor;
+      }
+   }
+
    /*
     * Allocate contiguous blocks, and use the following format:
     *    * key
