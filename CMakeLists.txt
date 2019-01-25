@@ -16,6 +16,7 @@ execute_process (COMMAND ${LIBCLANG_LLVM_CONFIG_EXECUTABLE} --includedir OUTPUT_
 execute_process (COMMAND ${LIBCLANG_LLVM_CONFIG_EXECUTABLE} --libdir OUTPUT_VARIABLE LIBCLANG_LIBDIR OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 option(StrictChecking "Enable Strict Checking" OFF)
+option(Profile "Enable Profiling" OFF)
 
 #
 # Link this 'library' to set the c++ standard / compile-time options requested
@@ -28,6 +29,10 @@ if (StrictChecking)
 target_compile_options (project_options INTERFACE -DFTAGS_STRICT_CHECKING)
 endif ()
 
+if (Profile)
+target_compile_options (project_options INTERFACE -pg)
+target_link_options (project_options INTERFACE -pg)
+endif ()
 
 #
 # Link this 'library' to use the standard warnings
