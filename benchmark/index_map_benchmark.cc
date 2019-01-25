@@ -28,10 +28,10 @@ static void BM_STL_Implementation(benchmark::State& state)
    const uint32_t valueCount{static_cast<uint32_t>(state.range(0))};
    const uint32_t bucketCount{static_cast<uint32_t>(state.range(1))};
 
-   std::map<uint32_t, std::vector<uint32_t>> indexMap;
-
    for (auto _ : state)
    {
+      std::map<uint32_t, std::vector<uint32_t>> indexMap;
+
       for (uint32_t kk = 0; kk < valueCount; kk++)
       {
          for (uint32_t ii = 1; ii <= bucketCount; ii++)
@@ -49,10 +49,10 @@ static void BM_IndexMap_Implementation(benchmark::State& state)
    const uint32_t valueCount{static_cast<uint32_t>(state.range(0))};
    const uint32_t bucketCount{static_cast<uint32_t>(state.range(1))};
 
-   ftags::IndexMap indexMap;
-
    for (auto _ : state)
    {
+      ftags::IndexMap indexMap;
+
       for (uint32_t kk = 0; kk < valueCount; kk++)
       {
          for (uint32_t ii = 1; ii <= bucketCount; ii++)
