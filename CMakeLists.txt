@@ -15,12 +15,19 @@ endif ()
 execute_process (COMMAND ${LIBCLANG_LLVM_CONFIG_EXECUTABLE} --includedir OUTPUT_VARIABLE LIBCLANG_INCLUDEDIR OUTPUT_STRIP_TRAILING_WHITESPACE)
 execute_process (COMMAND ${LIBCLANG_LLVM_CONFIG_EXECUTABLE} --libdir OUTPUT_VARIABLE LIBCLANG_LIBDIR OUTPUT_STRIP_TRAILING_WHITESPACE)
 
+option(StrictChecking "Enable Strict Checking" OFF)
+
 #
 # Link this 'library' to set the c++ standard / compile-time options requested
 #
 add_library (project_options INTERFACE)
 
 target_compile_features (project_options INTERFACE cxx_std_17)
+
+if (StrictChecking)
+target_compile_options (project_options INTERFACE -DFTAGS_STRICT_CHECKING)
+endif ()
+
 
 #
 # Link this 'library' to use the standard warnings
@@ -63,6 +70,7 @@ find_package (GTest REQUIRED)
 include (GoogleTest)
 
 find_package (benchmark)
+
 
 #
 # Tools
