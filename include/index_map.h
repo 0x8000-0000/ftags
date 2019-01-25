@@ -56,29 +56,32 @@ public:
 #endif
 
 private:
+   using store_type = Store<uint32_t, uint32_t, 24>;
+   using bag_size_type = typename store_type::block_size_type;
+
    // the initial capacity of a bag
-   static constexpr unsigned InitialAllocationSize = 6;
+   static constexpr uint32_t InitialAllocationSize = 6;
 
    // when growing, the new size is (X + X / GrowthFactor)
-   static constexpr unsigned GrowthFactor = 2;
+   static constexpr uint32_t GrowthFactor = 2;
 
    /* we use two extra elements, one to store the key copy and one to
     * store the capacity, size pair
     */
-   static constexpr unsigned MetadataSize = 2;
+   static constexpr uint32_t MetadataSize = 2;
 
-   using iterator = typename Store<uint32_t, uint32_t, 24>::iterator;
+   using iterator = typename store_type::iterator;
 
-   iterator allocateBag(uint32_t key, std::size_t capacity, std::size_t size);
+   iterator allocateBag(uint32_t key, bag_size_type capacity, bag_size_type size);
 
-   iterator reallocateBag(uint32_t    key,
-                          std::size_t capacity,
-                          std::size_t copySize,
-                          uint32_t    oldStorageKey,
-                          std::size_t oldBlockSize,
-                          iterator    oldData);
+   iterator reallocateBag(uint32_t      key,
+                          bag_size_type capacity,
+                          bag_size_type copySize,
+                          uint32_t      oldStorageKey,
+                          bag_size_type oldBlockSize,
+                          iterator      oldData);
 
-   static uint32_t nextCapacity(uint32_t capacity)
+   static bag_size_type nextCapacity(bag_size_type capacity)
    {
       // ensure all allocations are aligned to 4 after accounting for Metadata
       return ((capacity + capacity / GrowthFactor + 4) & (~3U)) + 2;
@@ -94,7 +97,7 @@ private:
     * the next bag and we take over its space.
     */
 
-   Store<uint32_t, uint32_t, 24> m_store;
+   store_type m_store;
 
    /* Maps from a value to the location in store where its corresponding bag
     * is stored.

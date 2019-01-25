@@ -30,14 +30,16 @@
 // const uint32_t loopCount = 23;      // 22 is ok
 // const uint32_t bucketCount = 5;
 
+#ifdef TEST_LINEAR
 const uint32_t loopCount   = 1024;
 const uint32_t bucketCount = 16384;
+#endif
 
 int main(void)
 {
    ftags::IndexMap indexMap;
 
-#if 0
+#ifdef TEST_LINEAR
    for (uint32_t kk = 0; kk < loopCount; kk++)
    {
       for (uint32_t ii = 1; ii <= bucketCount; ii++)

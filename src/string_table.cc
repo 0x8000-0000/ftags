@@ -51,15 +51,15 @@ uint32_t ftags::StringTable::getKey(const char* inputString) const noexcept
 
 uint32_t ftags::StringTable::addKey(const char* inputString)
 {
-   const uint32_t currentPosition = getKey(inputString);
+   const uint32_t currentPosition{getKey(inputString)};
    if (currentPosition != 0)
    {
       return currentPosition;
    }
 
-   const auto inputLength = strlen(inputString);
+   const auto inputLength{static_cast<uint32_t>(strlen(inputString))};
 
-   auto allocation = m_store.allocate(inputLength + 1);
+   auto allocation{m_store.allocate(inputLength + 1)};
 
    std::copy_n(inputString, inputLength + 1, allocation.iterator);
 

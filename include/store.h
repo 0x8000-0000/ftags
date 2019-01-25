@@ -41,8 +41,9 @@ class Store
 {
 
 public:
-   using iterator       = typename std::vector<T>::iterator;
-   using const_iterator = typename std::vector<T>::const_iterator;
+   using iterator        = typename std::vector<T>::iterator;
+   using const_iterator  = typename std::vector<T>::const_iterator;
+   using block_size_type = uint32_t;
 
    struct Allocation
    {
@@ -60,7 +61,7 @@ public:
     * @param size is the number of units of T
     * @return a pair of key and an iterator to the first allocated unit
     */
-   Allocation allocate(std::size_t size);
+   Allocation allocate(block_size_type size);
 
    /** Requests access to an allocated block by key
     *
@@ -78,7 +79,7 @@ public:
     * @param size is the number of units of T
     * @note this method is optional
     */
-   void deallocate(K key, std::size_t size);
+   void deallocate(K key, block_size_type size);
 
    /** Return the number of units we know can be allocated starting at key
     *
@@ -89,7 +90,7 @@ public:
     * if K is right at the end of the current allocation.
     * @see allocateAt
     */
-   std::size_t availableAfter(K key, std::size_t size) const noexcept;
+   block_size_type availableAfter(K key, block_size_type size) const noexcept;
 
    /** Extends the block at key K
     *
@@ -101,51 +102,51 @@ public:
     * more than newSize - size
     * @see availableAt
     */
-   iterator extend(K key, std::size_t oldSize, std::size_t newSize);
+   iterator extend(K key, block_size_type oldSize, block_size_type newSize);
 
    /** Runs a self-check
     */
    void validateInternalState() const;
 
 private:
-   static constexpr std::size_t MaxSegmentSize      = (1UL << SegmentSizeBits);
-   static constexpr std::size_t MaxSegmentCount     = (1UL << ((sizeof(K) * 8) - SegmentSizeBits));
-   static constexpr std::size_t OffsetInSegmentMask = (MaxSegmentSize - 1);
-   static constexpr std::size_t SegmentIndexMask    = ((MaxSegmentCount - 1) << SegmentSizeBits);
+   static constexpr block_size_type MaxSegmentSize      = (1U << SegmentSizeBits);
+   static constexpr block_size_type MaxSegmentCount     = (1U << ((sizeof(K) * 8) - SegmentSizeBits));
+   static constexpr block_size_type OffsetInSegmentMask = (MaxSegmentSize - 1);
+   static constexpr block_size_type SegmentIndexMask    = ((MaxSegmentCount - 1) << SegmentSizeBits);
 
-   static std::size_t getOffsetInSegment(K key)
+   static block_size_type getOffsetInSegment(K key)
    {
       return (key & OffsetInSegmentMask);
    }
 
-   static std::size_t getSegmentIndex(K key)
+   static block_size_type getSegmentIndex(K key)
    {
       return (key >> SegmentSizeBits) & (MaxSegmentCount - 1);
    }
 
    struct Block
    {
-      K           key;
-      std::size_t size;
+      K               key;
+      block_size_type size;
    };
 
    static bool isAdjacent(const Block& left, const Block& right)
    {
-      const std::size_t leftSegmentIndex{getSegmentIndex(left.key)};
-      const std::size_t rightSegmentIndex{getSegmentIndex(right.key)};
+      const block_size_type leftSegmentIndex{getSegmentIndex(left.key)};
+      const block_size_type rightSegmentIndex{getSegmentIndex(right.key)};
 
       if (leftSegmentIndex != rightSegmentIndex)
       {
          return false;
       }
 
-      const std::size_t leftOffsetInSegment{getOffsetInSegment(left.key)};
-      const std::size_t rightOffsetInSegment{getOffsetInSegment(right.key)};
+      const block_size_type leftOffsetInSegment{getOffsetInSegment(left.key)};
+      const block_size_type rightOffsetInSegment{getOffsetInSegment(right.key)};
 
       return (leftOffsetInSegment + left.size) == rightOffsetInSegment;
    }
 
-   static K makeKey(std::size_t segmentIndex, std::size_t offsetInSegment)
+   static K makeKey(block_size_type segmentIndex, block_size_type offsetInSegment)
    {
       assert(segmentIndex < MaxSegmentCount);
       assert(offsetInSegment < MaxSegmentSize);
@@ -155,7 +156,7 @@ private:
 
    void addSegment()
    {
-      const std::size_t segmentsInUse{m_segment.size()};
+      const block_size_type segmentsInUse{static_cast<block_size_type>(m_segment.size())};
 
       if ((segmentsInUse + 1) >= MaxSegmentCount)
       {
@@ -193,8 +194,8 @@ Store<T, K, SegmentSizeBits>::get(K key) const
                        typename Store<T, K, SegmentSizeBits>::const_iterator>(m_segment[0].end(), m_segment[0].end());
    }
 
-   const std::size_t segmentIndex{getSegmentIndex(key)};
-   const std::size_t offsetInSegment{getOffsetInSegment(key)};
+   const block_size_type segmentIndex{getSegmentIndex(key)};
+   const block_size_type offsetInSegment{getOffsetInSegment(key)};
 
    const auto& segment{m_segment.at(segmentIndex)};
    auto        iter{segment.begin()};
@@ -216,8 +217,8 @@ Store<T, K, SegmentSizeBits>::get(K key)
                        typename Store<T, K, SegmentSizeBits>::const_iterator>(m_segment[0].end(), m_segment[0].end());
    }
 
-   const std::size_t segmentIndex    = getSegmentIndex(key);
-   const std::size_t offsetInSegment = getOffsetInSegment(key);
+   const block_size_type segmentIndex    = getSegmentIndex(key);
+   const block_size_type offsetInSegment = getOffsetInSegment(key);
 
    auto& segment = m_segment.at(segmentIndex);
    auto  iter    = segment.begin();
@@ -230,7 +231,7 @@ Store<T, K, SegmentSizeBits>::get(K key)
 }
 
 template <typename T, typename K, unsigned SegmentSizeBits>
-typename Store<T, K, SegmentSizeBits>::Allocation Store<T, K, SegmentSizeBits>::allocate(std::size_t size)
+typename Store<T, K, SegmentSizeBits>::Allocation Store<T, K, SegmentSizeBits>::allocate(block_size_type size)
 {
    if (size >= MaxSegmentSize)
    {
@@ -240,8 +241,8 @@ typename Store<T, K, SegmentSizeBits>::Allocation Store<T, K, SegmentSizeBits>::
    /*
     * check if there is a suitable free block available
     */
-   auto suitableBlockIter{
-      std::lower_bound(m_freeBlocks.begin(), m_freeBlocks.end(), size, [](const Block& pp, std::size_t ss) -> bool {
+   auto suitableBlockIter{std::lower_bound(
+      m_freeBlocks.begin(), m_freeBlocks.end(), size, [](const Block& pp, block_size_type ss) -> bool {
          return pp.size < ss;
       })};
 
@@ -251,8 +252,8 @@ typename Store<T, K, SegmentSizeBits>::Allocation Store<T, K, SegmentSizeBits>::
 
       const K key{suitableBlockIter->key};
 
-      const std::size_t segmentIndex{getSegmentIndex(key)};
-      const std::size_t offsetInSegment{getOffsetInSegment(key)};
+      const block_size_type segmentIndex{getSegmentIndex(key)};
+      const block_size_type offsetInSegment{getOffsetInSegment(key)};
 
       if (suitableBlockIter->size == size)
       {
@@ -262,7 +263,7 @@ typename Store<T, K, SegmentSizeBits>::Allocation Store<T, K, SegmentSizeBits>::
       else
       {
          // shrink the leftover block
-         const std::size_t leftOverOffsetInSegment{offsetInSegment + size};
+         const block_size_type leftOverOffsetInSegment{offsetInSegment + size};
          suitableBlockIter->key = makeKey(segmentIndex, leftOverOffsetInSegment);
          suitableBlockIter->size -= size;
       }
@@ -288,15 +289,17 @@ typename Store<T, K, SegmentSizeBits>::Allocation Store<T, K, SegmentSizeBits>::
 }
 
 template <typename T, typename K, unsigned SegmentSizeBits>
-std::size_t Store<T, K, SegmentSizeBits>::availableAfter(K key, std::size_t size) const noexcept
+typename Store<T, K, SegmentSizeBits>::block_size_type
+Store<T, K, SegmentSizeBits>::availableAfter(K key, typename Store<T, K, SegmentSizeBits>::block_size_type size) const
+   noexcept
 {
    if (key == 0)
    {
       return 0;
    }
 
-   const std::size_t segmentIndex{getSegmentIndex(key)};
-   const std::size_t offsetInSegment{getOffsetInSegment(key)};
+   const block_size_type segmentIndex{getSegmentIndex(key)};
+   const block_size_type offsetInSegment{getOffsetInSegment(key)};
 
    const K candidateKey{makeKey(segmentIndex, offsetInSegment + size)};
 
@@ -312,7 +315,7 @@ std::size_t Store<T, K, SegmentSizeBits>::availableAfter(K key, std::size_t size
 
 template <typename T, typename K, unsigned SegmentSizeBits>
 typename Store<T, K, SegmentSizeBits>::iterator
-Store<T, K, SegmentSizeBits>::extend(K key, std::size_t oldSize, std::size_t newSize)
+Store<T, K, SegmentSizeBits>::extend(K key, block_size_type oldSize, block_size_type newSize)
 {
    if (key == 0)
    {
@@ -324,8 +327,8 @@ Store<T, K, SegmentSizeBits>::extend(K key, std::size_t oldSize, std::size_t new
       throw std::invalid_argument("Nothing to extend; old size and new size are the same");
    }
 
-   const std::size_t segmentIndex    = getSegmentIndex(key);
-   const std::size_t offsetInSegment = getOffsetInSegment(key);
+   const block_size_type segmentIndex    = getSegmentIndex(key);
+   const block_size_type offsetInSegment = getOffsetInSegment(key);
 
    const K candidateKey{makeKey(segmentIndex, offsetInSegment + oldSize)};
 
@@ -338,7 +341,7 @@ Store<T, K, SegmentSizeBits>::extend(K key, std::size_t oldSize, std::size_t new
          throw std::logic_error("Can't allocate more than what's available");
       }
 
-      const std::size_t sizeIncrease = newSize - oldSize;
+      const block_size_type sizeIncrease = newSize - oldSize;
 
       if (sizeIncrease == blockIter->size)
       {
@@ -348,7 +351,7 @@ Store<T, K, SegmentSizeBits>::extend(K key, std::size_t oldSize, std::size_t new
       else
       {
          // shrink the leftover block
-         const std::size_t leftOverOffsetInSegment{offsetInSegment + newSize};
+         const block_size_type leftOverOffsetInSegment{offsetInSegment + newSize};
          blockIter->key = makeKey(segmentIndex, leftOverOffsetInSegment);
          blockIter->size -= sizeIncrease;
       }
@@ -371,7 +374,7 @@ Store<T, K, SegmentSizeBits>::extend(K key, std::size_t oldSize, std::size_t new
 }
 
 template <typename T, typename K, unsigned SegmentSizeBits>
-void Store<T, K, SegmentSizeBits>::deallocate(K key, std::size_t size)
+void Store<T, K, SegmentSizeBits>::deallocate(K key, block_size_type size)
 {
    const Block newBlock{key, size};
 
@@ -428,18 +431,18 @@ void Store<T, K, SegmentSizeBits>::validateInternalState() const
       return left.key < right.key;
    });
 
-   std::size_t currentSegment{MaxSegmentCount + 1};
-   std::size_t currentOffset{0};
+   block_size_type currentSegment{MaxSegmentCount + 1};
+   block_size_type currentOffset{0};
 
-   for (const auto& block: freeBlocks)
+   for (const auto& block : freeBlocks)
    {
-      const std::size_t segmentIndex{getSegmentIndex(block.key)};
-      const std::size_t offsetInSegment{getOffsetInSegment(block.key)};
+      const block_size_type segmentIndex{getSegmentIndex(block.key)};
+      const block_size_type offsetInSegment{getOffsetInSegment(block.key)};
 
       if (currentSegment != segmentIndex)
       {
          currentSegment = segmentIndex;
-         currentOffset = 0;
+         currentOffset  = 0;
       }
       else
       {

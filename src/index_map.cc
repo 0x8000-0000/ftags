@@ -68,9 +68,9 @@ void ftags::IndexMap::add(uint32_t key, uint32_t value)
    /*
     * no more room in this bag; need to grow
     */
-   std::size_t newCapacity{nextCapacity(capacity)};
+   bag_size_type newCapacity{nextCapacity(capacity)};
 
-   const std::size_t available{m_store.availableAfter(storageKey, capacity + MetadataSize)};
+   const bag_size_type available{m_store.availableAfter(storageKey, capacity + MetadataSize)};
    if (available != 0)
    {
       /*
@@ -108,7 +108,7 @@ void ftags::IndexMap::add(uint32_t key, uint32_t value)
    add(key, value);
 }
 
-ftags::IndexMap::iterator ftags::IndexMap::allocateBag(uint32_t key, std::size_t capacity, std::size_t size)
+ftags::IndexMap::iterator ftags::IndexMap::allocateBag(uint32_t key, bag_size_type capacity, bag_size_type size)
 {
    auto location{m_store.allocate(capacity + MetadataSize)};
    auto iter{location.iterator};
@@ -131,7 +131,7 @@ ftags::IndexMap::iterator ftags::IndexMap::allocateBag(uint32_t key, std::size_t
 }
 
 ftags::IndexMap::iterator ftags::IndexMap::reallocateBag(
-   uint32_t key, std::size_t capacity, std::size_t copySize, uint32_t oldStorageKey, std::size_t blockSize, ftags::IndexMap::iterator oldData)
+   uint32_t key, bag_size_type capacity, bag_size_type copySize, uint32_t oldStorageKey, bag_size_type blockSize, ftags::IndexMap::iterator oldData)
 {
    // assert(capacity != size); // move as-is for now
    auto iter{allocateBag(key, capacity, copySize)};
