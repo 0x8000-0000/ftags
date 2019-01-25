@@ -25,13 +25,14 @@
 
 static void BM_STL_Implementation(benchmark::State& state)
 {
-   const uint32_t bucketCount{static_cast<uint32_t>(state.range(0))};
-   
+   const uint32_t valueCount{static_cast<uint32_t>(state.range(0))};
+   const uint32_t bucketCount{static_cast<uint32_t>(state.range(1))};
+
    std::map<uint32_t, std::vector<uint32_t>> indexMap;
 
    for (auto _ : state)
    {
-      for (uint32_t kk = 0; kk < 16; kk++)
+      for (uint32_t kk = 0; kk < valueCount; kk++)
       {
          for (uint32_t ii = 1; ii <= bucketCount; ii++)
          {
@@ -41,18 +42,18 @@ static void BM_STL_Implementation(benchmark::State& state)
    }
 }
 
-BENCHMARK(BM_STL_Implementation)->Arg(128)->Arg(256);
-
+BENCHMARK(BM_STL_Implementation)->Args({32, 128})->Args({64, 512})->Args({128, 1024});
 
 static void BM_IndexMap_Implementation(benchmark::State& state)
 {
-   const uint32_t bucketCount{static_cast<uint32_t>(state.range(0))};
-   
+   const uint32_t valueCount{static_cast<uint32_t>(state.range(0))};
+   const uint32_t bucketCount{static_cast<uint32_t>(state.range(1))};
+
    ftags::IndexMap indexMap;
 
    for (auto _ : state)
    {
-      for (uint32_t kk = 0; kk < 16; kk++)
+      for (uint32_t kk = 0; kk < valueCount; kk++)
       {
          for (uint32_t ii = 1; ii <= bucketCount; ii++)
          {
@@ -62,6 +63,6 @@ static void BM_IndexMap_Implementation(benchmark::State& state)
    }
 }
 
-BENCHMARK(BM_IndexMap_Implementation)->Arg(128)->Arg(256);
+BENCHMARK(BM_IndexMap_Implementation)->Args({32, 128})->Args({64, 512})->Args({128, 1024});
 
 BENCHMARK_MAIN();
