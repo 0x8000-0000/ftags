@@ -17,6 +17,7 @@
 #include <index_map.h>
 
 #include <algorithm>
+#include <random>
 
 #include <cassert>
 
@@ -26,16 +27,17 @@
 // const uint32_t loopCount = 11;      // 10 is ok
 // const uint32_t bucketCount = 4;
 
-//const uint32_t loopCount = 23;      // 22 is ok
-//const uint32_t bucketCount = 5;
+// const uint32_t loopCount = 23;      // 22 is ok
+// const uint32_t bucketCount = 5;
 
-const uint32_t loopCount = 1024;
+const uint32_t loopCount   = 1024;
 const uint32_t bucketCount = 16384;
 
 int main(void)
 {
    ftags::IndexMap indexMap;
 
+#if 0
    for (uint32_t kk = 0; kk < loopCount; kk++)
    {
       for (uint32_t ii = 1; ii <= bucketCount; ii++)
@@ -54,6 +56,22 @@ int main(void)
          indexMap.validateInternalState();
       }
    }
+#else
+
+   std::vector<uint32_t>                   values(1024 * 1024);
+   std::uniform_int_distribution<uint32_t> distribution(1, 65535);
+   std::default_random_engine              generator;
+   generator.seed(42);
+   std::generate(values.begin(), values.end(), [&distribution, &generator]() { return distribution(generator); });
+
+   uint32_t lastValue = 1;
+
+   for (uint32_t val : values)
+   {
+      indexMap.add(lastValue, val);
+      lastValue = val;
+   }
+#endif
 
    return 0;
 }
