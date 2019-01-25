@@ -47,12 +47,11 @@ public:
 
    void removeValue(uint32_t key, uint32_t value);
 
-   bool validateInternalState() const
-#ifndef NDEBUG
-   ;
+   void validateInternalState() const
+#ifdef FTAGS_STRICT_CHECKING
+      ;
 #else
    {
-      return true;
    }
 #endif
 

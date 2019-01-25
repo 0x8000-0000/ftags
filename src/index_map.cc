@@ -281,14 +281,18 @@ void ftags::IndexMap::removeValue(uint32_t key, uint32_t value)
    }
 }
 
-#ifndef NDEBUG
-bool ftags::IndexMap::validateInternalState() const
+#ifdef FTAGS_STRICT_CHECKING
+void ftags::IndexMap::validateInternalState() const
 {
+   m_store.validateInternalState();
+
    std::size_t capacityAllocated = 0;
 
    for (const auto& bag : m_index)
    {
+#ifndef NDEBUG
       const uint32_t key{bag.first};
+#endif
 
       auto location{m_store.get(bag.second)};
       // unpack location
@@ -302,14 +306,14 @@ bool ftags::IndexMap::validateInternalState() const
       iter++; // iter now points to size / capacity
       auto     sizeCapacityIter{iter};
       uint32_t capacity{*sizeCapacityIter >> 16};
+#ifndef NDEBUG
       uint32_t size{*sizeCapacityIter & 0xffff};
       assert(size <= capacity);
+#endif
 
       iter++; // iter now points to first value
 
       capacityAllocated += capacity;
    }
-
-   return true;
 }
 #endif

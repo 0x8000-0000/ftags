@@ -103,6 +103,10 @@ public:
     */
    iterator extend(K key, std::size_t oldSize, std::size_t newSize);
 
+   /** Runs a self-check
+    */
+   void validateInternalState() const;
+
 private:
    static constexpr std::size_t MaxSegmentSize      = (1UL << SegmentSizeBits);
    static constexpr std::size_t MaxSegmentCount     = (1UL << ((sizeof(K) * 8) - SegmentSizeBits));
@@ -412,6 +416,44 @@ void Store<T, K, SegmentSizeBits>::deallocate(K key, std::size_t size)
    std::sort(m_freeBlocks.begin(), m_freeBlocks.end(), [](const Block& left, const Block& right) -> bool {
       return left.size < right.size;
    });
+}
+
+template <typename T, typename K, unsigned SegmentSizeBits>
+void Store<T, K, SegmentSizeBits>::validateInternalState() const
+{
+#ifdef FTAGS_STRICT_CHECKING
+   std::vector<Block> freeBlocks(m_freeBlocks);
+
+   std::sort(freeBlocks.begin(), freeBlocks.end(), [](const Block& left, const Block& right) -> bool {
+      return left.key < right.key;
+   });
+
+   std::size_t currentSegment{MaxSegmentCount + 1};
+   std::size_t currentOffset{0};
+
+   for (const auto& block: freeBlocks)
+   {
+      const std::size_t segmentIndex{getSegmentIndex(block.key)};
+      const std::size_t offsetInSegment{getOffsetInSegment(block.key)};
+
+      if (currentSegment != segmentIndex)
+      {
+         currentSegment = segmentIndex;
+         currentOffset = 0;
+      }
+      else
+      {
+         assert(currentOffset <= offsetInSegment);
+         if (currentOffset > offsetInSegment)
+         {
+            throw std::logic_error("Internal free blocks corruption");
+         }
+
+         currentOffset = offsetInSegment + block.size;
+      }
+   }
+
+#endif
 }
 
 } // namespace ftags
