@@ -60,7 +60,7 @@ private:
    static constexpr unsigned InitialAllocationSize = 6;
 
    // when growing, the new size is (X + X / GrowthFactor)
-   static constexpr unsigned GrowthFactor = 4;
+   static constexpr unsigned GrowthFactor = 2;
 
    /* we use two extra elements, one to store the key copy and one to
     * store the capacity, size pair
@@ -80,14 +80,8 @@ private:
 
    static uint32_t nextCapacity(uint32_t capacity)
    {
-      if ((capacity / GrowthFactor) < GrowthFactor)
-      {
-         return capacity + GrowthFactor;
-      }
-      else
-      {
-         return capacity + capacity / GrowthFactor;
-      }
+      // ensure all allocations are aligned to 4 after accounting for Metadata
+      return ((capacity + capacity / GrowthFactor + 4) & (~3U)) + 2;
    }
 
    /*
