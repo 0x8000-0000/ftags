@@ -19,6 +19,8 @@
 
 #include <algorithm>
 #include <iterator>
+#include <list>
+#include <map>
 #include <stdexcept>
 #include <vector>
 
@@ -168,16 +170,14 @@ private:
 
       K key{makeKey(segmentsInUse, 1)};
 
-      const Block newBlock{key, MaxSegmentSize - 1};
-
-      m_freeBlocks.push_back(newBlock);
+      m_freeBlocks[MaxSegmentSize - 1].push_back(key);
    }
 
    /** Segment of contiguous T, up to (1<<B) elements in size.
     */
    std::vector<std::vector<T>> m_segment;
 
-   std::vector<Block> m_freeBlocks;
+   std::map<block_size_type, std::list<K>> m_freeBlocks;
 };
 
 /*
@@ -241,37 +241,28 @@ typename Store<T, K, SegmentSizeBits>::Allocation Store<T, K, SegmentSizeBits>::
    /*
     * check if there is a suitable free block available
     */
-   auto suitableBlockIter{std::lower_bound(
-      m_freeBlocks.begin(), m_freeBlocks.end(), size, [](const Block& pp, block_size_type ss) -> bool {
-         return pp.size < ss;
-      })};
+   auto suitableBlockIter{m_freeBlocks.lower_bound(size)};
 
-   if (suitableBlockIter != m_freeBlocks.end())
+   if ((suitableBlockIter != m_freeBlocks.end()) && (!suitableBlockIter->second.empty()))
    {
-      assert(suitableBlockIter->size >= size);
-
-      const K key{suitableBlockIter->key};
+      const K key{suitableBlockIter->second.front()};
+      suitableBlockIter->second.pop_front();
 
       const block_size_type segmentIndex{getSegmentIndex(key)};
       const block_size_type offsetInSegment{getOffsetInSegment(key)};
 
-      if (suitableBlockIter->size == size)
+      if (suitableBlockIter->first == size)
       {
          // free block is allocated entirely
-         m_freeBlocks.erase(suitableBlockIter);
       }
       else
       {
          // shrink the leftover block
          const block_size_type leftOverOffsetInSegment{offsetInSegment + size};
-         suitableBlockIter->key = makeKey(segmentIndex, leftOverOffsetInSegment);
-         suitableBlockIter->size -= size;
+         const K               reminderBlockKey{makeKey(segmentIndex, leftOverOffsetInSegment)};
+         const block_size_type reminderBlockSize{suitableBlockIter->first - size};
+         m_freeBlocks[reminderBlockSize].push_front(reminderBlockKey);
       }
-
-      // sort free blocks by size so we can quickly find a suitable block
-      std::sort(m_freeBlocks.begin(), m_freeBlocks.end(), [](const Block& left, const Block& right) -> bool {
-         return left.size < right.size;
-      });
 
       auto iter{m_segment[segmentIndex].begin()};
       std::advance(iter, offsetInSegment);
@@ -304,10 +295,12 @@ Store<T, K, SegmentSizeBits>::availableAfter(K key, typename Store<T, K, Segment
    const K candidateKey{makeKey(segmentIndex, offsetInSegment + size)};
 
    auto blockIter{std::find_if(
-      m_freeBlocks.begin(), m_freeBlocks.end(), [candidateKey](const Block& pp) { return pp.key == candidateKey; })};
+      m_freeBlocks.begin(), m_freeBlocks.end(), [candidateKey](const std::pair<block_size_type, std::list<K>>& pp) {
+         return std::find(pp.second.begin(), pp.second.end(), candidateKey) != pp.second.end();
+      })};
    if (blockIter != m_freeBlocks.end())
    {
-      return blockIter->size;
+      return blockIter->first;
    }
 
    return 0;
@@ -333,33 +326,37 @@ Store<T, K, SegmentSizeBits>::extend(K key, block_size_type oldSize, block_size_
    const K candidateKey{makeKey(segmentIndex, offsetInSegment + oldSize)};
 
    auto blockIter{std::find_if(
-      m_freeBlocks.begin(), m_freeBlocks.end(), [candidateKey](const Block& pp) { return pp.key == candidateKey; })};
+      m_freeBlocks.begin(), m_freeBlocks.end(), [candidateKey](const std::pair<block_size_type, std::list<K>>& pp) {
+         return std::find(pp.second.begin(), pp.second.end(), candidateKey) != pp.second.end();
+      })};
    if (blockIter != m_freeBlocks.end())
    {
-      if (newSize > (oldSize + blockIter->size))
+      const block_size_type sizeIncrease = newSize - oldSize;
+      if (sizeIncrease > blockIter->first)
       {
+         // need to call availableAfter first
          throw std::logic_error("Can't allocate more than what's available");
       }
 
-      const block_size_type sizeIncrease = newSize - oldSize;
+      auto keyIter{std::find(blockIter->second.begin(), blockIter->second.end(), candidateKey)};
+      blockIter->second.erase(keyIter);
+      if (blockIter->second.empty())
+      {
+         m_freeBlocks.erase(blockIter);
+      }
 
-      if (sizeIncrease == blockIter->size)
+      if (sizeIncrease == blockIter->first)
       {
          // free block is allocated entirely
-         m_freeBlocks.erase(blockIter);
       }
       else
       {
          // shrink the leftover block
          const block_size_type leftOverOffsetInSegment{offsetInSegment + newSize};
-         blockIter->key = makeKey(segmentIndex, leftOverOffsetInSegment);
-         blockIter->size -= sizeIncrease;
+         const K               reminderBlockKey{makeKey(segmentIndex, leftOverOffsetInSegment)};
+         const block_size_type reminderBlockSize{blockIter->first - sizeIncrease};
+         m_freeBlocks[reminderBlockSize].push_front(reminderBlockKey);
       }
-
-      // sort free blocks by size so we can quickly find a suitable block
-      std::sort(m_freeBlocks.begin(), m_freeBlocks.end(), [](const Block& left, const Block& right) -> bool {
-         return left.size < right.size;
-      });
 
       auto& segment = m_segment.at(segmentIndex);
       auto  iter{segment.begin()};
@@ -378,53 +375,102 @@ void Store<T, K, SegmentSizeBits>::deallocate(K key, block_size_type size)
 {
    const Block newBlock{key, size};
 
-   /*
-    * coalesce with adjacent blocks
-    */
-   auto previousAdjacentBlock{std::find_if(
-      m_freeBlocks.begin(), m_freeBlocks.end(), [&newBlock](const Block& pp) { return isAdjacent(pp, newBlock); })};
-   auto followingAdjacentBlock{std::find_if(
-      m_freeBlocks.begin(), m_freeBlocks.end(), [&newBlock](const Block& pp) { return isAdjacent(newBlock, pp); })};
+   Block previousBlock{0, 0};
+   Block followingBlock{0, 0};
 
-   if ((previousAdjacentBlock == m_freeBlocks.end()) && (followingAdjacentBlock == m_freeBlocks.end()))
+   auto previousEraser = m_freeBlocks.end();
+   auto followingEraser = m_freeBlocks.end();
+
+   for (auto groupIter{m_freeBlocks.begin()};
+        (groupIter != m_freeBlocks.end()) && (0 == previousBlock.key) && (0 == followingBlock.key);
+        ++groupIter)
    {
-      // not adjacent to any free blocks; just add it
-      m_freeBlocks.push_back(newBlock);
+      for (auto keyIter = groupIter->second.begin(); (keyIter != groupIter->second.end()) && (0 == previousBlock.key);
+           ++keyIter)
+      {
+         const Block oldBlock{*keyIter, groupIter->first};
+
+         if (isAdjacent(oldBlock, newBlock))
+         {
+            previousBlock = oldBlock;
+            groupIter->second.erase(keyIter);
+            if (groupIter->second.empty())
+            {
+               previousEraser = groupIter;
+            }
+         }
+      }
+
+      for (auto keyIter = groupIter->second.begin();
+           (keyIter != groupIter->second.end()) && (0 == followingBlock.key);
+           ++keyIter)
+      {
+         const Block oldBlock{*keyIter, groupIter->first};
+
+         if (isAdjacent(newBlock, oldBlock))
+         {
+            followingBlock = oldBlock;
+            groupIter->second.erase(keyIter);
+            if (groupIter->second.empty())
+            {
+               followingEraser = groupIter;
+            }
+         }
+      }
+   }
+
+   if (previousEraser == followingEraser)
+   {
+      if (previousEraser != m_freeBlocks.end())
+      {
+         m_freeBlocks.erase(previousEraser);
+      }
    }
    else
    {
-      if ((previousAdjacentBlock != m_freeBlocks.end()) && (followingAdjacentBlock != m_freeBlocks.end()))
+      if (previousEraser != m_freeBlocks.end())
       {
-         // adjacent both left and right; credit all size to previous and delete following
-         previousAdjacentBlock->size += size + followingAdjacentBlock->size;
-
-         m_freeBlocks.erase(followingAdjacentBlock);
+         m_freeBlocks.erase(previousEraser);
       }
-      else
+
+      if (followingEraser != m_freeBlocks.end())
       {
-         if (previousAdjacentBlock != m_freeBlocks.end())
-         {
-            previousAdjacentBlock->size += size;
-         }
-         else
-         {
-            assert(followingAdjacentBlock != m_freeBlocks.end());
-            followingAdjacentBlock->key = key;
-            followingAdjacentBlock->size += size;
-         }
+         m_freeBlocks.erase(followingEraser);
       }
    }
 
-   // sort free blocks by size so we can quickly find a suitable block
-   std::sort(m_freeBlocks.begin(), m_freeBlocks.end(), [](const Block& left, const Block& right) -> bool {
-      return left.size < right.size;
-   });
+   if ((0 == previousBlock.key) && (0 == followingBlock.key))
+   {
+      m_freeBlocks[size].push_back(key);
+   }
+   else if ((0 != previousBlock.key) && (0 != followingBlock.key))
+   {
+      // adjacent both left and right; credit all size to previous and delete following
+      assert(previousBlock.key < newBlock.key);
+      assert(newBlock.key < followingBlock.key);
+
+      m_freeBlocks[previousBlock.size + size + followingBlock.size].push_back(previousBlock.key);
+   }
+   else
+   {
+      if (0 != previousBlock.key)
+      {
+         assert(previousBlock.key < newBlock.key);
+         m_freeBlocks[previousBlock.size + size].push_back(previousBlock.key);
+      }
+      else
+      {
+         assert(newBlock.key < followingBlock.key);
+         m_freeBlocks[size + followingBlock.size].push_back(newBlock.key);
+      }
+   }
 }
 
 template <typename T, typename K, unsigned SegmentSizeBits>
 void Store<T, K, SegmentSizeBits>::validateInternalState() const
 {
 #ifdef FTAGS_STRICT_CHECKING
+#if 0
    std::vector<Block> freeBlocks(m_freeBlocks);
 
    std::sort(freeBlocks.begin(), freeBlocks.end(), [](const Block& left, const Block& right) -> bool {
@@ -455,7 +501,7 @@ void Store<T, K, SegmentSizeBits>::validateInternalState() const
          currentOffset = offsetInSegment + block.size;
       }
    }
-
+#endif
 #endif
 }
 

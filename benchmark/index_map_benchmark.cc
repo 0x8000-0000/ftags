@@ -69,7 +69,7 @@ static void BM_STL_ImplementationRandom(benchmark::State& state)
    }
 }
 
-BENCHMARK(BM_STL_ImplementationRandom)->Arg(1024)->Arg(16384)->Arg(65536)->Arg(1024 * 1024);
+BENCHMARK(BM_STL_ImplementationRandom)->Arg(1024)->Arg(16384)->Arg(65536)->Arg(256 * 1024);
 
 static void BM_IndexMap_ImplementationLinear(benchmark::State& state)
 {
@@ -115,6 +115,6 @@ static void BM_IndexMap_ImplementationRandom(benchmark::State& state)
    }
 }
 
-BENCHMARK(BM_IndexMap_ImplementationRandom)->Arg(1024)->Arg(16384)->Arg(65536)->Arg(1024 * 1024);
+BENCHMARK(BM_IndexMap_ImplementationRandom)->Arg(1024)->Arg(16384)->Arg(65536)->Arg(256 * 1024);
 
 BENCHMARK_MAIN();
