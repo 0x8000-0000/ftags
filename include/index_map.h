@@ -56,11 +56,11 @@ public:
 #endif
 
 private:
-   using store_type = Store<uint32_t, uint32_t, 24>;
+   using store_type    = Store<uint32_t, uint32_t, 24>;
    using bag_size_type = typename store_type::block_size_type;
 
    // the initial capacity of a bag
-   static constexpr uint32_t InitialAllocationSize = 6;
+   static constexpr uint32_t InitialAllocationSize = 14;
 
    // when growing, the new size is (X + X / GrowthFactor)
    static constexpr uint32_t GrowthFactor = 2;
@@ -83,8 +83,10 @@ private:
 
    static bag_size_type nextCapacity(bag_size_type capacity)
    {
-      // ensure all allocations are aligned to 4 after accounting for Metadata
-      return ((capacity + capacity / GrowthFactor + 4) & (~3U)) + 2;
+      // ensure all allocations are aligned to 4 after accounting for metadata
+      const bag_size_type retval{((capacity + capacity / GrowthFactor + 4) & (~3U)) + (4 - MetadataSize)};
+      assert(((retval + MetadataSize) % 4) == 0);
+      return retval;
    }
 
    /*
