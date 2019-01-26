@@ -497,7 +497,7 @@ void Store<T, K, SegmentSizeBits>::deallocatePartial(K key, block_size_type bloc
 
 #ifndef NDEBUG
    const K verificationKey{makeKey(segmentIndex, offsetInSegment)};
-   auto verificationIter = m_freeBlocksIndex.find(verificationKey);
+   auto    verificationIter = m_freeBlocksIndex.find(verificationKey);
 #endif
    assert(verificationIter == m_freeBlocksIndex.end());
 
