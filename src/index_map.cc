@@ -98,6 +98,7 @@ void ftags::IndexMap::add(uint32_t key, uint32_t value)
          auto nextBagIndexPos{m_index.find(nextBagKey)};
          assert(nextBagIndexPos != m_index.end());
          const auto nextBagStorageKey{nextBagIndexPos->second};
+         // TODO: instead of deallocate / extend - try to release only the part we don't want
          reallocateBag(nextBagKey, nextBagCapacity, nextBagStorageKey, nextBagIter);
 
          // now indicate that there is no next bag, because we just moved it out
