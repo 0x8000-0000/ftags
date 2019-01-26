@@ -128,28 +128,6 @@ private:
       return (key >> SegmentSizeBits) & (MaxSegmentCount - 1);
    }
 
-   struct Block
-   {
-      K               key;
-      block_size_type size;
-   };
-
-   static bool isAdjacent(const Block& left, const Block& right)
-   {
-      const block_size_type leftSegmentIndex{getSegmentIndex(left.key)};
-      const block_size_type rightSegmentIndex{getSegmentIndex(right.key)};
-
-      if (leftSegmentIndex != rightSegmentIndex)
-      {
-         return false;
-      }
-
-      const block_size_type leftOffsetInSegment{getOffsetInSegment(left.key)};
-      const block_size_type rightOffsetInSegment{getOffsetInSegment(right.key)};
-
-      return (leftOffsetInSegment + left.size) == rightOffsetInSegment;
-   }
-
    static K makeKey(block_size_type segmentIndex, block_size_type offsetInSegment)
    {
       assert(segmentIndex < MaxSegmentCount);
@@ -363,30 +341,41 @@ Store<T, K, SegmentSizeBits>::extend(K key, block_size_type oldSize, block_size_
 template <typename T, typename K, unsigned SegmentSizeBits>
 void Store<T, K, SegmentSizeBits>::deallocate(K key, block_size_type size)
 {
-   const Block newBlock{key, size};
+   const block_size_type segmentIndex{getSegmentIndex(key)};
+   const block_size_type offsetInSegment{getOffsetInSegment(key)};
 
-   Block previousBlock{0, 0};
-   Block followingBlock{0, 0};
+   block_size_type previousBlockKey{0};
+   block_size_type previousBlockSize{0};
+   block_size_type followingBlockKey{0};
+   block_size_type followingBlockSize{0};
 
    auto previousEraser  = m_freeBlocks.end();
    auto followingEraser = m_freeBlocks.end();
 
    for (auto groupIter{m_freeBlocks.begin()};
-        (groupIter != m_freeBlocks.end()) && (0 == (previousBlock.key * followingBlock.key));
+        (groupIter != m_freeBlocks.end()) && (0 == (previousBlockKey * followingBlockKey));
         ++groupIter)
    {
-      const Block oldBlock{groupIter->second, groupIter->first};
+      const block_size_type iterSegmentIndex{getSegmentIndex(groupIter->second)};
+      const block_size_type iterOffsetInSegment{getOffsetInSegment(groupIter->second)};
+      const block_size_type iterSize{groupIter->first};
 
-      if (isAdjacent(oldBlock, newBlock))
+      if (segmentIndex == iterSegmentIndex)
       {
-         previousBlock  = oldBlock;
-         previousEraser = groupIter;
-      }
+         if ((iterOffsetInSegment + iterSize) == offsetInSegment)
+         {
+            previousBlockKey  = groupIter->second;
+            previousBlockSize = iterSize;
+            previousEraser    = groupIter;
+            continue;
+         }
 
-      if (isAdjacent(newBlock, oldBlock))
-      {
-         followingBlock  = oldBlock;
-         followingEraser = groupIter;
+         if ((offsetInSegment + size) == iterOffsetInSegment)
+         {
+            followingBlockKey  = groupIter->second;
+            followingBlockSize = iterSize;
+            followingEraser    = groupIter;
+         }
       }
    }
 
@@ -410,31 +399,38 @@ void Store<T, K, SegmentSizeBits>::deallocate(K key, block_size_type size)
       }
    }
 
-   if ((0 == previousBlock.key) && (0 == followingBlock.key))
+   block_size_type newBlockKey{key};
+   block_size_type newBlockSize{size};
+
+   if ((0 == previousBlockKey) && (0 == followingBlockKey))
    {
-      m_freeBlocks.insert({size, key});
+      // default values - insert block as is
    }
-   else if ((0 != previousBlock.key) && (0 != followingBlock.key))
+   else if ((0 != previousBlockKey) && (0 != followingBlockKey))
    {
       // adjacent both left and right; credit all size to previous and delete following
-      assert(previousBlock.key < newBlock.key);
-      assert(newBlock.key < followingBlock.key);
+      assert(previousBlockKey < key);
+      assert(key < followingBlockKey);
 
-      m_freeBlocks.insert({previousBlock.size + size + followingBlock.size, previousBlock.key});
+      newBlockKey  = previousBlockKey;
+      newBlockSize = previousBlockSize + size + followingBlockSize;
    }
    else
    {
-      if (0 != previousBlock.key)
+      if (0 != previousBlockKey)
       {
-         assert(previousBlock.key < newBlock.key);
-         m_freeBlocks.insert({previousBlock.size + size, previousBlock.key});
+         assert(previousBlockKey < key);
+         newBlockKey  = previousBlockKey;
+         newBlockSize = previousBlockSize + size;
       }
       else
       {
-         assert(newBlock.key < followingBlock.key);
-         m_freeBlocks.insert({size + followingBlock.size, newBlock.key});
+         assert(key < followingBlockKey);
+         newBlockSize = size + followingBlockSize;
       }
    }
+
+   m_freeBlocks.insert({newBlockSize, newBlockKey});
 }
 
 template <typename T, typename K, unsigned SegmentSizeBits>
@@ -453,8 +449,8 @@ void Store<T, K, SegmentSizeBits>::validateInternalState() const
 
    for (const auto& block : freeBlocks)
    {
-      const block_size_type segmentIndex{getSegmentIndex(block.key)};
-      const block_size_type offsetInSegment{getOffsetInSegment(block.key)};
+      const block_size_type segmentIndex{getSegmentIndex(blockKey)};
+      const block_size_type offsetInSegment{getOffsetInSegment(blockKey)};
 
       if (currentSegment != segmentIndex)
       {
@@ -469,7 +465,7 @@ void Store<T, K, SegmentSizeBits>::validateInternalState() const
             throw std::logic_error("Internal free blocks corruption");
          }
 
-         currentOffset = offsetInSegment + block.size;
+         currentOffset = offsetInSegment + blockSize;
       }
    }
 #endif
