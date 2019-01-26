@@ -74,6 +74,14 @@ private:
 
    iterator allocateBag(uint32_t key, bag_size_type capacity, bag_size_type size);
 
+   /** Move the contents of this bag to newly allocated address
+    *
+    * @param key is the bag key
+    * @param capacity is the new desired capacity
+    * @param oldStorageKey is the key of this bag in the storage container; m_index[key]
+    * @param oldData is an iterator pointing to the data values in the old bag
+    * @return iterator pointing to the beginning of the bag in the new location
+    */
    iterator reallocateBag(uint32_t      key,
                           bag_size_type capacity,
                           uint32_t      oldStorageKey,

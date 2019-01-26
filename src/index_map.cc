@@ -148,11 +148,15 @@ void ftags::IndexMap::add(uint32_t key, uint32_t value)
    /*
     * move this bag to a new location
     */
-   reallocateBag(key, newCapacity, storageKey, iter);
+   auto newIter{reallocateBag(key, newCapacity, storageKey, iter)};
 
    validateInternalState();
 
-   add(key, value);
+   // add(key, value);
+   newIter --;    // now points to capacity / size
+   *newIter = (static_cast<uint32_t>(newCapacity) << 16) | (size + 1);
+   std::advance(newIter, size + 1);
+   *newIter = value;
 }
 
 ftags::IndexMap::iterator ftags::IndexMap::allocateBag(uint32_t key, bag_size_type capacity, bag_size_type size)
@@ -204,8 +208,6 @@ ftags::IndexMap::iterator ftags::IndexMap::reallocateBag(uint32_t               
    // release old bag
    m_store.deallocate(oldStorageKey, oldCapacity + MetadataSize);
 
-   // advance iterator after the moved data
-   std::advance(iter, oldSize);
    return iter;
 }
 
