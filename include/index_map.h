@@ -76,9 +76,7 @@ private:
 
    iterator reallocateBag(uint32_t      key,
                           bag_size_type capacity,
-                          bag_size_type copySize,
                           uint32_t      oldStorageKey,
-                          bag_size_type oldBlockSize,
                           iterator      oldData);
 
    static bag_size_type nextCapacity(bag_size_type capacity)
