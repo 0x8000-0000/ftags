@@ -150,14 +150,40 @@ private:
 
       const K key{makeKey(segmentsInUse, FirstKeyValue)};
 
-      m_freeBlocks.insert({MaxSegmentSize - FirstKeyValue, key});
+      recordFreeBlock(key, MaxSegmentSize - FirstKeyValue);
+   }
+
+   void recordFreeBlock(K key, block_size_type size)
+   {
+      m_freeBlocks.insert({size, key});
+      m_freeBlocksIndex.insert({key, size});
+   }
+
+   void recycleFreeBlock(typename std::multimap<block_size_type, K>::iterator iter)
+   {
+      m_freeBlocksIndex.erase(iter->second);
+      m_freeBlocks.erase(iter);
+   }
+
+   void recycleFreeBlock(typename std::multimap<block_size_type, K>::iterator iter,
+                         typename std::map<K, block_size_type>::iterator      iterIndex)
+   {
+      assert(iterIndex->first == iter->second);
+      m_freeBlocksIndex.erase(iterIndex);
+      m_freeBlocks.erase(iter);
    }
 
    /** Segment of contiguous T, up to (1<<B) elements in size.
     */
    std::vector<std::vector<T>> m_segment;
 
+   /** Maps sizes to block indices
+    */
    std::multimap<block_size_type, K> m_freeBlocks;
+
+   /** Maps free block indices to the block size
+    */
+   std::map<K, block_size_type> m_freeBlocksIndex;
 };
 
 /*
@@ -229,7 +255,7 @@ typename Store<T, K, SegmentSizeBits>::Allocation Store<T, K, SegmentSizeBits>::
       assert(availableSize >= size);
 
       const K key{blockIter->second};
-      m_freeBlocks.erase(blockIter);
+      recycleFreeBlock(blockIter);
 
       const block_size_type segmentIndex{getSegmentIndex(key)};
       const block_size_type offsetInSegment{getOffsetInSegment(key)};
@@ -240,7 +266,7 @@ typename Store<T, K, SegmentSizeBits>::Allocation Store<T, K, SegmentSizeBits>::
          const block_size_type leftOverOffsetInSegment{offsetInSegment + size};
          const K               reminderBlockKey{makeKey(segmentIndex, leftOverOffsetInSegment)};
          const block_size_type reminderBlockSize{availableSize - size};
-         m_freeBlocks.insert({reminderBlockSize, reminderBlockKey});
+         recordFreeBlock(reminderBlockKey, reminderBlockSize);
       }
 
       auto iter{m_segment[segmentIndex].begin()};
@@ -273,13 +299,25 @@ Store<T, K, SegmentSizeBits>::availableAfter(K key, typename Store<T, K, Segment
 
    const K candidateKey{makeKey(segmentIndex, offsetInSegment + size)};
 
+#ifdef FTAGS_STRICT_CHECKING
    auto blockIter{std::find_if(m_freeBlocks.begin(), m_freeBlocks.end(), [candidateKey](const auto& pp) {
       return pp.second == candidateKey;
    })};
-   if (blockIter != m_freeBlocks.end())
+#endif
+
+   auto blockIndex = m_freeBlocksIndex.find(candidateKey);
+   if (blockIndex != m_freeBlocksIndex.end())
    {
-      return blockIter->first;
+#ifdef FTAGS_STRICT_CHECKING
+      assert(blockIter != m_freeBlocks.end());
+      assert(blockIter->first == blockIndex->second);
+#endif
+      return blockIndex->second;
    }
+
+#ifdef FTAGS_STRICT_CHECKING
+   assert(blockIter == m_freeBlocks.end());
+#endif
 
    return 0;
 }
@@ -303,11 +341,14 @@ Store<T, K, SegmentSizeBits>::extend(K key, block_size_type oldSize, block_size_
 
    const K candidateKey{makeKey(segmentIndex, offsetInSegment + oldSize)};
 
-   auto blockIter{std::find_if(m_freeBlocks.begin(), m_freeBlocks.end(), [candidateKey](const auto& pp) {
-      return pp.second == candidateKey;
-   })};
-   if (blockIter != m_freeBlocks.end())
+   auto blockIndex = m_freeBlocksIndex.find(candidateKey);
+   if (blockIndex != m_freeBlocksIndex.end())
    {
+      auto range = m_freeBlocks.equal_range(blockIndex->second);
+
+      auto blockIter{std::find_if(
+         range.first, range.second, [candidateKey](const auto& pp) { return pp.second == candidateKey; })};
+
       const block_size_type sizeIncrease{newSize - oldSize};
       const block_size_type availableSize{blockIter->first};
       if (availableSize < sizeIncrease)
@@ -315,7 +356,7 @@ Store<T, K, SegmentSizeBits>::extend(K key, block_size_type oldSize, block_size_
          throw std::logic_error("Can't allocate more than what's available");
       }
 
-      m_freeBlocks.erase(blockIter);
+      recycleFreeBlock(blockIter, blockIndex);
 
       if (sizeIncrease != availableSize)
       {
@@ -323,7 +364,7 @@ Store<T, K, SegmentSizeBits>::extend(K key, block_size_type oldSize, block_size_
          const block_size_type leftOverOffsetInSegment{offsetInSegment + newSize};
          const K               reminderBlockKey{makeKey(segmentIndex, leftOverOffsetInSegment)};
          const block_size_type reminderBlockSize{availableSize - sizeIncrease};
-         m_freeBlocks.insert({reminderBlockSize, reminderBlockKey});
+         recordFreeBlock(reminderBlockKey, reminderBlockSize);
       }
 
       auto& segment = m_segment.at(segmentIndex);
@@ -383,19 +424,19 @@ void Store<T, K, SegmentSizeBits>::deallocate(K key, block_size_type size)
    {
       if (previousEraser != m_freeBlocks.end())
       {
-         m_freeBlocks.erase(previousEraser);
+         recycleFreeBlock(previousEraser);
       }
    }
    else
    {
       if (previousEraser != m_freeBlocks.end())
       {
-         m_freeBlocks.erase(previousEraser);
+         recycleFreeBlock(previousEraser);
       }
 
       if (followingEraser != m_freeBlocks.end())
       {
-         m_freeBlocks.erase(followingEraser);
+         recycleFreeBlock(followingEraser);
       }
    }
 
@@ -430,13 +471,14 @@ void Store<T, K, SegmentSizeBits>::deallocate(K key, block_size_type size)
       }
    }
 
-   m_freeBlocks.insert({newBlockSize, newBlockKey});
+   recordFreeBlock(newBlockKey, newBlockSize);
 }
 
 template <typename T, typename K, unsigned SegmentSizeBits>
 void Store<T, K, SegmentSizeBits>::validateInternalState() const
 {
 #ifdef FTAGS_STRICT_CHECKING
+   assert(m_freeBlocks.size() == m_freeBlocksIndex.size());
 #if 0
    std::vector<Block> freeBlocks(m_freeBlocks);
 
