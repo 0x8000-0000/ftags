@@ -190,3 +190,52 @@ TEST(IndexMapTest, AllocateThenDeleteThreeBlocks)
       im.add(50, ii);
    }
 }
+
+TEST(IndexMapTest, ForceRelocationAndVerify)
+{
+   ftags::IndexMap im;
+
+   for (uint32_t ii = 0; ii < 12; ii ++)
+   {
+      im.add(10, ii);
+   }
+
+   for (uint32_t ii = 0; ii < 12; ii ++)
+   {
+      im.add(20, ii);
+   }
+
+   for (uint32_t ii = 0; ii < 64; ii ++)
+   {
+      im.add(30, ii);
+   }
+
+   for (uint32_t ii = 12; ii < 42; ii ++)
+   {
+      im.add(20, ii);
+   }
+
+   for (uint32_t ii = 12; ii < 42; ii ++)
+   {
+      im.add(10, ii);
+   }
+
+   auto range10 = im.getValues(10);
+   for (auto [ii, iter] = std::tuple{0, range10.first}; iter != range10.second; ++iter, ++ii)
+   {
+      ASSERT_EQ(*iter, ii);
+   }
+
+   auto range20 = im.getValues(20);
+   for (auto [ii, iter] = std::tuple{0, range20.first}; iter != range20.second; ++iter, ++ii)
+   {
+      ASSERT_EQ(*iter, ii);
+   }
+
+   auto range30 = im.getValues(30);
+   for (auto [ii, iter] = std::tuple{0, range30.first}; iter != range30.second; ++iter, ++ii)
+   {
+      ASSERT_EQ(*iter, ii);
+   }
+
+}
