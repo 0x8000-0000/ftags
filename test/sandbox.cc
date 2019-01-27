@@ -17,9 +17,10 @@
 #include <index_map.h>
 
 #include <algorithm>
+#include <iostream>
 #include <random>
 
-#include <cassert>
+#define TEST_LINEAR
 
 // const uint32_t loopCount = 42;      // 41 is ok
 // const uint32_t bucketCount = 3;
@@ -35,11 +36,12 @@ const uint32_t loopCount   = 1024;
 const uint32_t bucketCount = 16384;
 #endif
 
-int main(void)
+static void testLinear()
 {
+   std::cout << "Test linear..." << std::endl;
+
    ftags::IndexMap indexMap;
 
-#ifdef TEST_LINEAR
    for (uint32_t kk = 0; kk < loopCount; kk++)
    {
       for (uint32_t ii = 1; ii <= bucketCount; ii++)
@@ -47,9 +49,13 @@ int main(void)
          auto range = indexMap.getValues(ii);
 
          uint32_t vv = 0;
-         for (auto iter = range.first; iter != range.second; ++ iter)
+         for (auto iter = range->first; iter != range->second; ++ iter)
          {
-            assert(*iter == (ii * 100 + vv));
+            //assert(*iter == (ii * 100 + vv));
+            if (*iter != (ii * 100 + vv))
+            {
+               throw std::logic_error("No match");
+            }
             vv++;
          }
 
@@ -58,7 +64,16 @@ int main(void)
          indexMap.validateInternalState();
       }
    }
-#else
+
+   std::cout << "Test linear completed" << std::endl;
+}
+
+static void testRandom()
+{
+   std::cout << "Test random..." << std::endl;
+
+   ftags::IndexMap indexMap;
+   std::map<uint32_t, std::vector<uint32_t>> stlIndexMap;
 
    std::vector<uint32_t>                   values(1024 * 1024);
    std::uniform_int_distribution<uint32_t> distribution(1, 65535);
@@ -71,9 +86,32 @@ int main(void)
    for (uint32_t val : values)
    {
       indexMap.add(lastValue, val);
+      stlIndexMap[lastValue].push_back(val);
       lastValue = val;
    }
-#endif
+
+   for (const auto& pp: stlIndexMap)
+   {
+      auto range{indexMap.getValues(pp.first)};
+      if (! range)
+      {
+         throw std::logic_error("Missing values");
+      }
+
+      if (! std::equal(range->first, range->second, pp.second.begin()))
+      {
+         throw std::logic_error("Values mismatch");
+      }
+   }
+
+   std::cout << "Test random completed" << std::endl;
+}
+
+int main(void)
+{
+   testLinear();
+
+   testRandom();
 
    return 0;
 }
