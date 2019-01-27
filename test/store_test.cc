@@ -270,3 +270,45 @@ TEST(StoreMapTest, ExtendAllocatedBlock5)
    ASSERT_EQ(blockFour.key, store.FirstKeyValue + 2 * blockSize);
    std::fill_n(blockFour.iterator, blockSize, 4);
 }
+
+TEST(StoreMapTest, PartialDealloc)
+{
+   Store store;
+
+   const Store::block_size_type blockSize{8};
+
+   const Store::block_size_type firstBlockSize{2 * blockSize};
+
+   const auto blockOne = store.allocate(firstBlockSize);
+   ASSERT_EQ(blockOne.key, store.FirstKeyValue);
+   std::fill_n(blockOne.iterator, blockSize, 1);
+   std::fill_n(blockOne.iterator + blockSize, blockSize, 5);
+
+   const auto blockTwo = store.allocate(blockSize);
+   ASSERT_EQ(blockTwo.key, store.FirstKeyValue + 2 * blockSize);
+   std::fill_n(blockTwo.iterator, 2 * blockSize, 2);
+
+   const auto blockThree = store.allocate(blockSize);
+   ASSERT_EQ(blockThree.key, store.FirstKeyValue + 3 * blockSize);
+   std::fill_n(blockThree.iterator, blockSize, 3);
+
+   store.deallocatePartial(blockOne.key, firstBlockSize, blockSize);
+   // now blockOne owns only the first blocksize elements
+
+   const auto blockFour = store.allocate(blockSize);
+   ASSERT_EQ(blockFour.key, store.FirstKeyValue + blockSize);
+   ASSERT_TRUE(std::all_of(blockOne.iterator, blockOne.iterator + blockSize, [](uint32_t val) { return val == 1; }));
+   ASSERT_TRUE(
+      std::all_of(blockFour.iterator, blockFour.iterator + blockSize, [](uint32_t val) { return val == 5; }));
+
+   store.deallocate(blockOne.key, blockSize);
+   store.deallocate(blockFour.key, blockSize);
+
+   const auto blockFive = store.allocate(2 * blockSize);
+   ASSERT_EQ(blockFive.key, store.FirstKeyValue);
+
+   ASSERT_TRUE(
+      std::all_of(blockFive.iterator, blockFive.iterator + blockSize, [](uint32_t val) { return val == 1; }));
+   ASSERT_TRUE(std::all_of(
+      blockFive.iterator + blockSize, blockFive.iterator + 2 * blockSize, [](uint32_t val) { return val == 5; }));
+}

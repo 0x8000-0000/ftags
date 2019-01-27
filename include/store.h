@@ -81,9 +81,24 @@ public:
     *
     * @param key identifies the block of T
     * @param size is the number of units of T
-    * @note this method is optional
     */
    void deallocate(K key, block_size_type size);
+
+   /** Releases s units of T allocated after key
+    *
+    * key
+    *  | ------------ block size ---------------- |
+    *  | ----- retained size ------ |             |
+    *  |                            | deallocated |
+    *
+    * @param key identifies the block of T
+    * @param blockSize is the number of units of T
+    * @param retainedSize is the number of units stil allocated
+    *
+    * @note This method essentially releases the block at (K + retainedSize) of size
+    * (blockSize - retainedSize)
+    */
+   void deallocatePartial(K key, block_size_type blockSize, block_size_type retainedSize);
 
    /** Return the number of units we know can be allocated starting at key
     *
@@ -295,29 +310,20 @@ Store<T, K, SegmentSizeBits>::availableAfter(K key, typename Store<T, K, Segment
    }
 
    const block_size_type segmentIndex{getSegmentIndex(key)};
-   const block_size_type offsetInSegment{getOffsetInSegment(key)};
+   const block_size_type offsetInSegment{getOffsetInSegment(key) + size};
 
-   const K candidateKey{makeKey(segmentIndex, offsetInSegment + size)};
+   if (offsetInSegment >= MaxSegmentSize)
+   {
+      return 0;
+   }
 
-#ifdef FTAGS_STRICT_CHECKING
-   auto blockIter{std::find_if(m_freeBlocks.begin(), m_freeBlocks.end(), [candidateKey](const auto& pp) {
-      return pp.second == candidateKey;
-   })};
-#endif
+   const K candidateKey{makeKey(segmentIndex, offsetInSegment)};
 
    auto blockIndex = m_freeBlocksIndex.find(candidateKey);
    if (blockIndex != m_freeBlocksIndex.end())
    {
-#ifdef FTAGS_STRICT_CHECKING
-      assert(blockIter != m_freeBlocks.end());
-      assert(blockIter->first == blockIndex->second);
-#endif
       return blockIndex->second;
    }
-
-#ifdef FTAGS_STRICT_CHECKING
-   assert(blockIter == m_freeBlocks.end());
-#endif
 
    return 0;
 }
@@ -472,6 +478,26 @@ void Store<T, K, SegmentSizeBits>::deallocate(K key, block_size_type size)
    }
 
    recordFreeBlock(newBlockKey, newBlockSize);
+}
+
+template <typename T, typename K, unsigned SegmentSizeBits>
+void Store<T, K, SegmentSizeBits>::deallocatePartial(K key, block_size_type blockSize, block_size_type retainedSize)
+{
+   assert(retainedSize < blockSize);
+
+   const block_size_type segmentIndex{getSegmentIndex(key)};
+   const block_size_type offsetInSegment{getOffsetInSegment(key)};
+
+#ifndef NDEBUG
+   const K verificationKey{makeKey(segmentIndex, offsetInSegment)};
+   auto verificationIter = m_freeBlocksIndex.find(verificationKey);
+#endif
+   assert(verificationIter == m_freeBlocksIndex.end());
+
+   assert((offsetInSegment + retainedSize) < MaxSegmentSize);
+
+   const K releaseKey{makeKey(segmentIndex, offsetInSegment + retainedSize)};
+   deallocate(releaseKey, blockSize - retainedSize);
 }
 
 template <typename T, typename K, unsigned SegmentSizeBits>
