@@ -127,6 +127,13 @@ public:
     */
    void validateInternalState() const;
 
+#ifdef FTAGS_STRICT_CHECKING
+   std::size_t getFreeBlockCount() const
+   {
+      return m_freeBlocks.size();
+   }
+#endif
+
 private:
    static constexpr block_size_type MaxSegmentSize      = (1U << SegmentSizeBits);
    static constexpr block_size_type MaxSegmentCount     = (1U << ((sizeof(K) * 8) - SegmentSizeBits));

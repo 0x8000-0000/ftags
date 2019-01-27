@@ -20,7 +20,7 @@
 
 void ftags::IndexMap::add(uint32_t key, uint32_t value)
 {
-   validateInternalState();
+   //validateInternalState();
 
    auto indexPos{m_index.find(key)};
    if (indexPos == m_index.end())
@@ -59,7 +59,7 @@ void ftags::IndexMap::add(uint32_t key, uint32_t value)
       std::advance(iter, size);
       *iter = value;
 
-      validateInternalState();
+      //validateInternalState();
       return;
    }
 
@@ -140,7 +140,7 @@ void ftags::IndexMap::add(uint32_t key, uint32_t value)
          auto extraUnits{m_store.extend(storageKey, capacity + MetadataSize, newCapacity + MetadataSize)};
          *extraUnits = value;
 
-         validateInternalState();
+         //validateInternalState();
          return;
       }
    }
@@ -150,10 +150,10 @@ void ftags::IndexMap::add(uint32_t key, uint32_t value)
     */
    auto newIter{reallocateBag(key, newCapacity, storageKey, iter)};
 
-   validateInternalState();
+   //validateInternalState();
 
    // add(key, value);
-   newIter --;    // now points to capacity / size
+   newIter--; // now points to capacity / size
    *newIter = (static_cast<uint32_t>(newCapacity) << 16) | (size + 1);
    std::advance(newIter, size + 1);
    *newIter = value;
@@ -191,7 +191,7 @@ ftags::IndexMap::iterator ftags::IndexMap::reallocateBag(uint32_t               
    // reset old bag metadata
    oldData--; // now points to the old size / capacity
    const uint32_t oldCapacity{*oldData >> 16};
-   uint32_t oldSize{*oldData & 0xffff};
+   uint32_t       oldSize{*oldData & 0xffff};
    assert(oldSize <= oldCapacity);
    *oldData = oldCapacity << 16;
    oldData--; // now points to the old key
@@ -341,30 +341,42 @@ void ftags::IndexMap::validateInternalState() const
 {
    m_store.validateInternalState();
 
-   std::size_t capacityAllocated = 0;
+   std::size_t freeBlocks{m_store.getFreeBlockCount()};
+   // we could have a free block without any elements in the index map
+   if (freeBlocks > (m_index.size() + 1))
+   {
+      throw std::logic_error("More free blocks than allocated");
+   }
+
+   std::size_t capacityAllocated{0};
 
    for (const auto& bag : m_index)
    {
-#ifndef NDEBUG
       const uint32_t key{bag.first};
-#endif
 
       auto location{m_store.get(bag.second)};
       // unpack location
       auto       iter{location.first};
       const auto segmentEnd{location.second};
-      assert(iter != segmentEnd);
+      if (iter == segmentEnd)
+      {
+         throw std::logic_error("Empty range");
+      }
 
       // verify key
-      assert(key == *iter);
+      if (key != *iter)
+      {
+         throw std::logic_error("Key does not match");
+      }
 
       iter++; // iter now points to size / capacity
       auto     sizeCapacityIter{iter};
       uint32_t capacity{*sizeCapacityIter >> 16};
-#ifndef NDEBUG
       uint32_t size{*sizeCapacityIter & 0xffff};
-      assert(size <= capacity);
-#endif
+      if (size > capacity)
+      {
+         throw std::logic_error("Size is greater than capacity");
+      }
 
       iter++; // iter now points to first value
 

@@ -21,25 +21,9 @@
 #include <random>
 #include <sstream>
 
-#define TEST_LINEAR
-
-// const uint32_t loopCount = 42;      // 41 is ok
-// const uint32_t bucketCount = 3;
-
-// const uint32_t loopCount = 11;      // 10 is ok
-// const uint32_t bucketCount = 4;
-
-// const uint32_t loopCount = 23;      // 22 is ok
-// const uint32_t bucketCount = 5;
-
-#ifdef TEST_LINEAR
-const uint32_t loopCount   = 1024;
-const uint32_t bucketCount = 16384;
-#endif
-
-static void testLinear()
+static void testLinear(uint32_t loopCount, uint32_t bucketCount)
 {
-   std::cout << "Test linear..." << std::endl;
+   std::cout << "Test linear inserting " << loopCount << " times into " << bucketCount << " buckets ..." << std::endl;
 
    ftags::IndexMap indexMap;
 
@@ -64,23 +48,24 @@ static void testLinear()
          }
 
          indexMap.add(ii, ii * 100 + kk);
-
-         indexMap.validateInternalState();
       }
+
+      indexMap.validateInternalState();
    }
 
    std::cout << "Test linear completed" << std::endl;
 }
 
-static void testRandom()
+static void testRandom(uint32_t valueCount, uint32_t bucketCount)
 {
-   std::cout << "Test random..." << std::endl;
+   std::cout << "Test randomly inserting " << valueCount << " values into " << bucketCount << " buckets..."
+             << std::endl;
 
    ftags::IndexMap                           indexMap;
    std::map<uint32_t, std::vector<uint32_t>> stlIndexMap;
 
-   std::vector<uint32_t>                   values(1024 * 1024);
-   std::uniform_int_distribution<uint32_t> distribution(1, 65535);
+   std::vector<uint32_t>                   values(valueCount);
+   std::uniform_int_distribution<uint32_t> distribution(1, bucketCount);
    std::default_random_engine              generator;
    generator.seed(42);
    std::generate(values.begin(), values.end(), [&distribution, &generator]() { return distribution(generator); });
@@ -93,6 +78,8 @@ static void testRandom()
       stlIndexMap[lastValue].push_back(val);
       lastValue = val;
    }
+
+   indexMap.validateInternalState();
 
    for (const auto& pp : stlIndexMap)
    {
@@ -125,9 +112,17 @@ static void testRandom()
 
 int main(void)
 {
-   testRandom();
+   testLinear(64u, 1024u);
 
-   testLinear();
+   testLinear(512u, 16384u);
+
+   testLinear(1024u, 8192u);
+
+   testLinear(1024u, 16384u);
+
+   testRandom(64u * 1024u, 32u);
+
+   testRandom(1024u * 1024u, 65536u);
 
    return 0;
 }

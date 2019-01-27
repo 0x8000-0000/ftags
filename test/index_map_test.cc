@@ -39,7 +39,7 @@ TEST(IndexMapTest, AddOneValueThenGetItBack)
 
    ASSERT_EQ(*resultForValidValue.first, 3141);
 
-   resultForValidValue.first ++;
+   resultForValidValue.first++;
 
    ASSERT_TRUE(resultForValidValue.first == resultForValidValue.second);
 }
@@ -57,11 +57,11 @@ TEST(IndexMapTest, AddTwoValuesThenGetThemBack)
 
    ASSERT_EQ(*resultForValidValue.first, 3141);
 
-   resultForValidValue.first ++;
+   resultForValidValue.first++;
 
    ASSERT_EQ(*resultForValidValue.first, 999);
 
-   resultForValidValue.first ++;
+   resultForValidValue.first++;
 
    ASSERT_TRUE(resultForValidValue.first == resultForValidValue.second);
 }
@@ -83,11 +83,11 @@ TEST(IndexMapTest, AddValuesToDifferentKeys)
 
    ASSERT_EQ(*resultForValidValue.first, 3141);
 
-   resultForValidValue.first ++;
+   resultForValidValue.first++;
 
    ASSERT_EQ(*resultForValidValue.first, 999);
 
-   resultForValidValue.first ++;
+   resultForValidValue.first++;
 
    ASSERT_TRUE(resultForValidValue.first == resultForValidValue.second);
 }
@@ -100,7 +100,7 @@ TEST(IndexMapTest, CanExtendLastElement)
 
    im.add(10, 552);
 
-   for (uint32_t ii = 0; ii < 16; ii ++)
+   for (uint32_t ii = 0; ii < 16; ++ii)
    {
       im.add(42, ii);
    }
@@ -120,7 +120,7 @@ TEST(IndexMapTest, CanExtendOtherThanLastElement)
 
    im.add(10, 552);
 
-   for (uint32_t ii = 0; ii < 16; ii ++)
+   for (uint32_t ii = 0; ii < 16; ++ii)
    {
       im.add(42, ii);
    }
@@ -140,14 +140,14 @@ TEST(IndexMapTest, ExtendIntoFreedSpace)
 
    im.add(10, 777);
 
-   for (uint32_t ii = 0; ii < 3; ii ++)
+   for (uint32_t ii = 0; ii < 3; ++ii)
    {
       im.add(42, ii);
    }
 
    im.removeKey(10);
 
-   for (uint32_t ii = 10; ii < 20; ii ++)
+   for (uint32_t ii = 10; ii < 20; ++ii)
    {
       im.add(42, ii);
    }
@@ -161,22 +161,22 @@ TEST(IndexMapTest, AllocateThenDeleteThreeBlocks)
 {
    ftags::IndexMap im;
 
-   for (uint32_t ii = 0; ii < 15; ii ++)
+   for (uint32_t ii = 0; ii < 15; ++ii)
    {
       im.add(10, ii);
    }
 
-   for (uint32_t ii = 0; ii < 9; ii ++)
+   for (uint32_t ii = 0; ii < 9; ++ii)
    {
       im.add(20, ii);
    }
 
-   for (uint32_t ii = 0; ii < 4; ii ++)
+   for (uint32_t ii = 0; ii < 4; ++ii)
    {
       im.add(30, ii);
    }
 
-   for (uint32_t ii = 0; ii < 8; ii ++)
+   for (uint32_t ii = 0; ii < 8; ++ii)
    {
       im.add(40, ii);
    }
@@ -185,7 +185,7 @@ TEST(IndexMapTest, AllocateThenDeleteThreeBlocks)
    im.removeKey(30);
    im.removeKey(20);
 
-   for (uint32_t ii = 0; ii < 4; ii ++)
+   for (uint32_t ii = 0; ii < 4; ++ii)
    {
       im.add(50, ii);
    }
@@ -195,27 +195,27 @@ TEST(IndexMapTest, ForceRelocationAndVerify)
 {
    ftags::IndexMap im;
 
-   for (uint32_t ii = 0; ii < 12; ii ++)
+   for (uint32_t ii{0}; ii < 12; ++ii)
    {
       im.add(10, ii);
    }
 
-   for (uint32_t ii = 0; ii < 12; ii ++)
+   for (uint32_t ii{0}; ii < 12; ++ii)
    {
       im.add(20, ii);
    }
 
-   for (uint32_t ii = 0; ii < 64; ii ++)
+   for (uint32_t ii{0}; ii < 64; ++ii)
    {
       im.add(30, ii);
    }
 
-   for (uint32_t ii = 12; ii < 42; ii ++)
+   for (uint32_t ii{12}; ii < 42; ++ii)
    {
       im.add(20, ii);
    }
 
-   for (uint32_t ii = 12; ii < 42; ii ++)
+   for (uint32_t ii{12}; ii < 42; ++ii)
    {
       im.add(10, ii);
    }
@@ -237,5 +237,30 @@ TEST(IndexMapTest, ForceRelocationAndVerify)
    {
       ASSERT_EQ(*iter, ii);
    }
+}
 
+TEST(IndexMapTest, ForceRepeatedReallocations)
+{
+   ftags::IndexMap im;
+
+   const uint32_t bucketCount{128};
+
+   for (uint32_t ii{0}; ii < 1024u; ++ii)
+   {
+      for (uint32_t bb{1}; bb <= bucketCount; ++bb)
+      {
+         im.add(bb, 100 * bb + ii);
+      }
+   }
+
+   im.validateInternalState();
+
+   for (uint32_t bb{1}; bb <= bucketCount; ++bb)
+   {
+      auto range = im.getValues(bb);
+      for (auto [ii, iter] = std::tuple{0u, range.first}; iter != range.second; ++iter, ++ii)
+      {
+         ASSERT_EQ(*iter, (100 * bb + ii));
+      }
+   }
 }
