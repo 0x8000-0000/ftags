@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <iostream>
 #include <random>
+#include <sstream>
 
 #define TEST_LINEAR
 
@@ -49,12 +50,15 @@ static void testLinear()
          auto range = indexMap.getValues(ii);
 
          uint32_t vv = 0;
-         for (auto iter = range->first; iter != range->second; ++ iter)
+         for (auto iter = range.first; iter != range.second; ++iter)
          {
-            //assert(*iter == (ii * 100 + vv));
-            if (*iter != (ii * 100 + vv))
+            // assert(*iter == (ii * 100 + vv));
+            const uint32_t expected{ii * 100 + vv};
+            if (*iter != expected)
             {
-               throw std::logic_error("No match");
+               std::ostringstream os;
+               os << "No match in set " << ii << ": expected " << expected << " but observed " << *iter;
+               throw std::logic_error(os.str());
             }
             vv++;
          }
@@ -72,7 +76,7 @@ static void testRandom()
 {
    std::cout << "Test random..." << std::endl;
 
-   ftags::IndexMap indexMap;
+   ftags::IndexMap                           indexMap;
    std::map<uint32_t, std::vector<uint32_t>> stlIndexMap;
 
    std::vector<uint32_t>                   values(1024 * 1024);
@@ -90,17 +94,29 @@ static void testRandom()
       lastValue = val;
    }
 
-   for (const auto& pp: stlIndexMap)
+   for (const auto& pp : stlIndexMap)
    {
       auto range{indexMap.getValues(pp.first)};
-      if (! range)
+      if (range.first == range.second)
       {
-         throw std::logic_error("Missing values");
+         std::ostringstream os;
+         os << "Missing values for " << pp.first;
+         throw std::logic_error(os.str());
       }
 
-      if (! std::equal(range->first, range->second, pp.second.begin()))
+      if (std::distance(range.first, range.second) != static_cast<ptrdiff_t>(pp.second.size()))
       {
-         throw std::logic_error("Values mismatch");
+         std::ostringstream os;
+         os << "Data set mismatch for " << pp.first << " expected " << pp.second.size() << " but observed "
+            << std::distance(range.first, range.second);
+         throw std::logic_error(os.str());
+      }
+
+      if (!std::equal(range.first, range.second, pp.second.begin()))
+      {
+         std::ostringstream os;
+         os << "Values mismatch for " << pp.first;
+         throw std::logic_error(os.str());
       }
    }
 
@@ -109,9 +125,9 @@ static void testRandom()
 
 int main(void)
 {
-   testLinear();
-
    testRandom();
+
+   testLinear();
 
    return 0;
 }
