@@ -125,4 +125,5 @@ target_link_libraries (sandbox_test PRIVATE project_options project_warnings)
 add_executable (ftags_benchmark benchmark/index_map_benchmark.cc
    src/index_map.cc)
 target_include_directories (ftags_benchmark PRIVATE include)
-target_link_libraries(ftags_benchmark PRIVATE benchmark::benchmark_main)
+target_link_libraries (ftags_benchmark PRIVATE project_options)
+target_link_libraries (ftags_benchmark PRIVATE benchmark::benchmark_main)
