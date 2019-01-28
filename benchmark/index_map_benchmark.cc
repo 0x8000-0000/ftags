@@ -88,15 +88,16 @@ static void BM_IndexMap_ImplementationLinear(benchmark::State& state)
    }
 }
 
-BENCHMARK(BM_STL_ImplementationLinear)->Args({64, 512})->Args({128, 1024});
-BENCHMARK(BM_IndexMap_ImplementationLinear)->Args({64, 512})->Args({128, 1024});
+BENCHMARK(BM_STL_ImplementationLinear)->Args({64, 512})->Args({128, 1024})->Args({16 * 1024, 128});
+BENCHMARK(BM_IndexMap_ImplementationLinear)->Args({64, 512})->Args({128, 1024})->Args({16 * 1024, 128});
 
 static void BM_IndexMap_ImplementationRandom(benchmark::State& state)
 {
    const uint32_t valueCount{static_cast<uint32_t>(state.range(0))};
+   const uint32_t bucketCount{static_cast<uint32_t>(state.range(1))};
 
    std::vector<uint32_t>                   values(valueCount);
-   std::uniform_int_distribution<uint32_t> distribution(1, 65535);
+   std::uniform_int_distribution<uint32_t> distribution(1, bucketCount);
    std::default_random_engine              generator;
    generator.seed(42);
    std::generate(values.begin(), values.end(), [&distribution, &generator]() { return distribution(generator); });
@@ -114,7 +115,7 @@ static void BM_IndexMap_ImplementationRandom(benchmark::State& state)
    }
 }
 
-BENCHMARK(BM_STL_ImplementationRandom)->Arg(65536)->Arg(256 * 1024)->Arg(512 * 1024);
-BENCHMARK(BM_IndexMap_ImplementationRandom)->Arg(65536)->Arg(256 * 1024)->Arg(512 * 1024);
+BENCHMARK(BM_STL_ImplementationRandom)->Args({65536, 65536})->Args({256 * 1024, 65536})->Args({512 * 1024, 65536})->Args({128 * 1024, 1024});
+BENCHMARK(BM_IndexMap_ImplementationRandom)->Args({65536, 65536})->Args({256 * 1024, 65536})->Args({512 * 1024, 65536})->Args({128 * 1024, 1024});
 
 BENCHMARK_MAIN();
