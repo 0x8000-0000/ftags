@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package ftags;
+
+message Greeting
+{
+   string version = 1;
+   string location = 2;
+}

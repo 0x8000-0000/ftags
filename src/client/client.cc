@@ -1,3 +1,5 @@
+#include <ftags.pb.h>
+
 #include <zmq.hpp>
 
 #include <iostream>
@@ -11,6 +13,8 @@ int main()
 
    std::cout << "Connecting to hello world server…" << std::endl;
    socket.connect("tcp://localhost:5555");
+
+   ftags::Greeting greeting;
 
    //  Do 10 requests, waiting each time for a response
    for (int request_nbr = 0; request_nbr != 10; request_nbr++)
