@@ -30,13 +30,41 @@ The source code indexer will support the following types of queries:
 As stretch goal, it will implement Language Server Protocol.
 
 
+Dependencies
+------------
+
+Dependencies imported from the OS image (referenced, not included)
+
+   * [{fmt}](https://github.com/fmtlib/fmt)
+
+   * [Google Benchmark](https://github.com/google/benchmark)
+
+   * [Google Test](https://github.com/google/googletest)
+
+   * [Google Protocol Buffers](https://developers.google.com/protocol-buffers/)
+
+   * [spdlog](https://github.com/gabime/spdlog)
+
+   * [ØMQ](http://zeromq.org/)
+
+To install the prerequisites on Debian run the following command:
+
+    sudo apt install libzmq3-dev libspdlog-dev libfmt-dev libbenchmark-dev \
+        libbenchmark-tools libgtest-dev libclang-7-dev libclang1-7 clang-7 \
+        libprotobuf-dev protobuf-c-compiler
+
+Included dependencies:
+
+   * [Clara](https://github.com/catchorg/Clara/)
+
+
 Building
 --------
 
     git clone ...
     mkdir ftags.build
     cd ftags.build
-    CXX=clang++-7 cmake ../ftags -DLIBCLANG_LLVM_CONFIG_EXECUTABLE=llvm-config-7
+    [CXX=clang++-7] cmake ../ftags -DLIBCLANG_LLVM_CONFIG_EXECUTABLE=llvm-config-7 [-DCMAKE_BUILD_TYPE=Debug -GNinja]
     cmake --build .
 
 
