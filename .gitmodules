@@ -1,0 +1,3 @@
+[submodule "external/Clara"]
+	path = external/Clara
+	url = https://github.com/catchorg/Clara
