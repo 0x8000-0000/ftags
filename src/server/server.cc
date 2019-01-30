@@ -38,7 +38,7 @@ int main()
       //  Wait for next request from client
       socket.recv(&request);
       command.ParseFromArray(request.data(), static_cast<int>(request.size()));
-      std::cout << "Received request from " << command.location() << std::endl;
+      std::cout << "Received request from " << command.source() << std::endl;
 
       //  Do some 'work'
       std::this_thread::sleep_for(std::chrono::seconds(1));

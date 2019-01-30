@@ -4,32 +4,41 @@ package ftags;
 
 message Command
 {
-   string version = 1;
-   string location = 2;
-
    enum Type
    {
       PING = 0;
-      SHUT_DOWN = 1;
-      GET_STATUS = 2;
+      GET_VERSION = 1;
+      SHUT_DOWN = 2;
+      GET_STATUS = 3;
+      FLUSH = 4;
+      SAVE_DATABASE = 5;
    }
 
-   Type type = 3;
+   Type type = 1;
+
+   string source = 2;
 }
 
 message Status
 {
-   string timestamp = 1;
-
    enum Type
    {
       UNKNOWN = 0;
       STARTING = 1;
       IDLE = 2;
-      DISCOVERING = 3;
-      INDEXING = 4;
       SHUTTING_DOWN = 5;
    }
 
-   Type type = 2;
+   Type type = 1;
+
+   string timestamp = 2;
 }
+
+message IndexRequest
+{
+   string projectName = 1;
+   string fileName = 2;
+   repeated string argument = 3;
+   bool shutdownAfter = 4;
+}
+

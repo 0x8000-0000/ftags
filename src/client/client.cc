@@ -2,7 +2,6 @@
 
 #include <zmq.hpp>
 
-#include <iostream>
 #include <string>
 
 int main()
@@ -17,8 +16,7 @@ int main()
    socket.connect("tcp://localhost:5555");
 
    ftags::Command command{};
-   command.set_version("1.0");
-   command.set_location("home");
+   command.set_source("client");
    command.set_type(ftags::Command::Type::Command_Type_PING);
    std::string serializedCommand;
    command.SerializeToString(&serializedCommand);
