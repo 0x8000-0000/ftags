@@ -64,9 +64,14 @@ Building
     git clone ...
     mkdir ftags.build
     cd ftags.build
-    [CXX=clang++-7] cmake ../ftags -DLIBCLANG_LLVM_CONFIG_EXECUTABLE=llvm-config-7 [-DCMAKE_BUILD_TYPE=Debug -GNinja]
+    [CXX=clang++-7] cmake ../ftags -DLIBCLANG_LLVM_CONFIG_EXECUTABLE=llvm-config-7 [-DCMAKE_BUILD_TYPE=Debug]
     cmake --build .
 
+Note: don't use -GNinja if you plan to work on this project because due to
+[CMake Bug  17450](https://gitlab.kitware.com/cmake/cmake/issues/17450) the
+compile\_commands.json contains invalid relative paths to the generated files
+instead of absolute paths. So your code completion engine will not find some
+of the protobuf-generated files.
 
 License
 -------
