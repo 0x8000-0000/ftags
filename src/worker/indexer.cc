@@ -37,7 +37,6 @@ int main(int argc, char* argv[])
    zmq::context_t context(1);
    zmq::socket_t  socket(context, ZMQ_PUSH);
 
-   std::cout << "Connecting to hello world server…" << std::endl;
    const std::string connectionString = std::string("tcp://localhost:") + std::to_string(ftags::WorkerPort);
    socket.connect(connectionString);
 
@@ -57,9 +56,8 @@ int main(int argc, char* argv[])
       {
          CXCompileCommand compileCommand = clang_CompileCommands_getCommand(compileCommands, ii);
 
-         CXString    fileNameString = clang_CompileCommand_getFilename(compileCommand);
-         const char* sourceFileName = clang_getCString(fileNameString);
-         std::cout << "Processing " << sourceFileName << std::endl;
+         CXString dirNameString  = clang_CompileCommand_getDirectory(compileCommand);
+         CXString fileNameString = clang_CompileCommand_getFilename(compileCommand);
 
          const unsigned        argCount = clang_CompileCommand_getNumArgs(compileCommand);
          std::vector<CXString> argumentsAsCXString;
@@ -67,6 +65,7 @@ int main(int argc, char* argv[])
 
          ftags::IndexRequest indexRequest{};
          indexRequest.set_projectname("main");
+         indexRequest.set_directoryname(clang_getCString(dirNameString));
          indexRequest.set_filename(clang_getCString(fileNameString));
 
          bool skipFileNames = false;
@@ -105,6 +104,7 @@ int main(int argc, char* argv[])
          }
 
          clang_disposeString(fileNameString);
+         clang_disposeString(dirNameString);
       }
 
       clang_CompileCommands_dispose(compileCommands);
