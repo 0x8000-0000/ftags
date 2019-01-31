@@ -22,12 +22,16 @@
 
 #include <zmq.hpp>
 
+#include <spdlog/spdlog.h>
+
 #include <string>
 #include <vector>
 
 int main(int argc, char* argv[])
 {
    GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+   spdlog::info("Indexer started");
 
    if (argc < 2)
    {
@@ -37,8 +41,10 @@ int main(int argc, char* argv[])
    zmq::context_t context(1);
    zmq::socket_t  socket(context, ZMQ_PUSH);
 
-   const std::string connectionString = std::string("tcp://localhost:") + std::to_string(ftags::WorkerPort);
-   socket.connect(connectionString);
+   const std::string connectionString = std::string("tcp://*:") + std::to_string(ftags::WorkerPort);
+   socket.bind(connectionString);
+
+   spdlog::info("Connection established");
 
    CXCompilationDatabase_Error ccderror            = CXCompilationDatabase_NoError;
    CXCompilationDatabase       compilationDatabase = clang_CompilationDatabase_fromDirectory(argv[1], &ccderror);
@@ -97,6 +103,8 @@ int main(int argc, char* argv[])
          zmq::message_t request(serializedRequest.size());
          memcpy(request.data(), serializedRequest.data(), serializedRequest.size());
          socket.send(request);
+
+         spdlog::info("Enqueued {}", clang_getCString(fileNameString));
 
          for (CXString cxString : argumentsAsCXString)
          {
