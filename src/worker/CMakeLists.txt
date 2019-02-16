@@ -1,10 +1,10 @@
-add_executable (ft_worker worker.cc)
+add_executable (ft_scanner scanner.cc)
 
-target_include_directories (ft_worker PRIVATE ${LIBCLANG_INCLUDEDIR})
-target_link_libraries (ft_worker PRIVATE project_options project_warnings)
-target_link_libraries (ft_worker PRIVATE zmq ftags)
-target_link_libraries (ft_worker PRIVATE -L${LIBCLANG_LIBDIR})
-target_link_libraries (ft_worker PRIVATE -lclang)
+target_include_directories (ft_scanner PRIVATE ${LIBCLANG_INCLUDEDIR})
+target_link_libraries (ft_scanner PRIVATE project_options project_warnings)
+target_link_libraries (ft_scanner PRIVATE zmq ftags)
+target_link_libraries (ft_scanner PRIVATE -L${LIBCLANG_LIBDIR})
+target_link_libraries (ft_scanner PRIVATE -lclang)
 
 add_executable (ft_indexer indexer.cc)
 

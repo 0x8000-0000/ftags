@@ -24,102 +24,125 @@
 
 #include <spdlog/spdlog.h>
 
+#include <iostream>
 #include <string>
 #include <vector>
 
-int main(int argc, char* argv[])
+#if 0
+namespace
+{
+
+struct VisitData
+{
+   unsigned int level = 0;
+};
+
+void dumpCursorInfo(CXCursor cursor, unsigned int level)
+{
+   CXString name = clang_getCursorSpelling(cursor);
+
+   CXCursorKind kind     = clang_getCursorKind(cursor);
+   CXString     kindName = clang_getCursorKindSpelling(kind);
+
+   CXSourceLocation location = clang_getCursorLocation(cursor);
+
+   CXString     fileName;
+   unsigned int line   = 0;
+   unsigned int column = 0;
+
+   clang_getPresumedLocation(location, &fileName, &line, &column);
+
+   std::cout << clang_getCString(fileName) << ':' << line << ':' << column << ':' << std::string(level, ' ')
+             << clang_getCString(kindName) << ':' << clang_getCString(name) << std::endl;
+
+   clang_disposeString(fileName);
+   clang_disposeString(kindName);
+   clang_disposeString(name);
+}
+
+CXChildVisitResult visitTranslationUnit(CXCursor cursor, CXCursor /* parent */, CXClientData clientData)
+{
+   VisitData* visitData = reinterpret_cast<VisitData*>(clientData);
+
+   dumpCursorInfo(cursor, visitData->level);
+
+   VisitData childrenData;
+   childrenData.level = visitData->level + 1;
+   clang_visitChildren(cursor, visitTranslationUnit, &childrenData);
+
+   return CXChildVisit_Continue;
+}
+
+} // anonymous namespace
+#endif
+
+int main()
 {
    GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-   spdlog::info("Indexer started");
-
-   if (argc < 2)
-   {
-      return 0;
-   }
+   spdlog::info("Worker started");
 
    zmq::context_t context(1);
-   zmq::socket_t  socket(context, ZMQ_PUSH);
+   zmq::socket_t  receiver(context, ZMQ_PULL);
 
-   const std::string connectionString = std::string("tcp://*:") + std::to_string(ftags::WorkerPort);
-   socket.bind(connectionString);
+   const std::string connectionString = std::string("tcp://localhost:") + std::to_string(ftags::WorkerPort);
+   receiver.connect(connectionString);
 
    spdlog::info("Connection established");
 
-   CXCompilationDatabase_Error ccderror            = CXCompilationDatabase_NoError;
-   CXCompilationDatabase       compilationDatabase = clang_CompilationDatabase_fromDirectory(argv[1], &ccderror);
+   bool shutdownRequested{false};
 
-   if (CXCompilationDatabase_NoError == ccderror)
+   while (!shutdownRequested)
    {
+      zmq::message_t message;
+      receiver.recv(&message);
+
+      ftags::IndexRequest indexRequest{};
+      indexRequest.ParseFromArray(message.data(), static_cast<int>(message.size()));
+      shutdownRequested = indexRequest.shutdownafter();
+
+      spdlog::info("Received message");
+
       CXIndex index = clang_createIndex(/* excludeDeclarationsFromPCH = */ 0,
                                         /* displayDiagnostics         = */ 0);
 
-      CXCompileCommands compileCommands = clang_CompilationDatabase_getAllCompileCommands(compilationDatabase);
-
-      const unsigned compilationCount = clang_CompileCommands_getSize(compileCommands);
-
-      for (unsigned ii = 0; ii < compilationCount; ii++)
+      std::vector<const char*> arguments;
+      const int                argCount = indexRequest.argument_size();
+      arguments.reserve(static_cast<size_t>(argCount));
+      for (int ii{0}; ii < argCount; ++ii)
       {
-         CXCompileCommand compileCommand = clang_CompileCommands_getCommand(compileCommands, ii);
-
-         CXString dirNameString  = clang_CompileCommand_getDirectory(compileCommand);
-         CXString fileNameString = clang_CompileCommand_getFilename(compileCommand);
-
-         const unsigned        argCount = clang_CompileCommand_getNumArgs(compileCommand);
-         std::vector<CXString> argumentsAsCXString;
-         argumentsAsCXString.reserve(argCount);
-
-         ftags::IndexRequest indexRequest{};
-         indexRequest.set_projectname("main");
-         indexRequest.set_directoryname(clang_getCString(dirNameString));
-         indexRequest.set_filename(clang_getCString(fileNameString));
-
-         bool skipFileNames = false;
-
-         for (unsigned jj = 0; jj < argCount; jj++)
-         {
-            if (skipFileNames)
-            {
-               skipFileNames = false;
-               continue;
-            }
-
-            CXString cxString = clang_CompileCommand_getArg(compileCommand, jj);
-            argumentsAsCXString.push_back(cxString);
-            const char* argumentText = clang_getCString(cxString);
-
-            if ((argumentText[0] == '-') && ((argumentText[1] == 'c') || (argumentText[1] == 'o')))
-            {
-               skipFileNames = true;
-               continue;
-            }
-
-            indexRequest.add_argument(argumentText);
-         }
-
-         std::string serializedRequest;
-         indexRequest.SerializeToString(&serializedRequest);
-
-         zmq::message_t request(serializedRequest.size());
-         memcpy(request.data(), serializedRequest.data(), serializedRequest.size());
-         socket.send(request);
-
-         spdlog::info("Enqueued {}", clang_getCString(fileNameString));
-
-         for (CXString cxString : argumentsAsCXString)
-         {
-            clang_disposeString(cxString);
-         }
-
-         clang_disposeString(fileNameString);
-         clang_disposeString(dirNameString);
+         arguments.push_back(indexRequest.argument(ii).c_str());
       }
 
-      clang_CompileCommands_dispose(compileCommands);
+      CXTranslationUnit translationUnit = nullptr;
+
+      spdlog::info("Processing {}", indexRequest.filename());
+
+      const CXErrorCode parseError =
+         clang_parseTranslationUnit2(/* CIdx                  = */ index,
+                                     /* source_filename       = */ indexRequest.filename().c_str(),
+                                     /* command_line_args     = */ arguments.data(),
+                                     /* num_command_line_args = */ static_cast<int>(arguments.size()),
+                                     /* unsaved_files         = */ nullptr,
+                                     /* num_unsaved_files     = */ 0,
+                                     /* options               = */ CXTranslationUnit_DetailedPreprocessingRecord |
+                                        CXTranslationUnit_SingleFileParse,
+                                     /* out_TU                = */ &translationUnit);
+
+      spdlog::info("Parse status for {}: {}", indexRequest.filename(), parseError);
+      if (parseError == CXError_Success)
+      {
+#if 0
+         CXCursor cursor = clang_getTranslationUnitCursor(translationUnit);
+         VisitData visitData;
+         clang_visitChildren(cursor, visitTranslationUnit, &visitData);
+#endif
+
+         clang_disposeTranslationUnit(translationUnit);
+      }
+
       clang_disposeIndex(index);
    }
-
-   clang_CompilationDatabase_dispose(compilationDatabase);
 
    return 0;
 }
