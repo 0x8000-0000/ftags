@@ -14,6 +14,8 @@
    limitations under the License.
 */
 
+#include <zmq_logger_sink.h>
+
 #include <ftags.pb.h>
 #include <services.h>
 
@@ -30,6 +32,12 @@
 int main(int argc, char* argv[])
 {
    GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+   const std::string loggerConnectionString = std::string("tcp://*:") + std::to_string(ftags::LoggerPort);
+   auto sink = std::make_shared<ftags::ZmqLoggerSinkSinglethreaded>(std::string{"scanner"}, loggerConnectionString);
+   spdlog::default_logger()->sinks().clear();
+   spdlog::default_logger()->sinks().push_back(sink);
+   spdlog::default_logger()->set_pattern("%v");
 
    spdlog::info("Indexer started");
 

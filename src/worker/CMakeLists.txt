@@ -13,3 +13,10 @@ target_link_libraries (ft_indexer PRIVATE project_options project_warnings)
 target_link_libraries (ft_indexer PRIVATE zmq ftags)
 target_link_libraries (ft_indexer PRIVATE -L${LIBCLANG_LIBDIR})
 target_link_libraries (ft_indexer PRIVATE -lclang)
+
+add_executable (ft_logger logger.cc)
+
+target_include_directories (ft_logger PRIVATE ${LIBCLANG_INCLUDEDIR})
+target_link_libraries (ft_logger PRIVATE project_options project_warnings)
+target_link_libraries (ft_logger PRIVATE zmq ftags)
+target_link_libraries (ft_logger PRIVATE -L${LIBCLANG_LIBDIR})

@@ -7,7 +7,8 @@ namespace ftags
 enum ServicePort
 {
    ServerPort = 5555,
-   WorkerPort
+   WorkerPort,
+   LoggerPort,
 };
 
 } // namespace ftags

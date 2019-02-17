@@ -168,12 +168,12 @@ Compilation Database</panel_attributes>
     <coordinates>
       <x>960</x>
       <y>740</y>
-      <w>130</w>
+      <w>120</w>
       <h>160</h>
     </coordinates>
     <panel_attributes>lt=&lt;&lt;-
 Send query</panel_attributes>
-    <additional_attributes>10.0;140.0;50.0;10.0</additional_attributes>
+    <additional_attributes>10.0;140.0;40.0;10.0</additional_attributes>
   </element>
   <element>
     <id>Relation</id>
@@ -245,5 +245,16 @@ Translation Unit Reference</panel_attributes>
     <panel_attributes>lt=&lt;&lt;-
 Unit Contents</panel_attributes>
     <additional_attributes>10.0;10.0;220.0;130.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLDeployment</id>
+    <coordinates>
+      <x>1410</x>
+      <y>840</y>
+      <w>110</w>
+      <h>50</h>
+    </coordinates>
+    <panel_attributes>Logger</panel_attributes>
+    <additional_attributes/>
   </element>
 </diagram>
