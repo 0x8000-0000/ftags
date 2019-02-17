@@ -16,6 +16,8 @@
 
 #include "zmq_logger_sink.h"
 
+#include <spdlog/spdlog.h>
+
 ftags::ZmqPublisher::ZmqPublisher(const std::string& name, const std::string& connectionString) :
    m_name{name},
    m_context{1},
@@ -38,4 +40,13 @@ void ftags::ZmqPublisher::publish(spdlog::level::level_enum level, const std::st
    zmq::message_t messageMsg{msg.size() - 1};
    memcpy(messageMsg.data(), msg.data(), msg.size() - 1);
    m_socket.send(messageMsg, 0);
+}
+
+void ftags::configureCentralLogger(const std::string& name, int loggerPort)
+{
+   const std::string loggerConnectionString = std::string("tcp://*:") + std::to_string(loggerPort);
+   auto sink = std::make_shared<ftags::ZmqLoggerSinkSinglethreaded>(name, loggerConnectionString);
+   spdlog::default_logger()->sinks().clear();
+   spdlog::default_logger()->sinks().push_back(sink);
+   spdlog::default_logger()->set_pattern("%v");
 }

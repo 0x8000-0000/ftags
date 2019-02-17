@@ -33,11 +33,7 @@ int main(int argc, char* argv[])
 {
    GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-   const std::string loggerConnectionString = std::string("tcp://*:") + std::to_string(ftags::LoggerPort);
-   auto sink = std::make_shared<ftags::ZmqLoggerSinkSinglethreaded>(std::string{"scanner"}, loggerConnectionString);
-   spdlog::default_logger()->sinks().clear();
-   spdlog::default_logger()->sinks().push_back(sink);
-   spdlog::default_logger()->set_pattern("%v");
+   ftags::configureCentralLogger(std::string{"scanner"}, ftags::LoggerPort);
 
    spdlog::info("Indexer started");
 

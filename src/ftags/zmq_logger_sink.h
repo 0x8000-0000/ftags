@@ -39,6 +39,8 @@ private:
    zmq::socket_t m_socket;
 };
 
+void configureCentralLogger(const std::string& name, int loggerPort);
+
 template <typename Mutex>
 class ZmqLoggerSink : public spdlog::sinks::base_sink<Mutex>
 {
