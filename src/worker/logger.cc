@@ -37,9 +37,8 @@ int main()
       zmq::message_t sourceMsg;
       receiver.recv(&sourceMsg);
 
-      int more = 0;
-      size_t more_size = sizeof(more);
-      receiver.getsockopt(ZMQ_RCVMORE, &more, &more_size);
+      zmq::message_t pidMsg;
+      receiver.recv(&pidMsg);
 
       zmq::message_t levelMsg;
       receiver.recv(&levelMsg);
@@ -49,6 +48,9 @@ int main()
 
       std::string source{static_cast<char*>(sourceMsg.data()), sourceMsg.size()};
 
+      pid_t pid{};
+      memcpy(&pid, pidMsg.data(), sizeof(pid_t));
+
       uint32_t levelUint32 = 0;
       assert(levelMsg.size() == sizeof(levelUint32));
       memcpy(&levelUint32, levelMsg.data(), sizeof(levelUint32));
@@ -56,6 +58,6 @@ int main()
 
       std::string msg{static_cast<char*>(messageMsg.data()), messageMsg.size()};
 
-      spdlog::log(level, "[{}] {}", source, msg);
+      spdlog::log(level, "[{}-{}] {}", source, pid, msg);
    }
 }

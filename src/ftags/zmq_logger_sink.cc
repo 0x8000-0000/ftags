@@ -18,12 +18,16 @@
 
 #include <spdlog/spdlog.h>
 
+#include <unistd.h>
+
 ftags::ZmqPublisher::ZmqPublisher(const std::string& name, const std::string& connectionString) :
    m_name{name},
    m_context{1},
    m_socket{m_context, ZMQ_PUSH}
 {
    m_socket.bind(connectionString);
+
+   m_pid = getpid();
 }
 
 void ftags::ZmqPublisher::publish(spdlog::level::level_enum level, const std::string& msg)
@@ -31,6 +35,10 @@ void ftags::ZmqPublisher::publish(spdlog::level::level_enum level, const std::st
    zmq::message_t sourceMsg{m_name.size()};
    memcpy(sourceMsg.data(), m_name.data(), m_name.size());
    m_socket.send(sourceMsg, ZMQ_SNDMORE);
+
+   zmq::message_t pidMsg{sizeof(pid_t)};
+   memcpy(pidMsg.data(), &m_pid, sizeof(pid_t));
+   m_socket.send(pidMsg, ZMQ_SNDMORE);
 
    uint32_t levelUint32{level};
    zmq::message_t levelMsg{sizeof(levelUint32)};

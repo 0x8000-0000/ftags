@@ -21,6 +21,8 @@
 
 #include <spdlog/sinks/base_sink.h>
 
+#include <sys/types.h>
+
 namespace ftags
 {
 
@@ -37,6 +39,8 @@ private:
    zmq::context_t m_context;
 
    zmq::socket_t m_socket;
+
+   pid_t m_pid;
 };
 
 void configureCentralLogger(const std::string& name, int loggerPort);

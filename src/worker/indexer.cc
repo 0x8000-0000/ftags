@@ -14,6 +14,8 @@
    limitations under the License.
 */
 
+#include <zmq_logger_sink.h>
+
 #include <ftags.pb.h>
 #include <services.h>
 
@@ -79,6 +81,8 @@ CXChildVisitResult visitTranslationUnit(CXCursor cursor, CXCursor /* parent */, 
 int main()
 {
    GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+   ftags::configureCentralLogger(std::string{"indexer"}, ftags::LoggerPort);
 
    spdlog::info("Worker started");
 
