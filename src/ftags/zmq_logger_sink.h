@@ -29,28 +29,31 @@ namespace ftags
 class ZmqPublisher
 {
 public:
-   ZmqPublisher(const std::string& name, const std::string& connectionString);
+   ZmqPublisher(zmq::context_t& context, const std::string& name, const std::string& connectionString);
 
    void publish(spdlog::level::level_enum level, const std::string& msg);
 
 private:
    std::string m_name;
 
-   zmq::context_t m_context;
-
    zmq::socket_t m_socket;
 
    pid_t m_pid;
 };
 
-void configureCentralLogger(const std::string& name, int loggerPort);
+class ZmqCentralLogger
+{
+   public:
+      ZmqCentralLogger(zmq::context_t& context, const std::string& name, int loggerPort);
+      ~ZmqCentralLogger();
+};
 
 template <typename Mutex>
 class ZmqLoggerSink : public spdlog::sinks::base_sink<Mutex>
 {
 public:
-   ZmqLoggerSink(const std::string& name, const std::string& connectionString) :
-      m_publisher{name, connectionString}
+   ZmqLoggerSink(zmq::context_t& context, const std::string& name, const std::string& connectionString) :
+      m_publisher{context, name, connectionString}
    {
    }
 
@@ -68,7 +71,6 @@ protected:
    }
 
 private:
-
    ZmqPublisher m_publisher;
 };
 

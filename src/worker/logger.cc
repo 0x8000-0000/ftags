@@ -27,8 +27,8 @@ int main()
    zmq::context_t context{1};
    zmq::socket_t  receiver{context, ZMQ_PULL};
 
-   const std::string connectionString = std::string("tcp://localhost:") + std::to_string(ftags::LoggerPort);
-   receiver.connect(connectionString);
+   const std::string connectionString = std::string("tcp://*:") + std::to_string(ftags::LoggerPort);
+   receiver.bind(connectionString);
 
    spdlog::info("Connection established");
 

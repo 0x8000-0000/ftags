@@ -33,7 +33,9 @@ int main(int argc, char* argv[])
 {
    GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-   ftags::configureCentralLogger(std::string{"scanner"}, ftags::LoggerPort);
+   zmq::context_t context(1);
+
+   ftags::ZmqCentralLogger centralLogger{context, std::string{"scanner"}, ftags::LoggerPort};
 
    spdlog::info("Indexer started");
 
@@ -42,7 +44,6 @@ int main(int argc, char* argv[])
       return 0;
    }
 
-   zmq::context_t context(1);
    zmq::socket_t  socket(context, ZMQ_PUSH);
 
    const std::string connectionString = std::string("tcp://*:") + std::to_string(ftags::WorkerPort);
@@ -108,7 +109,7 @@ int main(int argc, char* argv[])
          memcpy(request.data(), serializedRequest.data(), serializedRequest.size());
          socket.send(request);
 
-         spdlog::info("Enqueued {}", clang_getCString(fileNameString));
+         spdlog::info("Enqueued {} of {}: {}", ii, compilationCount, clang_getCString(fileNameString));
 
          for (CXString cxString : argumentsAsCXString)
          {
@@ -119,11 +120,17 @@ int main(int argc, char* argv[])
          clang_disposeString(dirNameString);
       }
 
+      spdlog::info("Done with enqueueing");
+
       clang_CompileCommands_dispose(compileCommands);
       clang_disposeIndex(index);
    }
 
    clang_CompilationDatabase_dispose(compilationDatabase);
+
+   spdlog::info("Indexer shutting down");
+
+   socket.close();
 
    return 0;
 }

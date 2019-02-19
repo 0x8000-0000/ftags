@@ -82,11 +82,12 @@ int main()
 {
    GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-   ftags::configureCentralLogger(std::string{"indexer"}, ftags::LoggerPort);
-
-   spdlog::info("Worker started");
-
    zmq::context_t context(1);
+
+   ftags::ZmqCentralLogger centralLogger{context, std::string{"indexer"}, ftags::LoggerPort};
+
+   spdlog::info("Indexer started");
+
    zmq::socket_t  receiver(context, ZMQ_PULL);
 
    const std::string connectionString = std::string("tcp://localhost:") + std::to_string(ftags::WorkerPort);

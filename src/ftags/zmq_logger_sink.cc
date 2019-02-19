@@ -20,12 +20,13 @@
 
 #include <unistd.h>
 
-ftags::ZmqPublisher::ZmqPublisher(const std::string& name, const std::string& connectionString) :
+ftags::ZmqPublisher::ZmqPublisher(zmq::context_t&    context,
+                                  const std::string& name,
+                                  const std::string& connectionString) :
    m_name{name},
-   m_context{1},
-   m_socket{m_context, ZMQ_PUSH}
+   m_socket{context, ZMQ_PUSH}
 {
-   m_socket.bind(connectionString);
+   m_socket.connect(connectionString);
 
    m_pid = getpid();
 }
@@ -40,7 +41,7 @@ void ftags::ZmqPublisher::publish(spdlog::level::level_enum level, const std::st
    memcpy(pidMsg.data(), &m_pid, sizeof(pid_t));
    m_socket.send(pidMsg, ZMQ_SNDMORE);
 
-   uint32_t levelUint32{level};
+   uint32_t       levelUint32{level};
    zmq::message_t levelMsg{sizeof(levelUint32)};
    memcpy(levelMsg.data(), &levelUint32, sizeof(levelUint32));
    m_socket.send(levelMsg, ZMQ_SNDMORE);
@@ -50,11 +51,19 @@ void ftags::ZmqPublisher::publish(spdlog::level::level_enum level, const std::st
    m_socket.send(messageMsg, 0);
 }
 
-void ftags::configureCentralLogger(const std::string& name, int loggerPort)
+ftags::ZmqCentralLogger::ZmqCentralLogger(zmq::context_t& context, const std::string& name, int loggerPort)
 {
-   const std::string loggerConnectionString = std::string("tcp://*:") + std::to_string(loggerPort);
-   auto sink = std::make_shared<ftags::ZmqLoggerSinkSinglethreaded>(name, loggerConnectionString);
+   const std::string loggerConnectionString = std::string("tcp://localhost:") + std::to_string(loggerPort);
+   auto sink = std::make_shared<ftags::ZmqLoggerSinkSinglethreaded>(context, name, loggerConnectionString);
+
+   // TODO: save default logger and restore it in the destructor
+
    spdlog::default_logger()->sinks().clear();
    spdlog::default_logger()->sinks().push_back(sink);
    spdlog::default_logger()->set_pattern("%v");
+}
+
+ftags::ZmqCentralLogger::~ZmqCentralLogger()
+{
+   spdlog::default_logger()->sinks().clear();
 }
