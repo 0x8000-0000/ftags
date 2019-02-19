@@ -30,6 +30,8 @@
 #include <string>
 #include <vector>
 
+#include <signal.h>
+
 #if 0
 namespace
 {
@@ -78,9 +80,30 @@ CXChildVisitResult visitTranslationUnit(CXCursor cursor, CXCursor /* parent */, 
 } // anonymous namespace
 #endif
 
+static volatile int s_interrupted = 0;
+
+static void signalHandler(int /* signal_value */)
+{
+   s_interrupted = 1;
+}
+
+static void setupSignals(void)
+{
+   struct sigaction action
+   {
+   };
+   action.sa_handler = signalHandler;
+   action.sa_flags   = 0;
+   sigemptyset(&action.sa_mask);
+   sigaction(SIGINT, &action, NULL);
+   sigaction(SIGTERM, &action, NULL);
+}
+
 int main()
 {
    GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+   setupSignals();
 
    zmq::context_t context(1);
 
@@ -88,7 +111,7 @@ int main()
 
    spdlog::info("Indexer started");
 
-   zmq::socket_t  receiver(context, ZMQ_PULL);
+   zmq::socket_t receiver(context, ZMQ_PULL);
 
    const std::string connectionString = std::string("tcp://localhost:") + std::to_string(ftags::WorkerPort);
    receiver.connect(connectionString);
@@ -100,54 +123,68 @@ int main()
    while (!shutdownRequested)
    {
       zmq::message_t message;
-      receiver.recv(&message);
-
-      ftags::IndexRequest indexRequest{};
-      indexRequest.ParseFromArray(message.data(), static_cast<int>(message.size()));
-      shutdownRequested = indexRequest.shutdownafter();
-
-      spdlog::info("Received message");
-
-      CXIndex index = clang_createIndex(/* excludeDeclarationsFromPCH = */ 0,
-                                        /* displayDiagnostics         = */ 0);
-
-      std::vector<const char*> arguments;
-      const int                argCount = indexRequest.argument_size();
-      arguments.reserve(static_cast<size_t>(argCount));
-      for (int ii{0}; ii < argCount; ++ii)
+      try
       {
-         arguments.push_back(indexRequest.argument(ii).c_str());
-      }
+         receiver.recv(&message);
 
-      CXTranslationUnit translationUnit = nullptr;
+         ftags::IndexRequest indexRequest{};
+         indexRequest.ParseFromArray(message.data(), static_cast<int>(message.size()));
+         shutdownRequested = indexRequest.shutdownafter();
 
-      spdlog::info("Processing {}", indexRequest.filename());
+         spdlog::info("Received message");
 
-      const CXErrorCode parseError =
-         clang_parseTranslationUnit2(/* CIdx                  = */ index,
-                                     /* source_filename       = */ indexRequest.filename().c_str(),
-                                     /* command_line_args     = */ arguments.data(),
-                                     /* num_command_line_args = */ static_cast<int>(arguments.size()),
-                                     /* unsaved_files         = */ nullptr,
-                                     /* num_unsaved_files     = */ 0,
-                                     /* options               = */ CXTranslationUnit_DetailedPreprocessingRecord |
-                                        CXTranslationUnit_SingleFileParse,
-                                     /* out_TU                = */ &translationUnit);
+         CXIndex index = clang_createIndex(/* excludeDeclarationsFromPCH = */ 0,
+                                           /* displayDiagnostics         = */ 0);
 
-      spdlog::info("Parse status for {}: {}", indexRequest.filename(), parseError);
-      if (parseError == CXError_Success)
-      {
+         std::vector<const char*> arguments;
+         const int                argCount = indexRequest.argument_size();
+         arguments.reserve(static_cast<size_t>(argCount));
+         for (int ii{0}; ii < argCount; ++ii)
+         {
+            arguments.push_back(indexRequest.argument(ii).c_str());
+         }
+
+         CXTranslationUnit translationUnit = nullptr;
+
+         spdlog::info("Processing {}", indexRequest.filename());
+
+         const CXErrorCode parseError =
+            clang_parseTranslationUnit2(/* CIdx                  = */ index,
+                                        /* source_filename       = */ indexRequest.filename().c_str(),
+                                        /* command_line_args     = */ arguments.data(),
+                                        /* num_command_line_args = */ static_cast<int>(arguments.size()),
+                                        /* unsaved_files         = */ nullptr,
+                                        /* num_unsaved_files     = */ 0,
+                                        /* options               = */ CXTranslationUnit_DetailedPreprocessingRecord |
+                                           CXTranslationUnit_SingleFileParse,
+                                        /* out_TU                = */ &translationUnit);
+
+         spdlog::info("Parse status for {}: {}", indexRequest.filename(), parseError);
+         if (parseError == CXError_Success)
+         {
 #if 0
-         CXCursor cursor = clang_getTranslationUnitCursor(translationUnit);
-         VisitData visitData;
-         clang_visitChildren(cursor, visitTranslationUnit, &visitData);
+            CXCursor cursor = clang_getTranslationUnitCursor(translationUnit);
+            VisitData visitData;
+            clang_visitChildren(cursor, visitTranslationUnit, &visitData);
 #endif
 
-         clang_disposeTranslationUnit(translationUnit);
-      }
+            clang_disposeTranslationUnit(translationUnit);
+         }
 
-      clang_disposeIndex(index);
+         clang_disposeIndex(index);
+      }
+      catch (zmq::error_t& ze)
+      {
+         spdlog::error("0mq exception: {}", ze.what());
+      }
+      if (s_interrupted)
+      {
+         spdlog::debug("interrupt received; stopping worker");
+         break;
+      }
    }
+
+   spdlog::info("Indexer shutting down");
 
    return 0;
 }

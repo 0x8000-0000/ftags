@@ -20,8 +20,32 @@
 
 #include <spdlog/spdlog.h>
 
+#include <signal.h>
+
+static volatile int s_interrupted = 0;
+
+static void signalHandler(int /* signal_value */)
+{
+   s_interrupted = 1;
+}
+
+static void setupSignals(void)
+{
+   struct sigaction action
+   {
+   };
+   action.sa_handler = signalHandler;
+   action.sa_flags   = 0;
+   sigemptyset(&action.sa_mask);
+   sigaction(SIGINT, &action, NULL);
+   sigaction(SIGTERM, &action, NULL);
+}
+
+
 int main()
 {
+   setupSignals();
+
    spdlog::info("Logger started");
 
    zmq::context_t context{1};
@@ -34,30 +58,46 @@ int main()
 
    while (true)
    {
-      zmq::message_t sourceMsg;
-      receiver.recv(&sourceMsg);
+      try
+      {
+         zmq::message_t sourceMsg;
+         receiver.recv(&sourceMsg);
 
-      zmq::message_t pidMsg;
-      receiver.recv(&pidMsg);
+         zmq::message_t pidMsg;
+         receiver.recv(&pidMsg);
 
-      zmq::message_t levelMsg;
-      receiver.recv(&levelMsg);
+         zmq::message_t levelMsg;
+         receiver.recv(&levelMsg);
 
-      zmq::message_t messageMsg;
-      receiver.recv(&messageMsg);
+         zmq::message_t messageMsg;
+         receiver.recv(&messageMsg);
 
-      std::string source{static_cast<char*>(sourceMsg.data()), sourceMsg.size()};
+         std::string source{static_cast<char*>(sourceMsg.data()), sourceMsg.size()};
 
-      pid_t pid{};
-      memcpy(&pid, pidMsg.data(), sizeof(pid_t));
+         pid_t pid{};
+         memcpy(&pid, pidMsg.data(), sizeof(pid_t));
 
-      uint32_t levelUint32 = 0;
-      assert(levelMsg.size() == sizeof(levelUint32));
-      memcpy(&levelUint32, levelMsg.data(), sizeof(levelUint32));
-      spdlog::level::level_enum level = static_cast<spdlog::level::level_enum>(levelUint32);
+         uint32_t levelUint32 = 0;
+         assert(levelMsg.size() == sizeof(levelUint32));
+         memcpy(&levelUint32, levelMsg.data(), sizeof(levelUint32));
+         spdlog::level::level_enum level = static_cast<spdlog::level::level_enum>(levelUint32);
 
-      std::string msg{static_cast<char*>(messageMsg.data()), messageMsg.size()};
+         std::string msg{static_cast<char*>(messageMsg.data()), messageMsg.size()};
 
-      spdlog::log(level, "[{}-{}] {}", source, pid, msg);
+         spdlog::log(level, "[{}-{}] {}", source, pid, msg);
+      }
+      catch (zmq::error_t& ze)
+      {
+         spdlog::error("0mq exception: {}", ze.what());
+      }
+      if (s_interrupted)
+      {
+         spdlog::debug("interrupt received; stopping worker");
+         break;
+      }
    }
+
+   spdlog::info("Logger shutting down");
+
+   return 0;
 }
