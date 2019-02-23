@@ -82,4 +82,5 @@ find_package (spdlog)
 #find_package (ZeroMQ REQUIRED)
 
 add_subdirectory (src)
+add_subdirectory (test)
 
