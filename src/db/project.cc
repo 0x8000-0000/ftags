@@ -20,6 +20,11 @@ ftags::ProjectDb::ProjectDb()
 {
 }
 
+ftags::Record* ftags::ProjectDb::addCursor(const ftags::Cursor& /* cursor */, const ftags::Attributes& /* attributes */)
+{
+   return nullptr;
+}
+
 std::vector<ftags::Record*> ftags::ProjectDb::getFunctions() const
 {
    std::vector<ftags::Record*> functions;

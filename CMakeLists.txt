@@ -66,6 +66,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
       -Wno-documentation-unknown-command
       -Wno-switch-enum -Wno-weak-vtables -Wno-missing-noreturn
       -Wno-undefined-func-template -Wno-disabled-macro-expansion
+      -Wno-unused-member-function
       )
 endif ()
 endif ()

@@ -154,17 +154,17 @@ struct Attributes
 
 struct Location
 {
-   const char* const fileName;
-   int               line;
-   int               column;
+   const char* fileName;
+   int   line;
+   int   column;
 };
 
 struct Cursor
 {
-   const char* const symbolNamespace;
-   const char* const symbolName;
+   char*       symbolNamespace;
+   const char* symbolName;
 
-   const char* const symbolType;
+   const char* symbolType;
 
    Location location;
    int      endLine;
