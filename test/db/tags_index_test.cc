@@ -14,7 +14,7 @@
    limitations under the License.
 */
 
-#include <tags.h>
+#include <project.h>
 #include <tags_builder.h>
 
 #include <gtest/gtest.h>
@@ -37,7 +37,7 @@ TEST(TagsIndexTest, IndexOneFile)
    std::vector<const char*> arguments;
    arguments.push_back("-Wall");
    arguments.push_back("-Wextra");
-   ftags::Tags tagsDb = ftags::parseTranslationUnit(helloPath, arguments);
+   ftags::ProjectDb tagsDb = ftags::parseTranslationUnit(helloPath, arguments);
 
    std::vector<ftags::Record*> functions = tagsDb.getFunctions();
 

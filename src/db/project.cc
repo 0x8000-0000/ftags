@@ -14,13 +14,13 @@
    limitations under the License.
 */
 
-#include <tags.h>
+#include <project.h>
 
-ftags::Tags::Tags()
+ftags::ProjectDb::ProjectDb()
 {
 }
 
-std::vector<ftags::Record*> ftags::Tags::getFunctions() const
+std::vector<ftags::Record*> ftags::ProjectDb::getFunctions() const
 {
    std::vector<ftags::Record*> functions;
    return functions;

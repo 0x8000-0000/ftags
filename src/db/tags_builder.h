@@ -17,14 +17,14 @@
 #ifndef DB_TAGS_BUILDER_H_INCLUDED
 #define DB_TAGS_BUILDER_H_INCLUDED
 
-#include <tags.h>
+#include <project.h>
 
 #include <string>
 
 namespace ftags
 {
 
-Tags parseTranslationUnit(const std::string& fileName, std::vector<const char*> arguments);
+ProjectDb parseTranslationUnit(const std::string& fileName, std::vector<const char*> arguments);
 
 } // namespace ftags
 

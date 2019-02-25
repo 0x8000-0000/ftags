@@ -1,8 +1,8 @@
 #include <tags_builder.h>
 
-ftags::Tags ftags::parseTranslationUnit(const std::string& /* fileName */, std::vector<const char*> /* arguments */)
+ftags::ProjectDb ftags::parseTranslationUnit(const std::string& /* fileName */, std::vector<const char*> /* arguments */)
 {
-   ftags::Tags tags;
+   ftags::ProjectDb tags;
    return tags;
 }
 

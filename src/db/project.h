@@ -14,8 +14,8 @@
    limitations under the License.
 */
 
-#ifndef DB_TAGS_H_INCLUDED
-#define DB_TAGS_H_INCLUDED
+#ifndef DB_PROJECT_H_INCLUDED
+#define DB_PROJECT_H_INCLUDED
 
 #include <string_table.h>
 
@@ -187,14 +187,14 @@ struct Record
    Attributes attributes;
 };
 
-class Tags
+class ProjectDb
 {
 public:
    /*
     * Construction
     */
 
-   Tags();
+   ProjectDb();
 
    Record* addCursor(const Cursor& cursor, const Attributes& attributes);
 
@@ -245,7 +245,7 @@ public:
    /** Merge the tags from other database into this one
     * @param other is the other database
     */
-   void mergeFrom(const Tags& other);
+   void mergeFrom(const ProjectDb& other);
 
    /*
     * Serialization
@@ -253,7 +253,7 @@ public:
 
    std::vector<uint8_t> serialize() const;
 
-   static Tags deserialize(const uint8_t* buffer, size_t size);
+   static ProjectDb deserialize(const uint8_t* buffer, size_t size);
 
 private:
    StringTable m_symbolTable;
@@ -263,4 +263,4 @@ private:
 
 } // namespace ftags
 
-#endif // DB_TAGS_H_INCLUDED
+#endif // DB_PROJECT_H_INCLUDED
