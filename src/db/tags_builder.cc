@@ -5,3 +5,7 @@ ftags::Tags ftags::parseTranslationUnit(const std::string& /* fileName */, std::
    ftags::Tags tags;
    return tags;
 }
+
+/*
+ * Use clang_getCursorReferenced to get to declaration
+ */
