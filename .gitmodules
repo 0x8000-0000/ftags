@@ -1,3 +1,7 @@
 [submodule "external/Clara"]
 	path = external/Clara
 	url = https://github.com/catchorg/Clara
+[submodule "external/plf_colony"]
+	path = external/plf_colony
+	url = git@github.com:0x8000-0000/plf_colony.git
+   branch = modernize-cpp
