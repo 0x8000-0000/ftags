@@ -19,6 +19,9 @@
 
 #include <string_table.h>
 
+#include <plf_colony.h>
+
+#include <map>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -155,8 +158,8 @@ struct Attributes
 struct Location
 {
    const char* fileName;
-   int   line;
-   int   column;
+   int         line;
+   int         column;
 };
 
 struct Cursor
@@ -164,7 +167,7 @@ struct Cursor
    char*       symbolNamespace;
    const char* symbolName;
 
-   const char* symbolType;
+   SymbolType symbolType;
 
    Location location;
    int      endLine;
@@ -202,6 +205,8 @@ public:
 
    Cursor inflateRecord(const Record* record);
 
+   static ProjectDb parseTranslationUnit(const std::string& fileName, std::vector<const char*> arguments);
+
    /*
     * General queries
     */
@@ -210,6 +215,8 @@ public:
    std::vector<Record*> getClasses() const;
 
    std::vector<Record*> getGlobalVariables() const;
+
+   bool isFileIndexed(const std::string& fileName) const;
 
    /*
     * Specific queries
@@ -256,9 +263,23 @@ public:
    static ProjectDb deserialize(const uint8_t* buffer, size_t size);
 
 private:
+   enum State
+   {
+      OptimizedForParse,
+      OptimizedForQuery,
+   } m_operatingState;
+
+   void updateIndices();
+
+   plf::colony<Record> m_records;
+
    StringTable m_symbolTable;
    StringTable m_namespaceTable;
    StringTable m_fileNameTable;
+
+   std::map<uint32_t, std::vector<plf::colony<Record>::iterator>> m_fileIndex;
+
+   std::map<uint32_t, std::vector<plf::colony<Record>::iterator>> m_symbolIndex;
 };
 
 } // namespace ftags

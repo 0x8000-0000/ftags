@@ -16,13 +16,33 @@
 
 #include <project.h>
 
-ftags::ProjectDb::ProjectDb()
+ftags::ProjectDb::ProjectDb() : m_operatingState{OptimizedForParse}
 {
 }
 
-ftags::Record* ftags::ProjectDb::addCursor(const ftags::Cursor& /* cursor */, const ftags::Attributes& /* attributes */)
+ftags::Record* ftags::ProjectDb::addCursor(const ftags::Cursor& cursor, const ftags::Attributes& /* attributes */)
 {
-   return nullptr;
+   ftags::Record newRecord;
+   newRecord.fileNameKey   = m_fileNameTable.addKey(cursor.location.fileName);
+   newRecord.symbolNameKey = m_symbolTable.addKey(cursor.symbolName);
+
+   auto iter = m_records.insert(newRecord);
+
+   m_fileIndex[newRecord.fileNameKey].push_back(iter);
+   m_symbolIndex[newRecord.symbolNameKey].push_back(iter);
+
+   return &*iter;
+}
+
+bool ftags::ProjectDb::isFileIndexed(const std::string& fileName) const
+{
+   bool isIndexed = false;
+   uint32_t key = m_fileNameTable.getKey(fileName.data());
+   if (key)
+   {
+      isIndexed = m_fileIndex.count(key) != 0;
+   }
+   return isIndexed;
 }
 
 std::vector<ftags::Record*> ftags::ProjectDb::getFunctions() const

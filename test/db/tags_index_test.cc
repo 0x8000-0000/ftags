@@ -15,7 +15,6 @@
 */
 
 #include <project.h>
-#include <tags_builder.h>
 
 #include <gtest/gtest.h>
 
@@ -37,10 +36,31 @@ TEST(TagsIndexTest, IndexOneFile)
    std::vector<const char*> arguments;
    arguments.push_back("-Wall");
    arguments.push_back("-Wextra");
-   ftags::ProjectDb tagsDb = ftags::parseTranslationUnit(helloPath, arguments);
+   ftags::ProjectDb tagsDb = ftags::ProjectDb::parseTranslationUnit(helloPath, arguments);
+
+   ASSERT_TRUE(tagsDb.isFileIndexed(helloPath));
+}
+
+TEST(TagsIndexTest, IndexOneFileHasFunctions)
+{
+   /*
+    * This assumes we run the test from the root of the build directory.
+    * There's no portable way yet to get the path of the current running
+    * binary.
+    */
+   auto path = std::filesystem::current_path();
+
+   auto helloPath = path / "test" / "db" / "data" / "hello" / "hello.cc";
+   ASSERT_TRUE(std::filesystem::exists(helloPath));
+
+   std::vector<const char*> arguments;
+   arguments.push_back("-Wall");
+   arguments.push_back("-Wextra");
+   ftags::ProjectDb tagsDb = ftags::ProjectDb::parseTranslationUnit(helloPath, arguments);
+
+   ASSERT_TRUE(tagsDb.isFileIndexed(helloPath));
 
    std::vector<ftags::Record*> functions = tagsDb.getFunctions();
-
    ASSERT_EQ(1, functions.size());
 }
 

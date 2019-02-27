@@ -82,6 +82,7 @@ find_package (spdlog)
 # fails on Debian, and not needed but left here for other platforms
 #find_package (ZeroMQ REQUIRED)
 
+add_subdirectory (external)
 add_subdirectory (src)
 add_subdirectory (test)
 

@@ -14,7 +14,7 @@
    limitations under the License.
 */
 
-#include <tags_builder.h>
+#include <project.h>
 
 #include <clang-c/CXString.h>
 #include <clang-c/Index.h>
@@ -79,6 +79,7 @@ void processCursor(ftags::ProjectDb* projectDb, CXCursor clangCursor)
    ftags::Attributes attributes;
 
    cursor.symbolName = name.c_str();
+   cursor.symbolType = static_cast<ftags::SymbolType>(clang_getCursorKind(clangCursor));
 
    CXStringWrapper fileName;
    unsigned int    line   = 0;
@@ -106,7 +107,7 @@ CXChildVisitResult visitTranslationUnit(CXCursor cursor, CXCursor /* parent */, 
 
 } // namespace
 
-ftags::ProjectDb ftags::parseTranslationUnit(const std::string& fileName, std::vector<const char*> arguments)
+ftags::ProjectDb ftags::ProjectDb::parseTranslationUnit(const std::string& fileName, std::vector<const char*> arguments)
 {
    ftags::ProjectDb tags;
 
