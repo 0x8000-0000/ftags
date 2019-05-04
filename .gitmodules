@@ -3,4 +3,4 @@
 	url = https://github.com/catchorg/Clara
 [submodule "external/plf_colony"]
 	path = external/plf_colony
-   url = https://github.com/mattreecebentley/plf_colony
+	url = https://github.com/mattreecebentley/plf_colony
