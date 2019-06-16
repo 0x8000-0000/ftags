@@ -24,6 +24,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 
@@ -62,27 +63,33 @@ public:
 class StringTable
 {
 public:
-   const char* getString(uint32_t stringKey) const noexcept;
 
-   uint32_t getKey(const char* string) const noexcept;
-   uint32_t addKey(const char* string);
+   using Key = uint32_t;
+
+   const char* getString(Key stringKey) const noexcept;
+
+   Key getKey(const char* string) const noexcept;
+   Key addKey(const char* string);
    void removeKey(const char* string);
 
    /*
     * Serialization interface
     */
 
-   std::vector<uint8_t> serialize() const;
+   std::vector<std::byte> serialize() const;
 
-   static StringTable deserialize(const uint8_t* buffer, size_t size);
+   static StringTable deserialize(const std::byte* buffer, size_t size);
 
 private:
-   ftags::Store<char, uint32_t, 24> m_store;
+
+   static constexpr uint32_t k_bucketSize = 24;
+
+   ftags::Store<char, Key, k_bucketSize> m_store;
 
    /*
     * Lookup table; can be reconstructed from the store above.
     */
-   std::unordered_map<const char*, uint32_t, CharPointerHashingFunctor, CharPointerCompareFunctor> m_index;
+   std::unordered_map<const char*, Key, CharPointerHashingFunctor, CharPointerCompareFunctor> m_index;
 };
 
 } // namespace ftags

@@ -22,7 +22,7 @@
 #include <cassert>
 #include <cstring>
 
-const char* ftags::StringTable::getString(uint32_t stringKey) const noexcept
+const char* ftags::StringTable::getString(Key stringKey) const noexcept
 {
    auto location = m_store.get(stringKey);
 
@@ -36,7 +36,7 @@ const char* ftags::StringTable::getString(uint32_t stringKey) const noexcept
    }
 }
 
-uint32_t ftags::StringTable::getKey(const char* inputString) const noexcept
+ftags::StringTable::Key ftags::StringTable::getKey(const char* inputString) const noexcept
 {
    auto iter = m_index.find(inputString);
    if (m_index.end() == iter)
@@ -49,15 +49,15 @@ uint32_t ftags::StringTable::getKey(const char* inputString) const noexcept
    }
 }
 
-uint32_t ftags::StringTable::addKey(const char* inputString)
+ftags::StringTable::Key ftags::StringTable::addKey(const char* inputString)
 {
-   const uint32_t currentPosition{getKey(inputString)};
+   const Key currentPosition{getKey(inputString)};
    if (currentPosition != 0)
    {
       return currentPosition;
    }
 
-   const auto inputLength{static_cast<uint32_t>(strlen(inputString))};
+   const auto inputLength{static_cast<Key>(strlen(inputString))};
 
    auto allocation{m_store.allocate(inputLength + 1)};
 
@@ -68,13 +68,13 @@ uint32_t ftags::StringTable::addKey(const char* inputString)
    return allocation.key;
 }
 
-std::vector<uint8_t> ftags::StringTable::serialize() const
+std::vector<std::byte> ftags::StringTable::serialize() const
 {
-   std::vector<uint8_t> retval;
+   std::vector<std::byte> retval;
    return retval;
 }
 
-ftags::StringTable ftags::StringTable::deserialize(const uint8_t* /* buffer */, size_t /* size */)
+ftags::StringTable ftags::StringTable::deserialize(const std::byte* /* buffer */, size_t /* size */)
 {
    ftags::StringTable retval;
    return retval;
