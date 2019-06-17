@@ -57,13 +57,15 @@ ftags::StringTable::Key ftags::StringTable::addKey(const char* inputString)
       return currentPosition;
    }
 
-   const auto inputLength{static_cast<Key>(strlen(inputString))};
+   const auto inputLength{static_cast<uint32_t>(strlen(inputString))};
 
+   // allocate extra bite for NUL
    auto allocation{m_store.allocate(inputLength + 1)};
 
+   // also copy NUL
    std::copy_n(inputString, inputLength + 1, allocation.iterator);
 
-   m_index[inputString] = allocation.key;
+   m_index[&*allocation.iterator] = allocation.key;
 
    return allocation.key;
 }
