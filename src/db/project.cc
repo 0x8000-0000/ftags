@@ -23,6 +23,7 @@ ftags::ProjectDb::ProjectDb() : m_operatingState{OptimizedForParse}
 ftags::TranslationUnit::TranslationUnit(StringTable& symbolTable, const TranslationUnit& /* original */) :
    m_symbolTable{symbolTable}
 {
+   /* iterate over the original records and copy them locally */
 }
 
 void ftags::TranslationUnit::addCursor(const ftags::Cursor& cursor, const ftags::Attributes& attributes)

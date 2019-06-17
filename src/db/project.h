@@ -34,11 +34,12 @@ namespace ftags
  */
 enum class SymbolType : uint8_t
 {
-   StructDeclaration      = 2,
-   UnionDeclaration       = 3,
-   ClassDeclaration       = 4,
-   EnumerationDeclaration = 5,
+   Undefined = 0,
 
+   StructDeclaration              = 2,
+   UnionDeclaration               = 3,
+   ClassDeclaration               = 4,
+   EnumerationDeclaration         = 5,
    FieldDeclaration               = 6,
    EnumerationConstantDeclaration = 7,
    FunctionDeclaration            = 8,

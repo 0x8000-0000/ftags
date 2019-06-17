@@ -71,15 +71,40 @@ private:
    CXString m_string;
 };
 
+static ftags::SymbolType getSymbolType(CXCursor clangCursor, ftags::Attributes& attributes)
+{
+   enum CXCursorKind cursorKind = clang_getCursorKind(clangCursor);
+
+   ftags::SymbolType symbolType = ftags::SymbolType::Undefined;
+
+   switch (cursorKind)
+   {
+      case CXCursor_StructDecl:
+         symbolType = ftags::SymbolType::StructDeclaration;
+         attributes.isDeclaration = true;
+         break;
+
+      case CXCursor_FunctionDecl:
+         symbolType = ftags::SymbolType::FunctionDeclaration;
+         attributes.isDeclaration = true;
+         break;
+
+      default:
+         break;
+   }
+
+   return symbolType;
+}
+
 void processCursor(ftags::TranslationUnit* translationUnit, CXCursor clangCursor)
 {
    CXStringWrapper name{clang_getCursorSpelling(clangCursor)};
 
-   ftags::Cursor     cursor;
-   ftags::Attributes attributes;
+   ftags::Cursor     cursor = {};
+   ftags::Attributes attributes = {};
 
    cursor.symbolName = name.c_str();
-   cursor.symbolType = static_cast<ftags::SymbolType>(clang_getCursorKind(clangCursor));
+   cursor.symbolType = getSymbolType(clangCursor, attributes);
 
    CXStringWrapper fileName;
    unsigned int    line   = 0;
