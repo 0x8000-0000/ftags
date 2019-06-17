@@ -71,7 +71,7 @@ private:
    CXString m_string;
 };
 
-void processCursor(ftags::ProjectDb* projectDb, CXCursor clangCursor)
+void processCursor(ftags::TranslationUnit* translationUnit, CXCursor clangCursor)
 {
    CXStringWrapper name{clang_getCursorSpelling(clangCursor)};
 
@@ -92,14 +92,14 @@ void processCursor(ftags::ProjectDb* projectDb, CXCursor clangCursor)
    cursor.location.line     = static_cast<int>(line);
    cursor.location.column   = static_cast<int>(column);
 
-   projectDb->addCursor(cursor, attributes);
+   translationUnit->addCursor(cursor, attributes);
 }
 
 CXChildVisitResult visitTranslationUnit(CXCursor cursor, CXCursor /* parent */, CXClientData clientData)
 {
-   ftags::ProjectDb* projectDb = reinterpret_cast<ftags::ProjectDb*>(clientData);
+   ftags::TranslationUnit* translationUnit = reinterpret_cast<ftags::TranslationUnit*>(clientData);
 
-   processCursor(projectDb, cursor);
+   processCursor(translationUnit, cursor);
 
    clang_visitChildren(cursor, visitTranslationUnit, clientData);
    return CXChildVisit_Continue;
@@ -107,9 +107,10 @@ CXChildVisitResult visitTranslationUnit(CXCursor cursor, CXCursor /* parent */, 
 
 } // namespace
 
-ftags::ProjectDb ftags::ProjectDb::parseTranslationUnit(const std::string& fileName, std::vector<const char*> arguments)
+ftags::TranslationUnit ftags::TranslationUnit::parse(const std::string& fileName, std::vector<const char*> arguments)
 {
-   ftags::ProjectDb tags;
+   ftags::StringTable symbolTable;
+   ftags::TranslationUnit translationUnit(symbolTable);
 
    auto clangIndex = std::unique_ptr<void, CXIndexDestroyer>(clang_createIndex(/* excludeDeclarationsFromPCH = */ 0,
                                                                                /* displayDiagnostics         = */ 0));
@@ -128,17 +129,17 @@ ftags::ProjectDb ftags::ProjectDb::parseTranslationUnit(const std::string& fileN
 
    if ((parseError == CXError_Success) && (nullptr != translationUnitPtr))
    {
-      auto translationUnit = std::unique_ptr<CXTranslationUnitImpl, CXTranslationUnitDestroyer>(translationUnitPtr);
+      auto clangTranslationUnit = std::unique_ptr<CXTranslationUnitImpl, CXTranslationUnitDestroyer>(translationUnitPtr);
 
-      CXCursor cursor = clang_getTranslationUnitCursor(translationUnit.get());
-      clang_visitChildren(cursor, visitTranslationUnit, &tags);
+      CXCursor cursor = clang_getTranslationUnitCursor(clangTranslationUnit.get());
+      clang_visitChildren(cursor, visitTranslationUnit, &translationUnit);
    }
    else
    {
       throw std::runtime_error("Failed to parse input");
    }
 
-   return tags;
+   return translationUnit;
 }
 
 /*

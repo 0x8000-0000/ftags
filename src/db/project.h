@@ -19,8 +19,6 @@
 
 #include <string_table.h>
 
-#include <plf_colony.h>
-
 #include <map>
 #include <string>
 #include <unordered_map>
@@ -176,10 +174,13 @@ struct Cursor
 
 struct Record
 {
-   uint32_t symbolNameKey;
-   uint32_t namespaceKey;
+   using SymbolNameKey    = ftags::StringTable::Key;
+   using NamespaceNameKey = ftags::StringTable::Key;
+   using FileNameKey      = ftags::StringTable::Key;
 
-   uint32_t fileNameKey;
+   SymbolNameKey    symbolNameKey;
+   NamespaceNameKey namespaceKey;
+   FileNameKey      fileNameKey;
 
    uint32_t startLine;
    uint16_t startColumn;
@@ -190,27 +191,74 @@ struct Record
    Attributes attributes;
 };
 
-class ProjectDb
+class TranslationUnit
 {
 public:
-   /*
-    * Construction
-    */
+   TranslationUnit(StringTable& symbolTable) : m_symbolTable{symbolTable}
+   {
+   }
 
-   ProjectDb();
+   TranslationUnit(StringTable& symbolTable, const TranslationUnit& original);
 
-   Record* addCursor(const Cursor& cursor, const Attributes& attributes);
-
-   void eraseRecords(const std::string& fileName);
-
-   Cursor inflateRecord(const Record* record);
-
-   static ProjectDb parseTranslationUnit(const std::string& fileName, std::vector<const char*> arguments);
+   StringTable::Key getFileNameKey() const
+   {
+      return m_fileNameKey;
+   }
 
    /*
     * General queries
     */
    std::vector<Record*> getFunctions() const;
+
+   std::vector<Record*> getClasses() const;
+
+   std::vector<Record*> getGlobalVariables() const;
+
+   /*
+    * Specific queries
+    */
+   std::vector<Record*> findDeclaration(const std::string& symbolName) const;
+
+   std::vector<Record*> findDeclaration(const std::string& symbolName, SymbolType type) const;
+
+   std::vector<Record*> findDefinition(const std::string& symbolName) const;
+
+   static TranslationUnit parse(const std::string& fileName, std::vector<const char*> arguments);
+
+   void addCursor(const Cursor& cursor, const Attributes& attributes);
+
+   /*
+    * Query helper
+    */
+   void appendFunctionRecords(std::vector<const ftags::Record*>& records) const;
+
+private:
+   StringTable::Key m_fileNameKey = 0;
+
+   std::vector<Record> m_records;
+
+   StringTable& m_symbolTable;
+};
+
+class ProjectDb
+{
+public:
+   /*
+    * Construction and maintenance
+    */
+   ProjectDb();
+
+   void addTranslationUnit(const std::string& fileName, const TranslationUnit& translationUnit);
+
+   void removeTranslationUnit(const std::string& fileName);
+
+   Cursor inflateRecord(const Record* record);
+
+   /*
+    * General queries
+    */
+
+   std::vector<const Record*> getFunctions() const;
 
    std::vector<Record*> getClasses() const;
 
@@ -271,15 +319,21 @@ private:
 
    void updateIndices();
 
-   plf::colony<Record> m_records;
+   /** Contains all the symbol definitions.
+    */
+   std::vector<TranslationUnit> m_translationUnits;
 
    StringTable m_symbolTable;
    StringTable m_namespaceTable;
    StringTable m_fileNameTable;
 
-   std::map<uint32_t, std::vector<plf::colony<Record>::iterator>> m_fileIndex;
+   /** Maps from a symbol key to a bag of translation units containing the symbol.
+    */
+   std::map<StringTable::Key, std::vector<TranslationUnit*>> m_symbolIndex;
 
-   std::map<uint32_t, std::vector<plf::colony<Record>::iterator>> m_symbolIndex;
+   /** Maps from a file name key to a position in the translation units vector.
+    */
+   std::map<StringTable::Key, std::vector<TranslationUnit>::size_type> m_fileIndex;
 };
 
 } // namespace ftags

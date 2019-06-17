@@ -36,12 +36,15 @@ TEST(TagsIndexTest, IndexOneFile)
    std::vector<const char*> arguments;
    arguments.push_back("-Wall");
    arguments.push_back("-Wextra");
-   ftags::ProjectDb tagsDb = ftags::ProjectDb::parseTranslationUnit(helloPath, arguments);
+   ftags::TranslationUnit helloCpp = ftags::TranslationUnit::parse(helloPath, arguments);
+
+   ftags::ProjectDb tagsDb;
+   tagsDb.addTranslationUnit(helloPath, helloCpp);
 
    ASSERT_TRUE(tagsDb.isFileIndexed(helloPath));
 }
 
-TEST(TagsIndexTest, IndexOneFileHasFunctions)
+TEST(IndexTest, IndexOneFileHasFunctions)
 {
    /*
     * This assumes we run the test from the root of the build directory.
@@ -56,11 +59,14 @@ TEST(TagsIndexTest, IndexOneFileHasFunctions)
    std::vector<const char*> arguments;
    arguments.push_back("-Wall");
    arguments.push_back("-Wextra");
-   ftags::ProjectDb tagsDb = ftags::ProjectDb::parseTranslationUnit(helloPath, arguments);
+   ftags::TranslationUnit helloCpp = ftags::TranslationUnit::parse(helloPath, arguments);
+
+   ftags::ProjectDb tagsDb;
+   tagsDb.addTranslationUnit(helloPath, helloCpp);
 
    ASSERT_TRUE(tagsDb.isFileIndexed(helloPath));
 
-   std::vector<ftags::Record*> functions = tagsDb.getFunctions();
+   std::vector<const ftags::Record*> functions = tagsDb.getFunctions();
    ASSERT_EQ(1, functions.size());
 }
 

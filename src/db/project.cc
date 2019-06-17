@@ -20,24 +20,50 @@ ftags::ProjectDb::ProjectDb() : m_operatingState{OptimizedForParse}
 {
 }
 
-ftags::Record* ftags::ProjectDb::addCursor(const ftags::Cursor& cursor, const ftags::Attributes& /* attributes */)
+ftags::TranslationUnit::TranslationUnit(StringTable& symbolTable, const TranslationUnit& /* original */) :
+   m_symbolTable{symbolTable}
 {
-   ftags::Record newRecord;
-   newRecord.fileNameKey   = m_fileNameTable.addKey(cursor.location.fileName);
-   newRecord.symbolNameKey = m_symbolTable.addKey(cursor.symbolName);
+}
 
-   auto iter = m_records.insert(newRecord);
+void ftags::TranslationUnit::addCursor(const ftags::Cursor& cursor, const ftags::Attributes& attributes)
+{
+   ftags::Record newRecord = {};
 
-   m_fileIndex[newRecord.fileNameKey].push_back(iter);
-   m_symbolIndex[newRecord.symbolNameKey].push_back(iter);
+   newRecord.symbolNameKey   = m_symbolTable.addKey(cursor.symbolName);
 
-   return &*iter;
+   newRecord.attributes      = attributes;
+   newRecord.attributes.type = static_cast<uint32_t>(cursor.symbolType);
+
+   newRecord.startLine       = static_cast<uint32_t>(cursor.location.line);
+   newRecord.startColumn     = static_cast<uint16_t>(cursor.location.column);
+   newRecord.endLine         = static_cast<uint16_t>(cursor.endLine);
+
+   m_records.push_back(newRecord);
+}
+
+void ftags::TranslationUnit::appendFunctionRecords(std::vector<const ftags::Record*>& records) const
+{
+   for (const auto& record : m_records)
+   {
+      if (record.attributes.type == static_cast<uint32_t>(SymbolType::FunctionDeclaration))
+      {
+         records.push_back(&record);
+      }
+   }
+}
+
+void ftags::ProjectDb::addTranslationUnit(const std::string& fullPath, const TranslationUnit& translationUnit)
+{
+   const auto key = m_fileNameTable.addKey(fullPath.data());
+
+   m_translationUnits.emplace_back(TranslationUnit(m_symbolTable, translationUnit));
+   m_fileIndex[key] = m_translationUnits.size();
 }
 
 bool ftags::ProjectDb::isFileIndexed(const std::string& fileName) const
 {
-   bool isIndexed = false;
-   uint32_t key = m_fileNameTable.getKey(fileName.data());
+   bool       isIndexed = false;
+   const auto key       = m_fileNameTable.getKey(fileName.data());
    if (key)
    {
       isIndexed = m_fileIndex.count(key) != 0;
@@ -45,8 +71,14 @@ bool ftags::ProjectDb::isFileIndexed(const std::string& fileName) const
    return isIndexed;
 }
 
-std::vector<ftags::Record*> ftags::ProjectDb::getFunctions() const
+std::vector<const ftags::Record*> ftags::ProjectDb::getFunctions() const
 {
-   std::vector<ftags::Record*> functions;
+   std::vector<const ftags::Record*> functions;
+
+   for (const auto& translationUnit : m_translationUnits)
+   {
+      translationUnit.appendFunctionRecords(functions);
+   }
+
    return functions;
 }
