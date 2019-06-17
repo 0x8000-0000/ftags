@@ -34,6 +34,12 @@ target_compile_options (project_options INTERFACE -pg)
 target_link_options (project_options INTERFACE -pg)
 endif ()
 
+if (SANITIZE_ADDRESS)
+   target_compile_options (project_options INTERFACE -fsanitize=address)
+   target_link_options (project_options INTERFACE -fsanitize=address)
+endif ()
+
+
 #
 # Link this 'library' to use the standard warnings
 #
