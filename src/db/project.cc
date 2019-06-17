@@ -20,10 +20,20 @@ ftags::ProjectDb::ProjectDb() : m_operatingState{OptimizedForParse}
 {
 }
 
-ftags::TranslationUnit::TranslationUnit(StringTable& symbolTable, const TranslationUnit& /* original */) :
-   m_symbolTable{symbolTable}
+void ftags::TranslationUnit::copyRecords(const TranslationUnit& original)
 {
-   /* iterate over the original records and copy them locally */
+   /*
+    * iterate over the original records and copy them locally
+    */
+   for (const auto& record : original.m_records)
+   {
+      Record newRecord = record;
+
+      newRecord.symbolNameKey = m_symbolTable.addKey(original.m_symbolTable.getString(record.symbolNameKey));
+      newRecord.fileNameKey = m_fileNameTable.addKey(original.m_fileNameTable.getString(record.fileNameKey));
+
+      m_records.push_back(newRecord);
+   }
 }
 
 void ftags::TranslationUnit::addCursor(const ftags::Cursor& cursor, const ftags::Attributes& attributes)
@@ -57,7 +67,9 @@ void ftags::ProjectDb::addTranslationUnit(const std::string& fullPath, const Tra
 {
    const auto key = m_fileNameTable.addKey(fullPath.data());
 
-   m_translationUnits.emplace_back(TranslationUnit(m_symbolTable, translationUnit));
+   TranslationUnit newTranslationUnit{m_symbolTable, m_fileNameTable};
+   newTranslationUnit.copyRecords(translationUnit);
+   m_translationUnits.push_back(newTranslationUnit);
    m_fileIndex[key] = m_translationUnits.size();
 }
 

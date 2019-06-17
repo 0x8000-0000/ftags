@@ -195,11 +195,13 @@ struct Record
 class TranslationUnit
 {
 public:
-   TranslationUnit(StringTable& symbolTable) : m_symbolTable{symbolTable}
+   TranslationUnit(StringTable& symbolTable, StringTable& fileNameTable) :
+      m_symbolTable{symbolTable},
+      m_fileNameTable{fileNameTable}
    {
    }
 
-   TranslationUnit(StringTable& symbolTable, const TranslationUnit& original);
+   void copyRecords(const TranslationUnit& other);
 
    StringTable::Key getFileNameKey() const
    {
@@ -239,6 +241,7 @@ private:
    std::vector<Record> m_records;
 
    StringTable& m_symbolTable;
+   StringTable& m_fileNameTable;
 };
 
 class ProjectDb

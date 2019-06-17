@@ -98,13 +98,18 @@ static ftags::SymbolType getSymbolType(CXCursor clangCursor, ftags::Attributes& 
 
 void processCursor(ftags::TranslationUnit* translationUnit, CXCursor clangCursor)
 {
-   CXStringWrapper name{clang_getCursorSpelling(clangCursor)};
-
    ftags::Cursor     cursor = {};
    ftags::Attributes attributes = {};
-
-   cursor.symbolName = name.c_str();
    cursor.symbolType = getSymbolType(clangCursor, attributes);
+
+   if (cursor.symbolType == ftags::SymbolType::Undefined)
+   {
+      // don't know how to handle this cursor; just ignore it
+      return;
+   }
+
+   CXStringWrapper name{clang_getCursorSpelling(clangCursor)};
+   cursor.symbolName = name.c_str();
 
    CXStringWrapper fileName;
    unsigned int    line   = 0;
@@ -135,7 +140,8 @@ CXChildVisitResult visitTranslationUnit(CXCursor cursor, CXCursor /* parent */, 
 ftags::TranslationUnit ftags::TranslationUnit::parse(const std::string& fileName, std::vector<const char*> arguments)
 {
    ftags::StringTable symbolTable;
-   ftags::TranslationUnit translationUnit(symbolTable);
+   ftags::StringTable fileNameTable;
+   ftags::TranslationUnit translationUnit(symbolTable, fileNameTable);
 
    auto clangIndex = std::unique_ptr<void, CXIndexDestroyer>(clang_createIndex(/* excludeDeclarationsFromPCH = */ 0,
                                                                                /* displayDiagnostics         = */ 0));
