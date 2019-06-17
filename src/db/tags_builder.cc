@@ -137,10 +137,9 @@ CXChildVisitResult visitTranslationUnit(CXCursor cursor, CXCursor /* parent */, 
 
 } // namespace
 
-ftags::TranslationUnit ftags::TranslationUnit::parse(const std::string& fileName, std::vector<const char*> arguments)
+ftags::TranslationUnit ftags::TranslationUnit::parse(const std::string& fileName, std::vector<const char*> arguments,
+      StringTable& symbolTable, StringTable& fileNameTable)
 {
-   ftags::StringTable symbolTable;
-   ftags::StringTable fileNameTable;
    ftags::TranslationUnit translationUnit(symbolTable, fileNameTable);
 
    auto clangIndex = std::unique_ptr<void, CXIndexDestroyer>(clang_createIndex(/* excludeDeclarationsFromPCH = */ 0,

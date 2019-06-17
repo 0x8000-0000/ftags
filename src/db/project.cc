@@ -29,8 +29,8 @@ void ftags::TranslationUnit::copyRecords(const TranslationUnit& original)
    {
       Record newRecord = record;
 
-      newRecord.symbolNameKey = m_symbolTable.addKey(original.m_symbolTable.getString(record.symbolNameKey));
-      newRecord.fileNameKey = m_fileNameTable.addKey(original.m_fileNameTable.getString(record.fileNameKey));
+      newRecord.symbolNameKey = m_symbolTable.addKey(original.getSymbolName(record));
+      newRecord.fileNameKey   = m_fileNameTable.addKey(original.getFileName(record));
 
       m_records.push_back(newRecord);
    }
@@ -40,14 +40,15 @@ void ftags::TranslationUnit::addCursor(const ftags::Cursor& cursor, const ftags:
 {
    ftags::Record newRecord = {};
 
-   newRecord.symbolNameKey   = m_symbolTable.addKey(cursor.symbolName);
+   newRecord.symbolNameKey = m_symbolTable.addKey(cursor.symbolName);
+   newRecord.fileNameKey   = m_fileNameTable.addKey(cursor.location.fileName);
 
    newRecord.attributes      = attributes;
    newRecord.attributes.type = static_cast<uint32_t>(cursor.symbolType);
 
-   newRecord.startLine       = static_cast<uint32_t>(cursor.location.line);
-   newRecord.startColumn     = static_cast<uint16_t>(cursor.location.column);
-   newRecord.endLine         = static_cast<uint16_t>(cursor.endLine);
+   newRecord.startLine   = static_cast<uint32_t>(cursor.location.line);
+   newRecord.startColumn = static_cast<uint16_t>(cursor.location.column);
+   newRecord.endLine     = static_cast<uint16_t>(cursor.endLine);
 
    m_records.push_back(newRecord);
 }

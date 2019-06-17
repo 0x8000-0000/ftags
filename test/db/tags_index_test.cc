@@ -18,8 +18,8 @@
 
 #include <gtest/gtest.h>
 
-#include <vector>
 #include <filesystem>
+#include <vector>
 
 TEST(TagsIndexTest, IndexOneFile)
 {
@@ -36,7 +36,10 @@ TEST(TagsIndexTest, IndexOneFile)
    std::vector<const char*> arguments;
    arguments.push_back("-Wall");
    arguments.push_back("-Wextra");
-   ftags::TranslationUnit helloCpp = ftags::TranslationUnit::parse(helloPath, arguments);
+
+   ftags::StringTable symbolTable;
+   ftags::StringTable fileNameTable;
+   ftags::TranslationUnit helloCpp = ftags::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
 
    ftags::ProjectDb tagsDb;
    tagsDb.addTranslationUnit(helloPath, helloCpp);
@@ -44,7 +47,7 @@ TEST(TagsIndexTest, IndexOneFile)
    ASSERT_TRUE(tagsDb.isFileIndexed(helloPath));
 }
 
-TEST(IndexTest, IndexOneFileHasFunctions)
+TEST(TagsIndexTest, IndexOneFileHasFunctions)
 {
    /*
     * This assumes we run the test from the root of the build directory.
@@ -59,7 +62,10 @@ TEST(IndexTest, IndexOneFileHasFunctions)
    std::vector<const char*> arguments;
    arguments.push_back("-Wall");
    arguments.push_back("-Wextra");
-   ftags::TranslationUnit helloCpp = ftags::TranslationUnit::parse(helloPath, arguments);
+
+   ftags::StringTable symbolTable;
+   ftags::StringTable fileNameTable;
+   ftags::TranslationUnit helloCpp = ftags::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
 
    ftags::ProjectDb tagsDb;
    tagsDb.addTranslationUnit(helloPath, helloCpp);
@@ -69,4 +75,3 @@ TEST(IndexTest, IndexOneFileHasFunctions)
    std::vector<const ftags::Record*> functions = tagsDb.getFunctions();
    ASSERT_EQ(1, functions.size());
 }
-

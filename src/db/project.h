@@ -208,6 +208,16 @@ public:
       return m_fileNameKey;
    }
 
+   const char* getSymbolName(const Record& record) const
+   {
+      return m_symbolTable.getString(record.symbolNameKey);
+   }
+
+   const char* getFileName(const Record& record) const
+   {
+      return m_fileNameTable.getString(record.fileNameKey);
+   }
+
    /*
     * General queries
     */
@@ -226,7 +236,10 @@ public:
 
    std::vector<Record*> findDefinition(const std::string& symbolName) const;
 
-   static TranslationUnit parse(const std::string& fileName, std::vector<const char*> arguments);
+   static TranslationUnit parse(const std::string&       fileName,
+                                std::vector<const char*> arguments,
+                                StringTable&             symbolTable,
+                                StringTable&             fileNameTable);
 
    void addCursor(const Cursor& cursor, const Attributes& attributes);
 
