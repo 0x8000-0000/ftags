@@ -37,8 +37,8 @@ TEST(TagsIndexTest, IndexOneFile)
    arguments.push_back("-Wall");
    arguments.push_back("-Wextra");
 
-   ftags::StringTable symbolTable;
-   ftags::StringTable fileNameTable;
+   ftags::StringTable     symbolTable;
+   ftags::StringTable     fileNameTable;
    ftags::TranslationUnit helloCpp = ftags::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
 
    ftags::ProjectDb tagsDb;
@@ -63,8 +63,8 @@ TEST(TagsIndexTest, IndexOneFileHasFunctions)
    arguments.push_back("-Wall");
    arguments.push_back("-Wextra");
 
-   ftags::StringTable symbolTable;
-   ftags::StringTable fileNameTable;
+   ftags::StringTable     symbolTable;
+   ftags::StringTable     fileNameTable;
    ftags::TranslationUnit helloCpp = ftags::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
 
    ftags::ProjectDb tagsDb;
@@ -87,8 +87,8 @@ TEST(TagsIndexTest, HelloWorldHasMainFunction)
    arguments.push_back("-Wall");
    arguments.push_back("-Wextra");
 
-   ftags::StringTable symbolTable;
-   ftags::StringTable fileNameTable;
+   ftags::StringTable     symbolTable;
+   ftags::StringTable     fileNameTable;
    ftags::TranslationUnit helloCpp = ftags::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
 
    ftags::ProjectDb tagsDb;
@@ -96,4 +96,30 @@ TEST(TagsIndexTest, HelloWorldHasMainFunction)
 
    std::vector<const ftags::Record*> results = tagsDb.findDefinition("main");
    ASSERT_EQ(1, results.size());
+}
+
+TEST(TagsIndexTest, DistinguishDeclarationFromDefinition)
+{
+   auto path = std::filesystem::current_path();
+
+   auto translationUnitPath = path / "test" / "db" / "data" / "functions" / "alpha-beta.cc";
+   ASSERT_TRUE(std::filesystem::exists(translationUnitPath));
+
+   std::vector<const char*> arguments;
+   arguments.push_back("-Wall");
+   arguments.push_back("-Wextra");
+
+   ftags::StringTable     symbolTable;
+   ftags::StringTable     fileNameTable;
+   ftags::TranslationUnit translationUnit =
+      ftags::TranslationUnit::parse(translationUnitPath, arguments, symbolTable, fileNameTable);
+
+   ftags::ProjectDb tagsDb;
+   tagsDb.addTranslationUnit(translationUnitPath, translationUnit);
+
+   std::vector<const ftags::Record*> alphaDefinition = tagsDb.findDefinition("alpha");
+   ASSERT_EQ(1, alphaDefinition.size());
+
+   std::vector<const ftags::Record*> alphaDeclaration = tagsDb.findDeclaration("alpha");
+   ASSERT_EQ(1, alphaDeclaration.size());
 }

@@ -53,29 +53,6 @@ void ftags::TranslationUnit::addCursor(const ftags::Cursor& cursor, const ftags:
    m_records.push_back(newRecord);
 }
 
-void ftags::TranslationUnit::appendFunctionRecords(std::vector<const ftags::Record*>& records) const
-{
-   for (const auto& record : m_records)
-   {
-      if (record.attributes.type == static_cast<uint32_t>(SymbolType::FunctionDeclaration))
-      {
-         records.push_back(&record);
-      }
-   }
-}
-
-void ftags::TranslationUnit::appendDefinitionRecords(std::vector<const ftags::Record*>& records,
-                                                     ftags::StringTable::Key            symbolKey) const
-{
-   for (const auto& record : m_records)
-   {
-      if (record.attributes.isDefinition && record.symbolNameKey == symbolKey)
-      {
-         records.push_back(&record);
-      }
-   }
-}
-
 void ftags::ProjectDb::addTranslationUnit(const std::string& fullPath, const TranslationUnit& translationUnit)
 {
    const auto key = m_fileNameTable.addKey(fullPath.data());
@@ -108,7 +85,6 @@ std::vector<const ftags::Record*> ftags::ProjectDb::getFunctions() const
 
    for (const auto& translationUnit : m_translationUnits)
    {
-      // translationUnit.appendFunctionRecords(functions);
       translationUnit.forEachRecord([&functions](const Record* record) {
          if (record->attributes.type == static_cast<uint32_t>(SymbolType::FunctionDeclaration))
          {
@@ -130,7 +106,38 @@ std::vector<const ftags::Record*> ftags::ProjectDb::findDefinition(const std::st
       const auto range = m_symbolIndex.equal_range(key);
       for (auto translationUnitPos = range.first; translationUnitPos != range.second; ++translationUnitPos)
       {
-         m_translationUnits.at(translationUnitPos->second).appendDefinitionRecords(results, key);
+         const auto& translationUnit = m_translationUnits.at(translationUnitPos->second);
+
+         translationUnit.forEachRecord([&results, key](const Record* record) {
+            if (record->attributes.isDefinition && (record->symbolNameKey == key))
+            {
+               results.push_back(record);
+            }
+         });
+      }
+   }
+
+   return results;
+}
+
+std::vector<const ftags::Record*> ftags::ProjectDb::findDeclaration(const std::string& symbolName) const
+{
+   std::vector<const ftags::Record*> results;
+
+   const auto key = m_symbolTable.getKey(symbolName.data());
+   if (key)
+   {
+      const auto range = m_symbolIndex.equal_range(key);
+      for (auto translationUnitPos = range.first; translationUnitPos != range.second; ++translationUnitPos)
+      {
+         const auto& translationUnit = m_translationUnits.at(translationUnitPos->second);
+
+         translationUnit.forEachRecord([&results, key](const Record* record) {
+            if ((!record->attributes.isDefinition) && (record->symbolNameKey == key))
+            {
+               results.push_back(record);
+            }
+         });
       }
    }
 
