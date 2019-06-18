@@ -133,8 +133,8 @@ std::vector<const ftags::Record*> ftags::ProjectDb::findDefinition(const std::st
       {
          const auto& translationUnit = m_translationUnits.at(iter->second);
 
-         translationUnit.forEachRecord([&results, key](const Record* record) {
-            if (record->attributes.isDefinition && (record->symbolNameKey == key))
+         translationUnit.forEachRecordWithSymbol(key, [&results](const Record* record) {
+            if (record->attributes.isDefinition)
             {
                results.push_back(record);
             }
@@ -157,8 +157,8 @@ std::vector<const ftags::Record*> ftags::ProjectDb::findDeclaration(const std::s
       {
          const auto& translationUnit = m_translationUnits.at(translationUnitPos->second);
 
-         translationUnit.forEachRecord([&results, key](const Record* record) {
-            if ((!record->attributes.isDefinition) && (record->symbolNameKey == key))
+         translationUnit.forEachRecordWithSymbol(key, [&results](const Record* record) {
+            if (!record->attributes.isDefinition)
             {
                results.push_back(record);
             }

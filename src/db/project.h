@@ -248,11 +248,23 @@ public:
     * Query helper
     */
    template <typename F>
-   void forEachRecord(F f) const
+   void forEachRecord(F func) const
    {
       for (const auto& record : m_records)
       {
-         f(&record);
+         func(&record);
+      }
+   }
+
+   template <typename F>
+   void forEachRecordWithSymbol(ftags::StringTable::Key symbolNameKey, F func) const
+   {
+      for (const auto& record : m_records)
+      {
+         if (record.symbolNameKey == symbolNameKey)
+         {
+            func(&record);
+         }
       }
    }
 
