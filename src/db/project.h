@@ -188,7 +188,7 @@ struct Record
    uint16_t startColumn;
    uint16_t endLine;
 
-   uint64_t parentRecord;
+   uint64_t parentRecord;     // TODO: find an implementation for connecting records
 
    Attributes attributes;
 };

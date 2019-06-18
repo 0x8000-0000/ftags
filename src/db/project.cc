@@ -16,6 +16,8 @@
 
 #include <project.h>
 
+#include <algorithm>
+
 ftags::ProjectDb::ProjectDb() : m_operatingState{OptimizedForParse}
 {
 }
@@ -55,17 +57,40 @@ void ftags::TranslationUnit::addCursor(const ftags::Cursor& cursor, const ftags:
 
 void ftags::ProjectDb::addTranslationUnit(const std::string& fullPath, const TranslationUnit& translationUnit)
 {
-   const auto key = m_fileNameTable.addKey(fullPath.data());
-
+   /*
+    * clone the records using the project's symbol table
+    */
    TranslationUnit newTranslationUnit{m_symbolTable, m_fileNameTable};
    newTranslationUnit.copyRecords(translationUnit);
+
+   /*
+    * add the new translation unit to database
+    */
    const TranslationUnitStore::size_type translationUnitPos = m_translationUnits.size();
    m_translationUnits.push_back(newTranslationUnit);
-   m_fileIndex[key] = translationUnitPos;
 
-   newTranslationUnit.forEachRecord([this, translationUnitPos](const Record* record) {
-      m_symbolIndex.emplace(record->symbolNameKey, translationUnitPos);
-   });
+   /*
+    * register the name of the translation unit
+    */
+   const auto fileKey   = m_fileNameTable.addKey(fullPath.data());
+   m_fileIndex[fileKey] = translationUnitPos;
+
+   /*
+    * gather all unique symbols in this translation unit
+    */
+   std::set<ftags::StringTable::Key> symbolKeys;
+   newTranslationUnit.forEachRecord(
+      [&symbolKeys](const Record* record) { symbolKeys.insert(record->symbolNameKey); });
+
+   /*
+    * add a mapping from this symbol to this translation unit
+    */
+   std::for_each(
+      symbolKeys.cbegin(), symbolKeys.cend(), [this, translationUnitPos](ftags::StringTable::Key symbolKey) {
+         m_symbolIndex.emplace(symbolKey, translationUnitPos);
+      });
+
+   // TODO: save the Record's source file into the file name table
 }
 
 bool ftags::ProjectDb::isFileIndexed(const std::string& fileName) const
@@ -103,10 +128,10 @@ std::vector<const ftags::Record*> ftags::ProjectDb::findDefinition(const std::st
    const auto key = m_symbolTable.getKey(symbolName.data());
    if (key)
    {
-      const auto range = m_symbolIndex.equal_range(key);
-      for (auto translationUnitPos = range.first; translationUnitPos != range.second; ++translationUnitPos)
+      const auto keyRange = m_symbolIndex.equal_range(key);
+      for (auto iter = keyRange.first; iter != keyRange.second; ++iter)
       {
-         const auto& translationUnit = m_translationUnits.at(translationUnitPos->second);
+         const auto& translationUnit = m_translationUnits.at(iter->second);
 
          translationUnit.forEachRecord([&results, key](const Record* record) {
             if (record->attributes.isDefinition && (record->symbolNameKey == key))
