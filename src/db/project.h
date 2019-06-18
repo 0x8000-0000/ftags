@@ -247,10 +247,6 @@ public:
    /*
     * Query helper
     */
-   void appendFunctionRecords(std::vector<const ftags::Record*>& records) const;
-
-   void appendDefinitionRecords(std::vector<const ftags::Record*>& records, ftags::StringTable::Key symbolKey) const;
-
    template <typename F>
    void forEachRecord(F f) const
    {
