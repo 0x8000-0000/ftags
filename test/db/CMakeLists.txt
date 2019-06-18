@@ -21,3 +21,5 @@ gtest_discover_tests (tags_index_test
    WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
 configure_file (data/hello/hello.cc data/hello/hello.cc)
+
+configure_file (data/functions/alpha-beta.cc data/functions/alpha-beta.cc)

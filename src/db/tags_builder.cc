@@ -79,18 +79,18 @@ static ftags::SymbolType getSymbolType(CXCursor clangCursor, ftags::Attributes& 
 
    switch (cursorKind)
    {
-      case CXCursor_StructDecl:
-         symbolType = ftags::SymbolType::StructDeclaration;
-         attributes.isDeclaration = true;
-         break;
+   case CXCursor_StructDecl:
+      symbolType               = ftags::SymbolType::StructDeclaration;
+      attributes.isDeclaration = true;
+      break;
 
-      case CXCursor_FunctionDecl:
-         symbolType = ftags::SymbolType::FunctionDeclaration;
-         attributes.isDeclaration = true;
-         break;
+   case CXCursor_FunctionDecl:
+      symbolType               = ftags::SymbolType::FunctionDeclaration;
+      attributes.isDeclaration = true;
+      break;
 
-      default:
-         break;
+   default:
+      break;
    }
 
    return symbolType;
@@ -98,9 +98,9 @@ static ftags::SymbolType getSymbolType(CXCursor clangCursor, ftags::Attributes& 
 
 void processCursor(ftags::TranslationUnit* translationUnit, CXCursor clangCursor)
 {
-   ftags::Cursor     cursor = {};
+   ftags::Cursor     cursor     = {};
    ftags::Attributes attributes = {};
-   cursor.symbolType = getSymbolType(clangCursor, attributes);
+   cursor.symbolType            = getSymbolType(clangCursor, attributes);
 
    if (cursor.symbolType == ftags::SymbolType::Undefined)
    {
@@ -117,6 +117,16 @@ void processCursor(ftags::TranslationUnit* translationUnit, CXCursor clangCursor
 
    CXSourceLocation location = clang_getCursorLocation(clangCursor);
    clang_getPresumedLocation(location, fileName.get(), &line, &column);
+
+   if (clang_Location_isFromMainFile(location))
+   {
+      attributes.isFromMainFile = 1;
+   }
+
+   if (clang_isCursorDefinition(clangCursor))
+   {
+      attributes.isDefinition = 1;
+   }
 
    cursor.location.fileName = fileName.c_str();
    cursor.location.line     = static_cast<int>(line);
@@ -137,8 +147,10 @@ CXChildVisitResult visitTranslationUnit(CXCursor cursor, CXCursor /* parent */, 
 
 } // namespace
 
-ftags::TranslationUnit ftags::TranslationUnit::parse(const std::string& fileName, std::vector<const char*> arguments,
-      StringTable& symbolTable, StringTable& fileNameTable)
+ftags::TranslationUnit ftags::TranslationUnit::parse(const std::string&       fileName,
+                                                     std::vector<const char*> arguments,
+                                                     StringTable&             symbolTable,
+                                                     StringTable&             fileNameTable)
 {
    ftags::TranslationUnit translationUnit(symbolTable, fileNameTable);
 
@@ -159,7 +171,8 @@ ftags::TranslationUnit ftags::TranslationUnit::parse(const std::string& fileName
 
    if ((parseError == CXError_Success) && (nullptr != translationUnitPtr))
    {
-      auto clangTranslationUnit = std::unique_ptr<CXTranslationUnitImpl, CXTranslationUnitDestroyer>(translationUnitPtr);
+      auto clangTranslationUnit =
+         std::unique_ptr<CXTranslationUnitImpl, CXTranslationUnitDestroyer>(translationUnitPtr);
 
       CXCursor cursor = clang_getTranslationUnitCursor(clangTranslationUnit.get());
       clang_visitChildren(cursor, visitTranslationUnit, &translationUnit);

@@ -64,14 +64,31 @@ void ftags::TranslationUnit::appendFunctionRecords(std::vector<const ftags::Reco
    }
 }
 
+void ftags::TranslationUnit::appendDefinitionRecords(std::vector<const ftags::Record*>& records,
+                                                     ftags::StringTable::Key            symbolKey) const
+{
+   for (const auto& record : m_records)
+   {
+      if (record.attributes.isDefinition && record.symbolNameKey == symbolKey)
+      {
+         records.push_back(&record);
+      }
+   }
+}
+
 void ftags::ProjectDb::addTranslationUnit(const std::string& fullPath, const TranslationUnit& translationUnit)
 {
    const auto key = m_fileNameTable.addKey(fullPath.data());
 
    TranslationUnit newTranslationUnit{m_symbolTable, m_fileNameTable};
    newTranslationUnit.copyRecords(translationUnit);
+   const TranslationUnitStore::size_type translationUnitPos = m_translationUnits.size();
    m_translationUnits.push_back(newTranslationUnit);
-   m_fileIndex[key] = m_translationUnits.size();
+   m_fileIndex[key] = translationUnitPos;
+
+   newTranslationUnit.forEachRecord([this, translationUnitPos](const Record* record) {
+      m_symbolIndex.emplace(record->symbolNameKey, translationUnitPos);
+   });
 }
 
 bool ftags::ProjectDb::isFileIndexed(const std::string& fileName) const
@@ -91,8 +108,31 @@ std::vector<const ftags::Record*> ftags::ProjectDb::getFunctions() const
 
    for (const auto& translationUnit : m_translationUnits)
    {
-      translationUnit.appendFunctionRecords(functions);
+      // translationUnit.appendFunctionRecords(functions);
+      translationUnit.forEachRecord([&functions](const Record* record) {
+         if (record->attributes.type == static_cast<uint32_t>(SymbolType::FunctionDeclaration))
+         {
+            functions.push_back(record);
+         }
+      });
    }
 
    return functions;
+}
+
+std::vector<const ftags::Record*> ftags::ProjectDb::findDefinition(const std::string& symbolName) const
+{
+   std::vector<const ftags::Record*> results;
+
+   const auto key = m_symbolTable.getKey(symbolName.data());
+   if (key)
+   {
+      const auto range = m_symbolIndex.equal_range(key);
+      for (auto translationUnitPos = range.first; translationUnitPos != range.second; ++translationUnitPos)
+      {
+         m_translationUnits.at(translationUnitPos->second).appendDefinitionRecords(results, key);
+      }
+   }
+
+   return results;
 }

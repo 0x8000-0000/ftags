@@ -151,7 +151,8 @@ struct Attributes
 
    uint32_t isThrown : 1;
 
-   // 3 free bits
+   uint32_t isFromMainFile : 1;
+   // 2 free bits
 };
 
 struct Location
@@ -248,6 +249,17 @@ public:
     */
    void appendFunctionRecords(std::vector<const ftags::Record*>& records) const;
 
+   void appendDefinitionRecords(std::vector<const ftags::Record*>& records, ftags::StringTable::Key symbolKey) const;
+
+   template <typename F>
+   void forEachRecord(F f) const
+   {
+      for (const auto& record : m_records)
+      {
+         f(&record);
+      }
+   }
+
 private:
    StringTable::Key m_fileNameKey = 0;
 
@@ -287,15 +299,15 @@ public:
     * Specific queries
     */
 
-   std::vector<Record*> findDeclaration(const std::string& symbolName) const;
+   std::vector<const Record*> findDeclaration(const std::string& symbolName) const;
 
-   std::vector<Record*> findDeclaration(const std::string& symbolName, SymbolType type) const;
+   std::vector<const Record*> findDeclaration(const std::string& symbolName, SymbolType type) const;
 
-   std::vector<Record*> findDefinition(const std::string& symbolName) const;
+   std::vector<const Record*> findDefinition(const std::string& symbolName) const;
 
-   std::vector<Record*> findWhereUsed(Record* record) const;
+   std::vector<const Record*> findWhereUsed(Record* record) const;
 
-   std::vector<Record*> findOverloadDefinitions(Record* record) const;
+   std::vector<const Record*> findOverloadDefinitions(Record* record) const;
 
    Record* getDefinition(Record* record) const;
    Record* getDeclaration(Record* record) const;
@@ -338,7 +350,8 @@ private:
 
    /** Contains all the symbol definitions.
     */
-   std::vector<TranslationUnit> m_translationUnits;
+   using TranslationUnitStore = std::vector<TranslationUnit>;
+   TranslationUnitStore m_translationUnits;
 
    StringTable m_symbolTable;
    StringTable m_namespaceTable;
@@ -346,7 +359,7 @@ private:
 
    /** Maps from a symbol key to a bag of translation units containing the symbol.
     */
-   std::map<StringTable::Key, std::vector<TranslationUnit*>> m_symbolIndex;
+   std::multimap<StringTable::Key, TranslationUnitStore::size_type> m_symbolIndex;
 
    /** Maps from a file name key to a position in the translation units vector.
     */

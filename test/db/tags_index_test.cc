@@ -75,3 +75,25 @@ TEST(TagsIndexTest, IndexOneFileHasFunctions)
    std::vector<const ftags::Record*> functions = tagsDb.getFunctions();
    ASSERT_EQ(1, functions.size());
 }
+
+TEST(TagsIndexTest, HelloWorldHasMainFunction)
+{
+   auto path = std::filesystem::current_path();
+
+   auto helloPath = path / "test" / "db" / "data" / "hello" / "hello.cc";
+   ASSERT_TRUE(std::filesystem::exists(helloPath));
+
+   std::vector<const char*> arguments;
+   arguments.push_back("-Wall");
+   arguments.push_back("-Wextra");
+
+   ftags::StringTable symbolTable;
+   ftags::StringTable fileNameTable;
+   ftags::TranslationUnit helloCpp = ftags::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
+
+   ftags::ProjectDb tagsDb;
+   tagsDb.addTranslationUnit(helloPath, helloCpp);
+
+   std::vector<const ftags::Record*> results = tagsDb.findDefinition("main");
+   ASSERT_EQ(1, results.size());
+}
