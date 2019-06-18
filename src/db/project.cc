@@ -24,6 +24,8 @@ ftags::ProjectDb::ProjectDb() : m_operatingState{OptimizedForParse}
 
 void ftags::TranslationUnit::copyRecords(const TranslationUnit& original)
 {
+   m_records.reserve(original.m_records.size());
+
    /*
     * iterate over the original records and copy them locally
     */
@@ -36,6 +38,13 @@ void ftags::TranslationUnit::copyRecords(const TranslationUnit& original)
 
       m_records.push_back(newRecord);
    }
+
+   /*
+    * sort the records by symbol key to speed-up lookups
+    */
+   std::sort(m_records.begin(), m_records.end(), [](const Record& left, const Record& right) {
+      return left.symbolNameKey < right.symbolNameKey;
+   });
 }
 
 void ftags::TranslationUnit::addCursor(const ftags::Cursor& cursor, const ftags::Attributes& attributes)

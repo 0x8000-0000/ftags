@@ -19,6 +19,7 @@
 
 #include <string_table.h>
 
+#include <algorithm>
 #include <map>
 #include <string>
 #include <unordered_map>
@@ -188,7 +189,7 @@ struct Record
    uint16_t startColumn;
    uint16_t endLine;
 
-   uint64_t parentRecord;     // TODO: find an implementation for connecting records
+   uint64_t parentRecord; // TODO: find an implementation for connecting records
 
    Attributes attributes;
 };
@@ -256,9 +257,23 @@ public:
       }
    }
 
+   struct RecordSymbolComparator
+   {
+      bool operator()(const Record& record, ftags::StringTable::Key symbolNameKey)
+      {
+         return record.symbolNameKey < symbolNameKey;
+      }
+
+      bool operator()(ftags::StringTable::Key symbolNameKey, const Record& record)
+      {
+         return symbolNameKey < record.symbolNameKey;
+      }
+   };
+
    template <typename F>
    void forEachRecordWithSymbol(ftags::StringTable::Key symbolNameKey, F func) const
    {
+#if 0
       for (const auto& record : m_records)
       {
          if (record.symbolNameKey == symbolNameKey)
@@ -266,6 +281,15 @@ public:
             func(&record);
          }
       }
+#else
+      const auto keyRange =
+         std::equal_range(m_records.cbegin(), m_records.cend(), symbolNameKey, RecordSymbolComparator());
+
+      for (auto iter = keyRange.first; iter != keyRange.second; ++ iter)
+      {
+         func(&*iter);
+      }
+#endif
    }
 
 private:
