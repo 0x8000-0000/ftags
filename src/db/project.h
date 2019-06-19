@@ -197,6 +197,9 @@ struct Record
 class TranslationUnit
 {
 public:
+
+   using Key = ftags::StringTable::Key;
+
    TranslationUnit(StringTable& symbolTable, StringTable& fileNameTable) :
       m_symbolTable{symbolTable},
       m_fileNameTable{fileNameTable}
@@ -205,7 +208,11 @@ public:
 
    void copyRecords(const TranslationUnit& other);
 
-   StringTable::Key getFileNameKey() const
+   void optimizeForSymbolLookup();
+
+   void optimizeForFileLookup();
+
+   Key getFileNameKey() const
    {
       return m_fileNameKey;
    }
@@ -259,19 +266,19 @@ public:
 
    struct RecordSymbolComparator
    {
-      bool operator()(const Record& record, ftags::StringTable::Key symbolNameKey)
+      bool operator()(const Record& record, Key symbolNameKey)
       {
          return record.symbolNameKey < symbolNameKey;
       }
 
-      bool operator()(ftags::StringTable::Key symbolNameKey, const Record& record)
+      bool operator()(Key symbolNameKey, const Record& record)
       {
          return symbolNameKey < record.symbolNameKey;
       }
    };
 
    template <typename F>
-   void forEachRecordWithSymbol(ftags::StringTable::Key symbolNameKey, F func) const
+   void forEachRecordWithSymbol(Key symbolNameKey, F func) const
    {
 #if 0
       for (const auto& record : m_records)
@@ -293,7 +300,7 @@ public:
    }
 
 private:
-   StringTable::Key m_fileNameKey = 0;
+   Key m_fileNameKey = 0;
 
    std::vector<Record> m_records;
 

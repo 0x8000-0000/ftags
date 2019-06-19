@@ -24,26 +24,70 @@ ftags::ProjectDb::ProjectDb() : m_operatingState{OptimizedForParse}
 
 void ftags::TranslationUnit::copyRecords(const TranslationUnit& original)
 {
-   m_records.reserve(original.m_records.size());
+   /*
+    * copy the original records
+    */
+   m_records = original.m_records;
 
    /*
-    * iterate over the original records and copy them locally
+    * replace keys from translation unit's table with keys from the prject
+    * database
     */
-   for (const auto& record : original.m_records)
+
+   // update file keys
    {
-      Record newRecord = record;
+      optimizeForFileLookup();
 
-      newRecord.symbolNameKey = m_symbolTable.addKey(original.getSymbolName(record));
-      newRecord.fileNameKey   = m_fileNameTable.addKey(original.getFileName(record));
+      Key currentOriginalFileKey = 0;
+      Key currentFileKey         = 0;
 
-      m_records.push_back(newRecord);
+      for (auto& record : m_records)
+      {
+         if (record.fileNameKey != currentOriginalFileKey)
+         {
+            // TODO: lock for concurrent access
+            currentFileKey = m_fileNameTable.addKey(original.getFileName(record));
+         }
+         record.fileNameKey = currentFileKey;
+      }
    }
 
+   // update symbol keys
+   {
+      optimizeForSymbolLookup();
+
+      Key currentOriginalSymbolKey = 0;
+      Key currentSymbolKey         = 0;
+
+      for (auto& record : m_records)
+      {
+         if (record.symbolNameKey != currentOriginalSymbolKey)
+         {
+            // TODO: lock for concurrent access
+            currentSymbolKey = m_symbolTable.addKey(original.getSymbolName(record));
+         }
+         record.symbolNameKey = currentSymbolKey;
+      }
+   }
+}
+
+void ftags::TranslationUnit::optimizeForSymbolLookup()
+{
    /*
     * sort the records by symbol key to speed-up lookups
     */
    std::sort(m_records.begin(), m_records.end(), [](const Record& left, const Record& right) {
       return left.symbolNameKey < right.symbolNameKey;
+   });
+}
+
+void ftags::TranslationUnit::optimizeForFileLookup()
+{
+   /*
+    * sort the records by symbol key to speed-up lookups
+    */
+   std::sort(m_records.begin(), m_records.end(), [](const Record& left, const Record& right) {
+      return left.fileNameKey < right.fileNameKey;
    });
 }
 
