@@ -24,7 +24,17 @@
 
 const char* ftags::StringTable::getString(Key stringKey) const noexcept
 {
+   if (m_useSafeConcurrentAccess)
+   {
+      m_mutex.lock_shared();
+   }
+
    auto location = m_store.get(stringKey);
+
+   if (m_useSafeConcurrentAccess)
+   {
+      m_mutex.unlock_shared();
+   }
 
    if (location.first == location.second)
    {
@@ -38,7 +48,18 @@ const char* ftags::StringTable::getString(Key stringKey) const noexcept
 
 ftags::StringTable::Key ftags::StringTable::getKey(const char* inputString) const noexcept
 {
+   if (m_useSafeConcurrentAccess)
+   {
+      m_mutex.lock_shared();
+   }
+
    auto iter = m_index.find(inputString);
+
+   if (m_useSafeConcurrentAccess)
+   {
+      m_mutex.unlock_shared();
+   }
+
    if (m_index.end() == iter)
    {
       return 0;
@@ -51,13 +72,29 @@ ftags::StringTable::Key ftags::StringTable::getKey(const char* inputString) cons
 
 ftags::StringTable::Key ftags::StringTable::addKey(const char* inputString)
 {
+   if (m_useSafeConcurrentAccess)
+   {
+      m_mutex.lock_shared();
+   }
+
    const Key currentPosition{getKey(inputString)};
+
+   if (m_useSafeConcurrentAccess)
+   {
+      m_mutex.unlock_shared();
+   }
+
    if (currentPosition != 0)
    {
       return currentPosition;
    }
 
    const auto inputLength{static_cast<uint32_t>(strlen(inputString))};
+
+   if (m_useSafeConcurrentAccess)
+   {
+      m_mutex.lock();
+   }
 
    // allocate extra bite for NUL
    auto allocation{m_store.allocate(inputLength + 1)};
@@ -66,6 +103,11 @@ ftags::StringTable::Key ftags::StringTable::addKey(const char* inputString)
    std::copy_n(inputString, inputLength + 1, allocation.iterator);
 
    m_index[&*allocation.iterator] = allocation.key;
+
+   if (m_useSafeConcurrentAccess)
+   {
+      m_mutex.unlock();
+   }
 
    return allocation.key;
 }

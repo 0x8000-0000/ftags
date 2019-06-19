@@ -20,6 +20,8 @@
 #include <store.h>
 
 #include <functional>
+#include <memory>
+#include <shared_mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -63,13 +65,51 @@ public:
 class StringTable
 {
 public:
+   StringTable(bool enableConcurrentAccess = false) : m_useSafeConcurrentAccess{enableConcurrentAccess}
+   {
+   }
+
+   StringTable(const StringTable& other) :
+      m_store{other.m_store},
+      m_index{other.m_index},
+      m_useSafeConcurrentAccess{other.m_useSafeConcurrentAccess}
+   {
+   }
+
+   StringTable(StringTable&& other) :
+      m_store{std::move(other.m_store)},
+      m_index{std::move(other.m_index)},
+      m_useSafeConcurrentAccess{other.m_useSafeConcurrentAccess}
+   {
+   }
+
+   StringTable& operator=(const StringTable& other)
+   {
+      if (this != &other)
+      {
+         m_store = other.m_store;
+         m_index = other.m_index;
+      }
+      return *this;
+   }
+
+   StringTable& operator=(StringTable&& other)
+   {
+      if (this != &other)
+      {
+         m_store = std::move(other.m_store);
+         m_index = std::move(other.m_index);
+      }
+
+      return *this;
+   }
 
    using Key = uint32_t;
 
    const char* getString(Key stringKey) const noexcept;
 
-   Key getKey(const char* string) const noexcept;
-   Key addKey(const char* string);
+   Key  getKey(const char* string) const noexcept;
+   Key  addKey(const char* string);
    void removeKey(const char* string);
 
    /*
@@ -81,7 +121,6 @@ public:
    static StringTable deserialize(const std::byte* buffer, size_t size);
 
 private:
-
    static constexpr uint32_t k_bucketSize = 24;
 
    ftags::Store<char, Key, k_bucketSize> m_store;
@@ -90,6 +129,9 @@ private:
     * Lookup table; can be reconstructed from the store above.
     */
    std::unordered_map<const char*, Key, CharPointerHashingFunctor, CharPointerCompareFunctor> m_index;
+
+   const bool                m_useSafeConcurrentAccess;
+   mutable std::shared_mutex m_mutex;
 };
 
 } // namespace ftags

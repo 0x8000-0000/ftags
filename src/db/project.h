@@ -392,9 +392,9 @@ private:
    using TranslationUnitStore = std::vector<TranslationUnit>;
    TranslationUnitStore m_translationUnits;
 
-   StringTable m_symbolTable;
-   StringTable m_namespaceTable;
-   StringTable m_fileNameTable;
+   StringTable m_symbolTable{true};       // enable concurrent access on all symbol tables
+   StringTable m_namespaceTable{true};
+   StringTable m_fileNameTable{true};
 
    /** Maps from a symbol key to a bag of translation units containing the symbol.
     */
