@@ -42,6 +42,17 @@ ftags::ProjectDb g_projectDb;
 
 ftags::shared_queue<CompilationRequest> g_compilationRequests;
 
+const char* g_defaultArguments[] = {
+   "-isystem",
+   "/usr/include",
+   "-isystem",
+   "/usr/include/c++/8",
+   "-isystem",
+   "/usr/include/x86_64-linux-gnu/c++/8",
+   "-isystem",
+   "/usr/lib/gcc/x86_64-linux-gnu/8/include",
+};
+
 void parseTranslationUnit()
 {
    while (true)
@@ -56,7 +67,12 @@ void parseTranslationUnit()
       ftags::StringTable fileNameTable;
 
       std::vector<const char*> arguments;
-      arguments.reserve(request.arguments.size());
+      arguments.reserve(request.arguments.size() + std::size(g_defaultArguments));
+
+      for (size_t ii = 0; ii < std::size(g_defaultArguments); ii++)
+      {
+         arguments.push_back(g_defaultArguments[ii]);
+      }
 
       for (const auto& arg : request.arguments)
       {
@@ -65,12 +81,19 @@ void parseTranslationUnit()
 
       spdlog::debug("Parsing {}", request.fileName);
 
-      ftags::TranslationUnit translationUnit =
-         ftags::TranslationUnit::parse(request.fileName, arguments, symbolTable, fileNameTable);
+      try
+      {
+         ftags::TranslationUnit translationUnit =
+            ftags::TranslationUnit::parse(request.fileName, arguments, symbolTable, fileNameTable);
 
-      spdlog::info("Loaded {} records from {}", translationUnit.getRecordCount(), request.fileName);
+         spdlog::info("Loaded {} records from {}", translationUnit.getRecordCount(), request.fileName);
 
-      g_projectDb.addTranslationUnit(request.fileName, translationUnit);
+         g_projectDb.addTranslationUnit(request.fileName, translationUnit);
+      }
+      catch (const std::runtime_error& re)
+      {
+         spdlog::error("Failed to parse {}: {}", re.what());
+      }
    }
 }
 

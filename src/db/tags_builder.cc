@@ -84,9 +84,85 @@ static ftags::SymbolType getSymbolType(CXCursor clangCursor, ftags::Attributes& 
       attributes.isDeclaration = true;
       break;
 
+   case CXCursor_ClassDecl:
+      symbolType               = ftags::SymbolType::ClassDeclaration;
+      attributes.isDeclaration = true;
+      break;
+
+   case CXCursor_EnumDecl:
+      symbolType               = ftags::SymbolType::EnumerationDeclaration;
+      attributes.isDeclaration = true;
+      break;
+
    case CXCursor_FunctionDecl:
       symbolType               = ftags::SymbolType::FunctionDeclaration;
       attributes.isDeclaration = true;
+      break;
+
+   case CXCursor_VarDecl:
+      symbolType               = ftags::SymbolType::VariableDeclaration;
+      attributes.isDeclaration = true;
+      break;
+
+   case CXCursor_ParmDecl:
+      symbolType               = ftags::SymbolType::ParameterDeclaration;
+      attributes.isDeclaration = true;
+      break;
+
+   case CXCursor_TypedefDecl:
+      symbolType               = ftags::SymbolType::TypedefDeclaration;
+      attributes.isDeclaration = true;
+      break;
+
+   case CXCursor_CXXMethod:
+      symbolType               = ftags::SymbolType::MethodDeclaration;
+      attributes.isDeclaration = true;
+      break;
+
+   case CXCursor_Namespace:
+      symbolType               = ftags::SymbolType::Namespace;
+      attributes.isDeclaration = true;
+      break;
+
+   case CXCursor_Constructor:
+      symbolType               = ftags::SymbolType::Constructor;
+      attributes.isDeclaration = true;
+      break;
+
+   case CXCursor_Destructor:
+      symbolType               = ftags::SymbolType::Destructor;
+      attributes.isDeclaration = true;
+      break;
+
+   case CXCursor_MemberRef:
+      symbolType             = ftags::SymbolType::MemberReference;
+      attributes.isReference = true;
+      break;
+
+   case CXCursor_CallExpr:
+      symbolType              = ftags::SymbolType::FunctionCallExpression;
+      attributes.isExpression = true;
+      break;
+
+   case CXCursor_StringLiteral:
+      symbolType = ftags::SymbolType::StringLiteral;
+      break;
+
+   case CXCursor_DeclRefExpr:
+      symbolType              = ftags::SymbolType::DeclarationReferenceExpression;
+      attributes.isReference  = true;
+      attributes.isExpression = true;
+      break;
+
+   case CXCursor_MemberRefExpr:
+      symbolType              = ftags::SymbolType::MemberReferenceExpression;
+      attributes.isReference  = true;
+      attributes.isExpression = true;
+      break;
+
+   case CXCursor_CStyleCastExpr:
+      symbolType        = ftags::SymbolType::CStyleCastExpression;
+      attributes.isCast = true;
       break;
 
    default:
@@ -166,7 +242,7 @@ ftags::TranslationUnit ftags::TranslationUnit::parse(const std::string&       fi
       /* num_command_line_args = */ static_cast<int>(arguments.size()),
       /* unsaved_files         = */ nullptr,
       /* num_unsaved_files     = */ 0,
-      /* options               = */ CXTranslationUnit_DetailedPreprocessingRecord | CXTranslationUnit_SingleFileParse,
+      /* options               = */ CXTranslationUnit_DetailedPreprocessingRecord | CXTranslationUnit_KeepGoing | CXTranslationUnit_SingleFileParse,
       /* out_TU                = */ &translationUnitPtr);
 
    if ((parseError == CXError_Success) && (nullptr != translationUnitPtr))

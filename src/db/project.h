@@ -141,6 +141,9 @@ struct Attributes
    uint32_t isUse : 1;
    uint32_t isOverload : 1;
 
+   uint32_t isReference : 1;
+   uint32_t isExpression : 1;
+
    uint32_t isArray : 1;
    uint32_t isConstant : 1;
    uint32_t isGlobal : 1;
@@ -154,7 +157,8 @@ struct Attributes
    uint32_t isThrown : 1;
 
    uint32_t isFromMainFile : 1;
-   // 2 free bits
+
+   // 0 free bits
 };
 
 struct Location
@@ -198,7 +202,6 @@ struct Record
 class TranslationUnit
 {
 public:
-
    using Key = ftags::StringTable::Key;
 
    TranslationUnit(StringTable& symbolTable, StringTable& fileNameTable) :
@@ -231,7 +234,10 @@ public:
    /*
     * Statistics
     */
-   std::vector<Record>::size_type getRecordCount() const { return m_records.size(); }
+   std::vector<Record>::size_type getRecordCount() const
+   {
+      return m_records.size();
+   }
 
    /*
     * General queries
@@ -298,7 +304,7 @@ public:
       const auto keyRange =
          std::equal_range(m_records.cbegin(), m_records.cend(), symbolNameKey, RecordSymbolComparator());
 
-      for (auto iter = keyRange.first; iter != keyRange.second; ++ iter)
+      for (auto iter = keyRange.first; iter != keyRange.second; ++iter)
       {
          func(&*iter);
       }
@@ -397,9 +403,9 @@ private:
     */
    using TranslationUnitStore = std::vector<TranslationUnit>;
    TranslationUnitStore m_translationUnits;
-   std::mutex m_updateTranslationUnits;
+   std::mutex           m_updateTranslationUnits;
 
-   StringTable m_symbolTable{true};       // enable concurrent access on all symbol tables
+   StringTable m_symbolTable{true}; // enable concurrent access on all symbol tables
    StringTable m_namespaceTable{true};
    StringTable m_fileNameTable{true};
 
