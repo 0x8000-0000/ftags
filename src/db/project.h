@@ -21,6 +21,7 @@
 
 #include <algorithm>
 #include <map>
+#include <mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -228,6 +229,11 @@ public:
    }
 
    /*
+    * Statistics
+    */
+   std::vector<Record>::size_type getRecordCount() const { return m_records.size(); }
+
+   /*
     * General queries
     */
    std::vector<Record*> getFunctions() const;
@@ -391,6 +397,7 @@ private:
     */
    using TranslationUnitStore = std::vector<TranslationUnit>;
    TranslationUnitStore m_translationUnits;
+   std::mutex m_updateTranslationUnits;
 
    StringTable m_symbolTable{true};       // enable concurrent access on all symbol tables
    StringTable m_namespaceTable{true};

@@ -39,6 +39,11 @@ if (SANITIZE_ADDRESS)
    target_link_options (project_options INTERFACE -fsanitize=address)
 endif ()
 
+if (SANITIZE_THREAD)
+   target_compile_options (project_options INTERFACE -fsanitize=thread)
+   target_link_options (project_options INTERFACE -fsanitize=thread)
+endif ()
+
 
 #
 # Link this 'library' to use the standard warnings
@@ -72,7 +77,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
       -Wno-documentation-unknown-command
       -Wno-switch-enum -Wno-weak-vtables -Wno-missing-noreturn
       -Wno-undefined-func-template -Wno-disabled-macro-expansion
-      -Wno-unused-member-function
+      -Wno-unused-member-function -Wno-exit-time-destructors
       )
 endif ()
 endif ()

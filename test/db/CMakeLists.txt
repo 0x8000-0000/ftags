@@ -1,3 +1,7 @@
+#
+# GoogleTest tests
+#
+
 add_executable (store_test store_test.cc)
 target_link_libraries (store_test PRIVATE project_options project_warnings)
 target_link_libraries (store_test PRIVATE ${GTEST_BOTH_LIBRARIES}
@@ -23,3 +27,14 @@ gtest_discover_tests (tags_index_test
 configure_file (data/hello/hello.cc data/hello/hello.cc)
 
 configure_file (data/functions/alpha-beta.cc data/functions/alpha-beta.cc)
+
+#
+# Stand-alone tests
+#
+add_executable (project_index_test project_index_test.cc)
+
+target_include_directories (project_index_test PRIVATE ${LIBCLANG_INCLUDEDIR})
+target_link_libraries (project_index_test PRIVATE project_options project_warnings)
+target_link_libraries (project_index_test PRIVATE ftags db)
+target_link_libraries (project_index_test PRIVATE -L${LIBCLANG_LIBDIR})
+target_link_libraries (project_index_test PRIVATE -lclang)

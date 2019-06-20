@@ -117,23 +117,28 @@ void ftags::ProjectDb::addTranslationUnit(const std::string& fullPath, const Tra
    newTranslationUnit.copyRecords(translationUnit);
 
    /*
+    * gather all unique symbols in this translation unit
+    */
+   std::set<ftags::StringTable::Key> symbolKeys;
+   newTranslationUnit.forEachRecord(
+      [&symbolKeys](const Record* record) { symbolKeys.insert(record->symbolNameKey); });
+
+   /*
+    * protect access
+    */
+   std::lock_guard<std::mutex>           lock(m_updateTranslationUnits);
+
+   /*
     * add the new translation unit to database
     */
    const TranslationUnitStore::size_type translationUnitPos = m_translationUnits.size();
-   m_translationUnits.push_back(newTranslationUnit);
+   m_translationUnits.emplace_back(std::move(newTranslationUnit));
 
    /*
     * register the name of the translation unit
     */
    const auto fileKey   = m_fileNameTable.addKey(fullPath.data());
    m_fileIndex[fileKey] = translationUnitPos;
-
-   /*
-    * gather all unique symbols in this translation unit
-    */
-   std::set<ftags::StringTable::Key> symbolKeys;
-   newTranslationUnit.forEachRecord(
-      [&symbolKeys](const Record* record) { symbolKeys.insert(record->symbolNameKey); });
 
    /*
     * add a mapping from this symbol to this translation unit
