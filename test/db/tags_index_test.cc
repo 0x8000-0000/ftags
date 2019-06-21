@@ -74,7 +74,7 @@ TEST(TagsIndexTest, IndexOneFileHasFunctions)
    ASSERT_TRUE(tagsDb.isFileIndexed(helloPath));
 
    std::vector<const ftags::Record*> functions = tagsDb.getFunctions();
-   ASSERT_EQ(1, functions.size());
+   ASSERT_LT(1, functions.size());
 }
 
 TEST(TagsIndexTest, HelloWorldHasMainFunction)
@@ -109,6 +109,8 @@ TEST(TagsIndexTest, HelloWorldCallsPrintfFunction)
    std::vector<const char*> arguments;
    arguments.push_back("-Wall");
    arguments.push_back("-Wextra");
+   arguments.push_back("-stdlib=libstdc++");
+   arguments.push_back("--gcc-toolchain=/usr");
 
    ftags::StringTable     symbolTable;
    ftags::StringTable     fileNameTable;
@@ -138,6 +140,8 @@ TEST(TagsIndexTest, DistinguishDeclarationFromDefinition)
    std::vector<const char*> arguments;
    arguments.push_back("-Wall");
    arguments.push_back("-Wextra");
+   arguments.push_back("-isystem");
+   arguments.push_back("/usr/include");
 
    ftags::StringTable     symbolTable;
    ftags::StringTable     fileNameTable;

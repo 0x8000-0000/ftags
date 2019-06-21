@@ -16,17 +16,19 @@
 
 #include <project.h>
 
-#include <iostream>
+#include <ostream>
 
 void ftags::TranslationUnit::dumpRecords(std::ostream& os) const
 {
+   os << " Found " << m_records.size() << " records." << std::endl;
    for (const auto& record : m_records)
    {
       const char* symbolName = getSymbolName(record);
-      const char* fileName = getFileName(record);
-      os << "    " << symbolName << "    " << fileName << ':' << record.startLine << ':'
-         << record.startColumn << '\n';
+      const char* fileName   = getFileName(record);
+      os << "    " << symbolName << "    " << fileName << ':' << record.startLine << ':' << record.startColumn
+         << std::endl;
    }
+   os << " ----- " << std::endl;
 }
 
 void ftags::ProjectDb::dumpRecords(std::ostream& os) const
@@ -34,7 +36,15 @@ void ftags::ProjectDb::dumpRecords(std::ostream& os) const
    for (const auto& translationUnit : m_translationUnits)
    {
       const auto fileNameKey = translationUnit.getFileNameKey();
-      os << m_fileNameTable.getString(fileNameKey) << '\n';
+      const char* fileName   = m_fileNameTable.getString(fileNameKey);
+      if (fileName)
+      {
+         os << "File: " << fileName << std::endl;
+      }
+      else
+      {
+         os << "File: unnamed" << std::endl;
+      }
       translationUnit.dumpRecords(os);
    }
 }

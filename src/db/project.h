@@ -80,6 +80,7 @@ enum class SymbolType : uint8_t
    OverloadedDeclarationReference = 49,
    VariableReference              = 50,
 
+   UnexposedExpression            = 101,
    DeclarationReferenceExpression = 101,
    MemberReferenceExpression      = 102,
    FunctionCallExpression         = 103,

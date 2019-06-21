@@ -139,13 +139,32 @@ static ftags::SymbolType getSymbolType(CXCursor clangCursor, ftags::Attributes& 
       attributes.isReference = true;
       break;
 
+#if 0
+   case CXCursor_UnexposedExpr:
+      symbolType              = ftags::SymbolType::UnexposedExpression;
+      attributes.isExpression = true;
+      break;
+#endif
+
    case CXCursor_CallExpr:
       symbolType              = ftags::SymbolType::FunctionCallExpression;
       attributes.isExpression = true;
       break;
 
+   case CXCursor_IntegerLiteral:
+      symbolType = ftags::SymbolType::IntegerLiteral;
+      break;
+
    case CXCursor_StringLiteral:
       symbolType = ftags::SymbolType::StringLiteral;
+      break;
+
+   case CXCursor_CharacterLiteral:
+      symbolType = ftags::SymbolType::CharacterLiteral;
+      break;
+
+   case CXCursor_FloatingLiteral:
+      symbolType = ftags::SymbolType::FloatingLiteral;
       break;
 
    case CXCursor_DeclRefExpr:
@@ -175,6 +194,10 @@ static ftags::SymbolType getSymbolType(CXCursor clangCursor, ftags::Attributes& 
 void processCursor(ftags::TranslationUnit* translationUnit, CXCursor clangCursor)
 {
    ftags::Cursor     cursor     = {};
+   // get it early to aid debugging
+   CXStringWrapper name{clang_getCursorSpelling(clangCursor)};
+   cursor.symbolName = name.c_str();
+
    ftags::Attributes attributes = {};
    cursor.symbolType            = getSymbolType(clangCursor, attributes);
 
@@ -183,9 +206,6 @@ void processCursor(ftags::TranslationUnit* translationUnit, CXCursor clangCursor
       // don't know how to handle this cursor; just ignore it
       return;
    }
-
-   CXStringWrapper name{clang_getCursorSpelling(clangCursor)};
-   cursor.symbolName = name.c_str();
 
    CXStringWrapper fileName;
    unsigned int    line   = 0;
@@ -242,11 +262,35 @@ ftags::TranslationUnit ftags::TranslationUnit::parse(const std::string&       fi
       /* num_command_line_args = */ static_cast<int>(arguments.size()),
       /* unsaved_files         = */ nullptr,
       /* num_unsaved_files     = */ 0,
-      /* options               = */ CXTranslationUnit_DetailedPreprocessingRecord | CXTranslationUnit_KeepGoing | CXTranslationUnit_SingleFileParse,
+      /* options               = */ CXTranslationUnit_Incomplete | CXTranslationUnit_DetailedPreprocessingRecord |
+         CXTranslationUnit_KeepGoing | CXTranslationUnit_CreatePreambleOnFirstParse |
+         clang_defaultEditingTranslationUnitOptions(),
       /* out_TU                = */ &translationUnitPtr);
 
    if ((parseError == CXError_Success) && (nullptr != translationUnitPtr))
    {
+      CXDiagnosticSet diagnosticSet    = clang_getDiagnosticSetFromTU(translationUnitPtr);
+      unsigned        diagnosticsCount = clang_getNumDiagnosticsInSet(diagnosticSet);
+
+      if (diagnosticsCount)
+      {
+         const unsigned defaultDisplayOptions = clang_defaultDiagnosticDisplayOptions();
+         for (unsigned ii = 0; ii < diagnosticsCount; ii++)
+         {
+            CXDiagnostic diagnostic = clang_getDiagnosticInSet(diagnosticSet, ii);
+
+            CXString message = clang_formatDiagnostic(diagnostic, defaultDisplayOptions);
+
+            const char* msgStr = clang_getCString(message);
+            (void)msgStr;
+
+            clang_disposeString(message);
+            clang_disposeDiagnostic(diagnostic);
+         }
+      }
+
+      clang_disposeDiagnosticSet(diagnosticSet);
+
       auto clangTranslationUnit =
          std::unique_ptr<CXTranslationUnitImpl, CXTranslationUnitDestroyer>(translationUnitPtr);
 
