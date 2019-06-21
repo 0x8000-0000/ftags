@@ -226,3 +226,27 @@ std::vector<const ftags::Record*> ftags::ProjectDb::findDeclaration(const std::s
 
    return results;
 }
+
+std::vector<const ftags::Record*> ftags::ProjectDb::findReference(const std::string& symbolName) const
+{
+   std::vector<const ftags::Record*> results;
+
+   const auto key = m_symbolTable.getKey(symbolName.data());
+   if (key)
+   {
+      const auto range = m_symbolIndex.equal_range(key);
+      for (auto translationUnitPos = range.first; translationUnitPos != range.second; ++translationUnitPos)
+      {
+         const auto& translationUnit = m_translationUnits.at(translationUnitPos->second);
+
+         translationUnit.forEachRecordWithSymbol(key, [&results](const Record* record) {
+            if (record->attributes.isReference)
+            {
+               results.push_back(record);
+            }
+         });
+      }
+   }
+
+   return results;
+}

@@ -356,6 +356,8 @@ public:
 
    std::vector<const Record*> findDefinition(const std::string& symbolName) const;
 
+   std::vector<const Record*> findReference(const std::string& symbolName) const;
+
    std::vector<const Record*> findWhereUsed(Record* record) const;
 
    std::vector<const Record*> findOverloadDefinitions(Record* record) const;
