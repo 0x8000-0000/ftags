@@ -126,7 +126,7 @@ void ftags::ProjectDb::addTranslationUnit(const std::string& fullPath, const Tra
    /*
     * protect access
     */
-   std::lock_guard<std::mutex>           lock(m_updateTranslationUnits);
+   std::lock_guard<std::mutex> lock(m_updateTranslationUnits);
 
    /*
     * add the new translation unit to database

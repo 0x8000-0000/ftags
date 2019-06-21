@@ -19,6 +19,7 @@
 #include <gtest/gtest.h>
 
 #include <filesystem>
+#include <sstream>
 #include <vector>
 
 TEST(TagsIndexTest, IndexOneFile)
@@ -115,6 +116,13 @@ TEST(TagsIndexTest, HelloWorldCallsPrintfFunction)
 
    ftags::ProjectDb tagsDb;
    tagsDb.addTranslationUnit(helloPath, helloCpp);
+
+   std::stringstream output;
+
+   tagsDb.dumpRecords(output);
+
+   std::string result = output.str();
+   ASSERT_FALSE(result.empty());
 
    std::vector<const ftags::Record*> results = tagsDb.findReference("printf");
    ASSERT_EQ(1, results.size());

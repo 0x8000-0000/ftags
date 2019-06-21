@@ -20,6 +20,7 @@
 #include <string_table.h>
 
 #include <algorithm>
+#include <iosfwd>
 #include <map>
 #include <mutex>
 #include <string>
@@ -311,6 +312,11 @@ public:
 #endif
    }
 
+   /*
+    * Debugging
+    */
+   void dumpRecords(std::ostream& os) const;
+
 private:
    Key m_fileNameKey = 0;
 
@@ -391,6 +397,11 @@ public:
    std::vector<uint8_t> serialize() const;
 
    static ProjectDb deserialize(const uint8_t* buffer, size_t size);
+
+   /*
+    * Debugging
+    */
+   void dumpRecords(std::ostream& os) const;
 
 private:
    enum State
