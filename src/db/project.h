@@ -163,6 +163,8 @@ struct Attributes
    // 0 free bits
 };
 
+static_assert(sizeof(Attributes) == 4, "sizeof(Attributes) exceeds 4 bytes");
+
 struct Location
 {
    const char* fileName;
@@ -190,16 +192,16 @@ struct Record
 
    SymbolNameKey    symbolNameKey;
    NamespaceNameKey namespaceKey;
-   FileNameKey      fileNameKey;
 
-   uint32_t startLine;
-   uint16_t startColumn;
-   uint16_t endLine;
-
-   uint64_t parentRecord; // TODO: find an implementation for connecting records
+   FileNameKey fileNameKey;
+   uint32_t    startLine;
+   uint16_t    startColumn;
+   uint16_t    endLine;
 
    Attributes attributes;
 };
+
+static_assert(sizeof(Record) == 24, "sizeof(Record) exceeds 24 bytes");
 
 class TranslationUnit
 {

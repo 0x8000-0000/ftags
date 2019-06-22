@@ -193,7 +193,7 @@ static ftags::SymbolType getSymbolType(CXCursor clangCursor, ftags::Attributes& 
 
 void processCursor(ftags::TranslationUnit* translationUnit, CXCursor clangCursor)
 {
-   ftags::Cursor     cursor     = {};
+   ftags::Cursor cursor = {};
    // get it early to aid debugging
    CXStringWrapper name{clang_getCursorSpelling(clangCursor)};
    cursor.symbolName = name.c_str();
@@ -255,6 +255,10 @@ ftags::TranslationUnit ftags::TranslationUnit::parse(const std::string&       fi
 
    CXTranslationUnit translationUnitPtr = nullptr;
 
+   const unsigned parsingOptions = CXTranslationUnit_DetailedPreprocessingRecord | CXTranslationUnit_KeepGoing |
+                                   CXTranslationUnit_CreatePreambleOnFirstParse |
+                                   clang_defaultEditingTranslationUnitOptions();
+
    const CXErrorCode parseError = clang_parseTranslationUnit2(
       /* CIdx                  = */ clangIndex.get(),
       /* source_filename       = */ fileName.c_str(),
@@ -262,9 +266,7 @@ ftags::TranslationUnit ftags::TranslationUnit::parse(const std::string&       fi
       /* num_command_line_args = */ static_cast<int>(arguments.size()),
       /* unsaved_files         = */ nullptr,
       /* num_unsaved_files     = */ 0,
-      /* options               = */ CXTranslationUnit_Incomplete | CXTranslationUnit_DetailedPreprocessingRecord |
-         CXTranslationUnit_KeepGoing | CXTranslationUnit_CreatePreambleOnFirstParse |
-         clang_defaultEditingTranslationUnitOptions(),
+      /* options               = */ parsingOptions,
       /* out_TU                = */ &translationUnitPtr);
 
    if ((parseError == CXError_Success) && (nullptr != translationUnitPtr))
