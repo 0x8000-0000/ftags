@@ -16,15 +16,52 @@
 
 #include <project.h>
 
+#include <algorithm>
+#include <numeric>
 #include <ostream>
+
+namespace
+{
+
+class OrderRecordsByLocation
+{
+public:
+   OrderRecordsByLocation(const std::vector<ftags::Record>& records) : m_records{records}
+   {
+   }
+
+   bool operator()(const unsigned& left, const unsigned& right)
+   {
+      assert(right < m_records.size());
+      assert(left < m_records.size());
+
+      const ftags::Record& leftRecord  = m_records[left];
+      const ftags::Record& rightRecord = m_records[right];
+
+      return (leftRecord.fileNameKey < rightRecord.fileNameKey) || (leftRecord.startLine < rightRecord.startLine) ||
+             (leftRecord.startColumn < rightRecord.startColumn);
+   }
+
+private:
+   const std::vector<ftags::Record>& m_records;
+};
+
+} // anonymous namespace
 
 void ftags::TranslationUnit::dumpRecords(std::ostream& os) const
 {
+   std::vector<unsigned> recordsByLine(/* size = */ m_records.size());
+
+   std::iota(recordsByLine.begin(), recordsByLine.end(), 0);
+
+   //std::sort(recordsByLine.begin(), recordsByLine.end(), OrderRecordsByLocation(m_records));
+
    os << " Found " << m_records.size() << " records." << std::endl;
-   for (const auto& record : m_records)
+   for (auto ii : recordsByLine)
    {
-      const char* symbolName = getSymbolName(record);
-      const char* fileName   = getFileName(record);
+      const Record& record     = m_records[ii];
+      const char*   symbolName = getSymbolName(record);
+      const char*   fileName   = getFileName(record);
       os << "    " << symbolName << "    " << fileName << ':' << record.startLine << ':' << record.startColumn
          << std::endl;
    }
@@ -35,8 +72,8 @@ void ftags::ProjectDb::dumpRecords(std::ostream& os) const
 {
    for (const auto& translationUnit : m_translationUnits)
    {
-      const auto fileNameKey = translationUnit.getFileNameKey();
-      const char* fileName   = m_fileNameTable.getString(fileNameKey);
+      const auto  fileNameKey = translationUnit.getFileNameKey();
+      const char* fileName    = m_fileNameTable.getString(fileNameKey);
       if (fileName)
       {
          os << "File: " << fileName << std::endl;

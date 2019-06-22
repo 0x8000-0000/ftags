@@ -4,24 +4,29 @@
 #include <iostream>
 #include <vector>
 
-int main()
+int main(int argc, char* argv[])
 {
-   auto path = std::filesystem::current_path();
-
-   auto helloPath = path / "test" / "db" / "data" / "hello" / "hello.cc";
+   if (argc < 2)
+   {
+      std::cout << "Required file name argument missing" << std::endl;
+      return 1;
+   }
 
    std::vector<const char*> arguments;
    arguments.push_back("-Wall");
    arguments.push_back("-Wextra");
-   arguments.push_back("-stdlib=libstdc++");
-   arguments.push_back("--gcc-toolchain=/usr");
+
+   for (int ii = 2; ii < argc; ii ++)
+   {
+      arguments.push_back(argv[ii]);
+   }
 
    ftags::StringTable     symbolTable;
    ftags::StringTable     fileNameTable;
-   ftags::TranslationUnit helloCpp = ftags::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
+   ftags::TranslationUnit translationUnit = ftags::TranslationUnit::parse(argv[1], arguments, symbolTable, fileNameTable);
 
    ftags::ProjectDb tagsDb;
-   tagsDb.addTranslationUnit(helloPath, helloCpp);
+   tagsDb.addTranslationUnit(argv[1], translationUnit);
 
    tagsDb.dumpRecords(std::cout);
 
