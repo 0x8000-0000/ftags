@@ -30,7 +30,7 @@ public:
    {
    }
 
-   bool operator()(const unsigned& left, const unsigned& right)
+   bool operator()(const unsigned& left, const unsigned& right) const
    {
       assert(right < m_records.size());
       assert(left < m_records.size());
@@ -38,8 +38,28 @@ public:
       const ftags::Record& leftRecord  = m_records[left];
       const ftags::Record& rightRecord = m_records[right];
 
-      return (leftRecord.fileNameKey < rightRecord.fileNameKey) || (leftRecord.startLine < rightRecord.startLine) ||
-             (leftRecord.startColumn < rightRecord.startColumn);
+      if (leftRecord.fileNameKey < rightRecord.fileNameKey)
+      {
+         return true;
+      }
+
+      if (leftRecord.fileNameKey == rightRecord.fileNameKey)
+      {
+         if (leftRecord.startLine < rightRecord.startLine)
+         {
+            return true;
+         }
+
+         if (leftRecord.startLine == rightRecord.startLine)
+         {
+            if (leftRecord.startColumn < rightRecord.startColumn)
+            {
+               return true;
+            }
+         }
+      }
+
+      return false;
    }
 
 private:
@@ -54,7 +74,7 @@ void ftags::TranslationUnit::dumpRecords(std::ostream& os) const
 
    std::iota(recordsByLine.begin(), recordsByLine.end(), 0);
 
-   //std::sort(recordsByLine.begin(), recordsByLine.end(), OrderRecordsByLocation(m_records));
+   std::sort(recordsByLine.begin(), recordsByLine.end(), OrderRecordsByLocation(m_records));
 
    os << " Found " << m_records.size() << " records." << std::endl;
    for (auto ii : recordsByLine)
