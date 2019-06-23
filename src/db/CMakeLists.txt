@@ -1,6 +1,7 @@
 add_library (db STATIC string_table.cc project.cc project-debug tags_builder.cc)
 target_link_libraries (db PRIVATE project_options project_warnings)
 target_include_directories (db PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_include_directories (db PRIVATE ${LIBCLANG_INCLUDEDIR})
+target_include_directories (db PUBLIC ${LIBCLANG_INCLUDEDIR})
 target_link_directories (db PUBLIC ${LIBCLANG_LIBDIR})
+target_link_libraries (db PUBLIC -lstdc++fs)
 target_link_libraries (db PUBLIC clang)

@@ -33,16 +33,10 @@ configure_file (data/functions/alpha-beta.cc data/functions/alpha-beta.cc)
 #
 add_executable (project_index_test project_index_test.cc)
 
-target_include_directories (project_index_test PRIVATE ${LIBCLANG_INCLUDEDIR})
 target_link_libraries (project_index_test PRIVATE project_options project_warnings)
 target_link_libraries (project_index_test PRIVATE ftags db)
-target_link_libraries (project_index_test PRIVATE -L${LIBCLANG_LIBDIR})
-target_link_libraries (project_index_test PRIVATE -lclang)
 
 add_executable (dump_records dump_records.cc)
 
-target_include_directories (dump_records PRIVATE ${LIBCLANG_INCLUDEDIR})
 target_link_libraries (dump_records PRIVATE project_options project_warnings)
 target_link_libraries (dump_records PRIVATE ftags db)
-target_link_libraries (dump_records PRIVATE -L${LIBCLANG_LIBDIR})
-target_link_libraries (dump_records PRIVATE -lclang -lstdc++fs)
