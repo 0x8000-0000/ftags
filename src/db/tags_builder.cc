@@ -328,6 +328,7 @@ void processCursor(ftags::TranslationUnit* translationUnit, CXCursor clangCursor
       attributes.isDefinition = 1;
    }
 
+#ifdef USE_CANONICAL_PATHS
    const char*           fileNameAsRawCString = fileName.c_str();
    std::filesystem::path filePath{fileNameAsRawCString};
    std::string           canonicalFilePathAsString{fileNameAsRawCString};
@@ -345,10 +346,17 @@ void processCursor(ftags::TranslationUnit* translationUnit, CXCursor clangCursor
          canonicalFilePathAsString               = canonicalFilePath.string();
       }
    }
-
    cursor.location.fileName = canonicalFilePathAsString.data();
-   cursor.location.line     = static_cast<int>(line);
-   cursor.location.column   = static_cast<int>(column);
+#else
+   cursor.location.fileName = fileName.c_str();
+#endif
+
+   cursor.location.line   = static_cast<int>(line);
+   cursor.location.column = static_cast<int>(column);
+
+   CXStringWrapper unifiedSymbol{clang_getCursorUSR(clangCursor)};
+
+   cursor.unifiedSymbol = unifiedSymbol.c_str();
 
    translationUnit->addCursor(cursor, attributes);
 }

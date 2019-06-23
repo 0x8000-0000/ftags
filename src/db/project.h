@@ -183,6 +183,7 @@ struct Cursor
 {
    char*       symbolNamespace;
    const char* symbolName;
+   const char* unifiedSymbol;
 
    SymbolType symbolType;
 
