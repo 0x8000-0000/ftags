@@ -80,7 +80,7 @@ enum class SymbolType : uint16_t
    OverloadedDeclarationReference = 49,
    VariableReference              = 50,
 
-   UnexposedExpression            = 101,
+   UnexposedExpression            = 100,
    DeclarationReferenceExpression = 101,
    MemberReferenceExpression      = 102,
    FunctionCallExpression         = 103,
@@ -119,7 +119,7 @@ enum class SymbolType : uint16_t
 
    MacroDefinition    = 501,
    MacroExpansion     = 502,
-   InclusionDirective = 502,
+   InclusionDirective = 503,
 
    TypeAliasTemplateDecl = 601,
 };
