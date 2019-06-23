@@ -42,6 +42,8 @@ ftags::ProjectDb g_projectDb;
 
 ftags::shared_queue<CompilationRequest> g_compilationRequests;
 
+std::mutex g_clangMutex;
+
 const char* g_defaultArguments[] = {
    "-isystem",
    "/usr/include",
@@ -83,6 +85,7 @@ void parseTranslationUnit()
 
       try
       {
+         std::lock_guard<std::mutex> lock(g_clangMutex);
          ftags::TranslationUnit translationUnit =
             ftags::TranslationUnit::parse(request.fileName, arguments, symbolTable, fileNameTable);
 
