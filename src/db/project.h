@@ -35,7 +35,7 @@ namespace ftags
 /*
  * Maps to Clang-C interface numeric values
  */
-enum class SymbolType : uint8_t
+enum class SymbolType : uint16_t
 {
    Undefined = 0,
 
@@ -64,11 +64,11 @@ enum class SymbolType : uint8_t
    ClassTemplate                      = 31,
    ClassTemplatePartialSpecialization = 32,
 
-   NamespaceAlias   = 33,
-   UsingDirective   = 34,
-   UsingDeclaration = 35,
-   TypeAliasDecl    = 36,
-   AccessSpecifier  = 39,
+   NamespaceAlias       = 33,
+   UsingDirective       = 34,
+   UsingDeclaration     = 35,
+   TypeAliasDeclaration = 36,
+   AccessSpecifier      = 39,
 
    TypeReference      = 43,
    BaseSpecifier      = 44,
@@ -117,6 +117,11 @@ enum class SymbolType : uint8_t
    LambdaExpression  = 144,
    FixedPointLiteral = 149,
 
+   MacroDefinition    = 501,
+   MacroExpansion     = 502,
+   InclusionDirective = 502,
+
+   TypeAliasTemplateDecl = 601,
 };
 
 enum class Relation : uint8_t
@@ -136,7 +141,7 @@ struct Attributes
 {
    uint32_t lineSpan : 8;
 
-   uint32_t type : 8;
+   uint32_t type : 16;
 
    uint32_t isDeclaration : 1;
    uint32_t isDefinition : 1;
@@ -160,10 +165,12 @@ struct Attributes
 
    uint32_t isFromMainFile : 1;
 
-   // 0 free bits
+   uint32_t isNamespaceRef : 1;
+
+   uint32_t freeBits : 15;
 };
 
-static_assert(sizeof(Attributes) == 4, "sizeof(Attributes) exceeds 4 bytes");
+static_assert(sizeof(Attributes) == 8, "sizeof(Attributes) exceeds 4 bytes");
 
 struct Location
 {
@@ -201,7 +208,7 @@ struct Record
    Attributes attributes;
 };
 
-static_assert(sizeof(Record) == 24, "sizeof(Record) exceeds 24 bytes");
+static_assert(sizeof(Record) == 28, "sizeof(Record) exceeds 28 bytes");
 
 class TranslationUnit
 {

@@ -80,6 +80,21 @@ static ftags::SymbolType getSymbolType(CXCursor clangCursor, ftags::Attributes& 
 
    switch (cursorKind)
    {
+   case CXCursor_FieldDecl:
+      symbolType               = ftags::SymbolType::FieldDeclaration;
+      attributes.isDeclaration = true;
+      break;
+
+   case CXCursor_EnumConstantDecl:
+      symbolType               = ftags::SymbolType::EnumerationConstantDeclaration;
+      attributes.isDeclaration = true;
+      break;
+
+   case CXCursor_UnionDecl:
+      symbolType               = ftags::SymbolType::UnionDeclaration;
+      attributes.isDeclaration = true;
+      break;
+
    case CXCursor_StructDecl:
       symbolType               = ftags::SymbolType::StructDeclaration;
       attributes.isDeclaration = true;
@@ -135,8 +150,71 @@ static ftags::SymbolType getSymbolType(CXCursor clangCursor, ftags::Attributes& 
       attributes.isDeclaration = true;
       break;
 
+   case CXCursor_NonTypeTemplateParameter:
+      symbolType = ftags::SymbolType::NonTypeTemplateParameter;
+      break;
+
+   case CXCursor_TemplateTypeParameter:
+      symbolType               = ftags::SymbolType::TemplateTypeParameter;
+      attributes.isDeclaration = true;
+      break;
+
+   case CXCursor_FunctionTemplate:
+      symbolType               = ftags::SymbolType::FunctionTemplate;
+      attributes.isDeclaration = true;
+      break;
+
+   case CXCursor_UsingDeclaration:
+      symbolType               = ftags::SymbolType::UsingDeclaration;
+      attributes.isDeclaration = true;
+      break;
+
+   case CXCursor_TypeAliasDecl:
+      symbolType               = ftags::SymbolType::TypeAliasDeclaration;
+      attributes.isDeclaration = true;
+      break;
+
+   case CXCursor_CXXBaseSpecifier:
+      symbolType = ftags::SymbolType::BaseSpecifier;
+      break;
+
+   case CXCursor_TypeRef:
+      symbolType = ftags::SymbolType::TypeReference;
+      break;
+
+   case CXCursor_TemplateRef:
+      symbolType = ftags::SymbolType::TemplateReference;
+      break;
+
+   case CXCursor_ClassTemplate:
+      symbolType = ftags::SymbolType::ClassTemplate;
+      break;
+
+   case CXCursor_ClassTemplatePartialSpecialization:
+      symbolType = ftags::SymbolType::ClassTemplatePartialSpecialization;
+      break;
+
+   case CXCursor_NamespaceAlias:
+      symbolType = ftags::SymbolType::NamespaceAlias;
+      break;
+
+   case CXCursor_NamespaceRef:
+      symbolType                = ftags::SymbolType::NamespaceReference;
+      attributes.isNamespaceRef = true;
+      break;
+
    case CXCursor_MemberRef:
       symbolType             = ftags::SymbolType::MemberReference;
+      attributes.isReference = true;
+      break;
+
+   case CXCursor_VariableRef:
+      symbolType             = ftags::SymbolType::VariableReference;
+      attributes.isReference = true;
+      break;
+
+   case CXCursor_OverloadedDeclRef:
+      symbolType             = ftags::SymbolType::OverloadedDeclarationReference;
       attributes.isReference = true;
       break;
 
@@ -185,6 +263,23 @@ static ftags::SymbolType getSymbolType(CXCursor clangCursor, ftags::Attributes& 
       attributes.isCast = true;
       break;
 
+   case CXCursor_MacroDefinition:
+      symbolType = ftags::SymbolType::MacroDefinition;
+      break;
+
+   case CXCursor_MacroExpansion:
+      symbolType = ftags::SymbolType::MacroExpansion;
+      break;
+
+   case CXCursor_InclusionDirective:
+      symbolType = ftags::SymbolType::InclusionDirective;
+      break;
+
+   case CXCursor_TypeAliasTemplateDecl:
+      symbolType               = ftags::SymbolType::TypeAliasTemplateDecl;
+      attributes.isDeclaration = true;
+      break;
+
    default:
       break;
    }
@@ -204,6 +299,14 @@ void processCursor(ftags::TranslationUnit* translationUnit, CXCursor clangCursor
 
    if (cursor.symbolType == ftags::SymbolType::Undefined)
    {
+#if 0
+      enum CXCursorKind cursorKind = clang_getCursorKind(clangCursor);
+      if (CXCursor_FirstExpr != cursorKind)
+      {
+         std::cerr << "@@ Unhandled symbol " << cursor.symbolName << " code: " << cursorKind << std::endl;
+      }
+#endif
+
       // don't know how to handle this cursor; just ignore it
       return;
    }
@@ -225,14 +328,23 @@ void processCursor(ftags::TranslationUnit* translationUnit, CXCursor clangCursor
       attributes.isDefinition = 1;
    }
 
-   std::filesystem::path filePath{fileName.c_str()};
-   if (! std::filesystem::exists(filePath))
+   const char*           fileNameAsRawCString = fileName.c_str();
+   std::filesystem::path filePath{fileNameAsRawCString};
+   std::string           canonicalFilePathAsString{fileNameAsRawCString};
+   if (std::filesystem::exists(filePath))
    {
-      filePath = std::filesystem::current_path() / filePath;
-      assert(std::filesystem::exists(filePath));
+      std::filesystem::path canonicalFilePath = std::filesystem::canonical(filePath);
+      canonicalFilePathAsString               = canonicalFilePath.string();
    }
-   std::filesystem::path canonicalFilePath = std::filesystem::canonical(filePath);
-   std::string canonicalFilePathAsString = canonicalFilePath.string();
+   else
+   {
+      std::filesystem::path otherPath = std::filesystem::current_path() / filePath;
+      if (std::filesystem::exists(otherPath))
+      {
+         std::filesystem::path canonicalFilePath = std::filesystem::canonical(otherPath);
+         canonicalFilePathAsString               = canonicalFilePath.string();
+      }
+   }
 
    cursor.location.fileName = canonicalFilePathAsString.data();
    cursor.location.line     = static_cast<int>(line);
