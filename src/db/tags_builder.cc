@@ -19,6 +19,7 @@
 #include <clang-c/CXString.h>
 #include <clang-c/Index.h>
 
+#include <filesystem>
 #include <memory>
 #include <stdexcept>
 
@@ -224,7 +225,16 @@ void processCursor(ftags::TranslationUnit* translationUnit, CXCursor clangCursor
       attributes.isDefinition = 1;
    }
 
-   cursor.location.fileName = fileName.c_str();
+   std::filesystem::path filePath{fileName.c_str()};
+   if (! std::filesystem::exists(filePath))
+   {
+      filePath = std::filesystem::current_path() / filePath;
+      assert(std::filesystem::exists(filePath));
+   }
+   std::filesystem::path canonicalFilePath = std::filesystem::canonical(filePath);
+   std::string canonicalFilePathAsString = canonicalFilePath.string();
+
+   cursor.location.fileName = canonicalFilePathAsString.data();
    cursor.location.line     = static_cast<int>(line);
    cursor.location.column   = static_cast<int>(column);
 
