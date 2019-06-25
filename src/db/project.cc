@@ -181,72 +181,21 @@ std::vector<const ftags::Record*> ftags::ProjectDb::getFunctions() const
 
 std::vector<const ftags::Record*> ftags::ProjectDb::findDefinition(const std::string& symbolName) const
 {
-   std::vector<const ftags::Record*> results;
-
-   const auto key = m_symbolTable.getKey(symbolName.data());
-   if (key)
-   {
-      const auto keyRange = m_symbolIndex.equal_range(key);
-      for (auto iter = keyRange.first; iter != keyRange.second; ++iter)
-      {
-         const auto& translationUnit = m_translationUnits.at(iter->second);
-
-         translationUnit.forEachRecordWithSymbol(key, [&results](const Record* record) {
-            if (record->attributes.isDefinition)
-            {
-               results.push_back(record);
-            }
-         });
-      }
-   }
-
-   return results;
+   return filterRecordsWithSymbol(symbolName, [](const Record* record) { return record->attributes.isDefinition; });
 }
 
 std::vector<const ftags::Record*> ftags::ProjectDb::findDeclaration(const std::string& symbolName) const
 {
-   std::vector<const ftags::Record*> results;
-
-   const auto key = m_symbolTable.getKey(symbolName.data());
-   if (key)
-   {
-      const auto range = m_symbolIndex.equal_range(key);
-      for (auto translationUnitPos = range.first; translationUnitPos != range.second; ++translationUnitPos)
-      {
-         const auto& translationUnit = m_translationUnits.at(translationUnitPos->second);
-
-         translationUnit.forEachRecordWithSymbol(key, [&results](const Record* record) {
-            if (!record->attributes.isDefinition)
-            {
-               results.push_back(record);
-            }
-         });
-      }
-   }
-
-   return results;
+   return filterRecordsWithSymbol(symbolName, [](const Record* record) { return record->attributes.isDeclaration; });
 }
 
 std::vector<const ftags::Record*> ftags::ProjectDb::findReference(const std::string& symbolName) const
 {
-   std::vector<const ftags::Record*> results;
+   return filterRecordsWithSymbol(symbolName, [](const Record* record) { return record->attributes.isReference; });
+}
 
-   const auto key = m_symbolTable.getKey(symbolName.data());
-   if (key)
-   {
-      const auto range = m_symbolIndex.equal_range(key);
-      for (auto translationUnitPos = range.first; translationUnitPos != range.second; ++translationUnitPos)
-      {
-         const auto& translationUnit = m_translationUnits.at(translationUnitPos->second);
-
-         translationUnit.forEachRecordWithSymbol(key, [&results](const Record* record) {
-            if (record->attributes.isReference)
-            {
-               results.push_back(record);
-            }
-         });
-      }
-   }
-
-   return results;
+std::vector<const ftags::Record*> ftags::ProjectDb::findSymbol(const std::string& symbolName,
+                                                               ftags::SymbolType  symbolType) const
+{
+   return filterRecordsWithSymbol(symbolName, [symbolType](const Record* record) { return record->attributes.type == symbolType; });
 }

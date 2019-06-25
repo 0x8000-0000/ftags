@@ -248,9 +248,10 @@ static ftags::SymbolType getSymbolType(CXCursor clangCursor, ftags::Attributes& 
       break;
 
    case CXCursor_DeclRefExpr:
-      symbolType              = ftags::SymbolType::DeclarationReferenceExpression;
-      attributes.isReference  = true;
-      attributes.isExpression = true;
+      symbolType               = ftags::SymbolType::DeclarationReferenceExpression;
+      attributes.isDeclaration = true;
+      attributes.isReference   = true;
+      attributes.isExpression  = true;
       break;
 
    case CXCursor_MemberRefExpr:

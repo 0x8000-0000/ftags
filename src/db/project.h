@@ -380,6 +380,13 @@ public:
 
    std::vector<const Record*> findReference(const std::string& symbolName) const;
 
+   std::vector<const Record*> findSymbol(const std::string& symbolName) const
+   {
+      return filterRecordsWithSymbol(symbolName, [](const Record* /* record */) { return true; });
+   }
+
+   std::vector<const Record*> findSymbol(const std::string& symbolName, ftags::SymbolType symbolType) const;
+
    std::vector<const Record*> findWhereUsed(Record* record) const;
 
    std::vector<const Record*> findOverloadDefinitions(Record* record) const;
@@ -427,6 +434,31 @@ private:
    } m_operatingState;
 
    void updateIndices();
+
+   template <typename F>
+   std::vector<const Record*> filterRecordsWithSymbol(const std::string& symbolName, F selectRecord) const
+   {
+      std::vector<const ftags::Record*> results;
+
+      const auto key = m_symbolTable.getKey(symbolName.data());
+      if (key)
+      {
+         const auto range = m_symbolIndex.equal_range(key);
+         for (auto translationUnitPos = range.first; translationUnitPos != range.second; ++translationUnitPos)
+         {
+            const auto& translationUnit = m_translationUnits.at(translationUnitPos->second);
+
+            translationUnit.forEachRecordWithSymbol(key, [&results, selectRecord](const Record* record) {
+               if (selectRecord(record))
+               {
+                  results.push_back(record);
+               }
+            });
+         }
+      }
+
+      return results;
+   }
 
    /** Contains all the symbol definitions.
     */

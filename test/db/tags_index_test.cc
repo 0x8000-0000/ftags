@@ -127,7 +127,7 @@ TEST(TagsIndexTest, HelloWorldCallsPrintfFunction)
    ASSERT_FALSE(result.empty());
 
    std::vector<const ftags::Record*> results = tagsDb.findReference("printf");
-   ASSERT_EQ(1, results.size());
+   ASSERT_EQ(2, results.size());
 }
 
 TEST(TagsIndexTest, DistinguishDeclarationFromDefinition)
@@ -155,7 +155,7 @@ TEST(TagsIndexTest, DistinguishDeclarationFromDefinition)
    ASSERT_EQ(1, alphaDefinition.size());
 
    std::vector<const ftags::Record*> alphaDeclaration = tagsDb.findDeclaration("alpha");
-   ASSERT_EQ(1, alphaDeclaration.size());
+   ASSERT_EQ(2, alphaDeclaration.size());
 
    std::vector<const ftags::Record*> betaDefinition = tagsDb.findDefinition("beta");
    ASSERT_EQ(1, betaDefinition.size());
