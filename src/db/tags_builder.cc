@@ -436,6 +436,8 @@ ftags::TranslationUnit ftags::TranslationUnit::parse(const std::string&       fi
       throw std::runtime_error("Failed to parse input");
    }
 
+   translationUnit.updateIndices();
+
    return translationUnit;
 }
 

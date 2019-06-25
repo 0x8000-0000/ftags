@@ -229,10 +229,6 @@ public:
 
    void copyRecords(const TranslationUnit& other);
 
-   void optimizeForSymbolLookup();
-
-   void optimizeForFileLookup();
-
    Key getFileNameKey() const
    {
       return m_fileNameKey;
@@ -295,37 +291,35 @@ public:
 
    struct RecordSymbolComparator
    {
-      bool operator()(const Record& record, Key symbolNameKey)
+      RecordSymbolComparator(const std::vector<Record>& records) : m_records{records}
       {
-         return record.symbolNameKey < symbolNameKey;
       }
 
-      bool operator()(Key symbolNameKey, const Record& record)
+      bool operator()(std::vector<Record>::size_type recordPos, Key symbolNameKey)
       {
-         return symbolNameKey < record.symbolNameKey;
+         return m_records[recordPos].symbolNameKey < symbolNameKey;
       }
+
+      bool operator()(Key symbolNameKey, std::vector<Record>::size_type recordPos)
+      {
+         return symbolNameKey < m_records[recordPos].symbolNameKey;
+      }
+
+      const std::vector<Record>& m_records;
    };
 
    template <typename F>
    void forEachRecordWithSymbol(Key symbolNameKey, F func) const
    {
-#if 0
-      for (const auto& record : m_records)
-      {
-         if (record.symbolNameKey == symbolNameKey)
-         {
-            func(&record);
-         }
-      }
-#else
-      const auto keyRange =
-         std::equal_range(m_records.cbegin(), m_records.cend(), symbolNameKey, RecordSymbolComparator());
+      const auto keyRange = std::equal_range(m_recordsInSymbolKeyOrder.cbegin(),
+                                             m_recordsInSymbolKeyOrder.cend(),
+                                             symbolNameKey,
+                                             RecordSymbolComparator(m_records));
 
       for (auto iter = keyRange.first; iter != keyRange.second; ++iter)
       {
-         func(&*iter);
+         func(&m_records[*iter]);
       }
-#endif
    }
 
    /*
@@ -340,6 +334,11 @@ private:
 
    StringTable& m_symbolTable;
    StringTable& m_fileNameTable;
+
+   void updateIndices();
+
+   std::vector<std::vector<Record>::size_type> m_recordsInSymbolKeyOrder;
+   std::vector<std::vector<Record>::size_type> m_recordsInFileKeyOrder;
 };
 
 class ProjectDb

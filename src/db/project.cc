@@ -17,9 +17,94 @@
 #include <project.h>
 
 #include <algorithm>
+#include <numeric>
 
-ftags::ProjectDb::ProjectDb() : m_operatingState{OptimizedForParse}
+namespace
 {
+
+class OrderRecordsBySymbolKey
+{
+public:
+   OrderRecordsBySymbolKey(const std::vector<ftags::Record>& records) : m_records{records}
+   {
+   }
+
+   bool operator()(const unsigned& left, const unsigned& right) const
+   {
+      const ftags::Record& leftRecord  = m_records[left];
+      const ftags::Record& rightRecord = m_records[right];
+
+      if (leftRecord.symbolNameKey < rightRecord.symbolNameKey)
+      {
+         return true;
+      }
+
+      if (leftRecord.symbolNameKey == rightRecord.symbolNameKey)
+      {
+         if (leftRecord.attributes.type < rightRecord.attributes.type)
+         {
+            return true;
+         }
+      }
+
+      return false;
+   }
+
+private:
+   const std::vector<ftags::Record>& m_records;
+};
+
+class OrderRecordsByFileKey
+{
+public:
+   OrderRecordsByFileKey(const std::vector<ftags::Record>& records) : m_records{records}
+   {
+   }
+
+   bool operator()(const unsigned& left, const unsigned& right) const
+   {
+      const ftags::Record& leftRecord  = m_records[left];
+      const ftags::Record& rightRecord = m_records[right];
+
+      if (leftRecord.fileNameKey < rightRecord.fileNameKey)
+      {
+         return true;
+      }
+
+      if (leftRecord.fileNameKey == rightRecord.fileNameKey)
+      {
+         if (leftRecord.startLine < rightRecord.startLine)
+         {
+            return true;
+         }
+
+         if (leftRecord.startLine == rightRecord.startLine)
+         {
+            if (leftRecord.startColumn < rightRecord.startColumn)
+            {
+               return true;
+            }
+         }
+      }
+
+      return false;
+   }
+
+private:
+   const std::vector<ftags::Record>& m_records;
+};
+
+} // anonymous namespace
+
+void ftags::TranslationUnit::updateIndices()
+{
+   m_recordsInSymbolKeyOrder.resize(m_records.size());
+   std::iota(m_recordsInSymbolKeyOrder.begin(), m_recordsInSymbolKeyOrder.end(), 0);
+   std::sort(m_recordsInSymbolKeyOrder.begin(), m_recordsInSymbolKeyOrder.end(), OrderRecordsBySymbolKey(m_records));
+
+   m_recordsInFileKeyOrder.resize(m_records.size());
+   std::iota(m_recordsInFileKeyOrder.begin(), m_recordsInFileKeyOrder.end(), 0);
+   std::sort(m_recordsInFileKeyOrder.begin(), m_recordsInFileKeyOrder.end(), OrderRecordsByFileKey(m_records));
 }
 
 void ftags::TranslationUnit::copyRecords(const TranslationUnit& original)
@@ -30,22 +115,20 @@ void ftags::TranslationUnit::copyRecords(const TranslationUnit& original)
    m_records = original.m_records;
 
    /*
-    * replace keys from translation unit's table with keys from the prject
+    * replace keys from translation unit's table with keys from the project
     * database
     */
 
    // update file keys
    {
-      optimizeForFileLookup();
-
       Key currentOriginalFileKey = 0;
       Key currentFileKey         = 0;
 
-      for (auto& record : m_records)
+      for (auto recordPos : original.m_recordsInFileKeyOrder)
       {
+         Record& record = m_records[recordPos];
          if (record.fileNameKey != currentOriginalFileKey)
          {
-            // TODO: lock for concurrent access
             currentFileKey = m_fileNameTable.addKey(original.getFileName(record));
          }
          record.fileNameKey = currentFileKey;
@@ -54,41 +137,21 @@ void ftags::TranslationUnit::copyRecords(const TranslationUnit& original)
 
    // update symbol keys
    {
-      optimizeForSymbolLookup();
-
       Key currentOriginalSymbolKey = 0;
       Key currentSymbolKey         = 0;
 
-      for (auto& record : m_records)
+      for (auto recordPos : original.m_recordsInSymbolKeyOrder)
       {
+         Record& record = m_records[recordPos];
          if (record.symbolNameKey != currentOriginalSymbolKey)
          {
-            // TODO: lock for concurrent access
             currentSymbolKey = m_symbolTable.addKey(original.getSymbolName(record));
          }
          record.symbolNameKey = currentSymbolKey;
       }
    }
-}
 
-void ftags::TranslationUnit::optimizeForSymbolLookup()
-{
-   /*
-    * sort the records by symbol key to speed-up lookups
-    */
-   std::sort(m_records.begin(), m_records.end(), [](const Record& left, const Record& right) {
-      return left.symbolNameKey < right.symbolNameKey;
-   });
-}
-
-void ftags::TranslationUnit::optimizeForFileLookup()
-{
-   /*
-    * sort the records by symbol key to speed-up lookups
-    */
-   std::sort(m_records.begin(), m_records.end(), [](const Record& left, const Record& right) {
-      return left.fileNameKey < right.fileNameKey;
-   });
+   updateIndices();
 }
 
 void ftags::TranslationUnit::addCursor(const ftags::Cursor& cursor, const ftags::Attributes& attributes)
@@ -106,6 +169,14 @@ void ftags::TranslationUnit::addCursor(const ftags::Cursor& cursor, const ftags:
    newRecord.endLine     = static_cast<uint16_t>(cursor.endLine);
 
    m_records.push_back(newRecord);
+}
+
+/*
+ * ProjectDb
+ */
+
+ftags::ProjectDb::ProjectDb() : m_operatingState{OptimizedForParse}
+{
 }
 
 void ftags::ProjectDb::addTranslationUnit(const std::string& fullPath, const TranslationUnit& translationUnit)
@@ -197,5 +268,6 @@ std::vector<const ftags::Record*> ftags::ProjectDb::findReference(const std::str
 std::vector<const ftags::Record*> ftags::ProjectDb::findSymbol(const std::string& symbolName,
                                                                ftags::SymbolType  symbolType) const
 {
-   return filterRecordsWithSymbol(symbolName, [symbolType](const Record* record) { return record->attributes.type == symbolType; });
+   return filterRecordsWithSymbol(
+      symbolName, [symbolType](const Record* record) { return record->attributes.type == symbolType; });
 }
