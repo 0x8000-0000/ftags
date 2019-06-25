@@ -99,7 +99,7 @@ void ftags::TranslationUnit::addCursor(const ftags::Cursor& cursor, const ftags:
    newRecord.fileNameKey   = m_fileNameTable.addKey(cursor.location.fileName);
 
    newRecord.attributes      = attributes;
-   newRecord.attributes.type = static_cast<uint32_t>(cursor.symbolType);
+   newRecord.attributes.type = cursor.symbolType;
 
    newRecord.startLine   = static_cast<uint32_t>(cursor.location.line);
    newRecord.startColumn = static_cast<uint16_t>(cursor.location.column);
@@ -169,7 +169,7 @@ std::vector<const ftags::Record*> ftags::ProjectDb::getFunctions() const
    for (const auto& translationUnit : m_translationUnits)
    {
       translationUnit.forEachRecord([&functions](const Record* record) {
-         if (record->attributes.type == static_cast<uint32_t>(SymbolType::FunctionDeclaration))
+         if (record->attributes.type == SymbolType::FunctionDeclaration)
          {
             functions.push_back(record);
          }

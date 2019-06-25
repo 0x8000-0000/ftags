@@ -156,4 +156,20 @@ TEST(TagsIndexTest, DistinguishDeclarationFromDefinition)
 
    std::vector<const ftags::Record*> alphaDeclaration = tagsDb.findDeclaration("alpha");
    ASSERT_EQ(1, alphaDeclaration.size());
+
+   std::vector<const ftags::Record*> betaDefinition = tagsDb.findDefinition("beta");
+   ASSERT_EQ(1, betaDefinition.size());
+
+   std::vector<const ftags::Record*> betaDeclaration = tagsDb.findDeclaration("beta");
+   ASSERT_EQ(3, betaDeclaration.size());
+
+   std::vector<const ftags::Record*> betaReferences = tagsDb.findReference("beta");
+   ASSERT_EQ(2, betaReferences.size());
+
+   std::set<ftags::SymbolType> expectedTypes{ftags::SymbolType::FunctionCallExpression,
+                                             ftags::SymbolType::DeclarationReferenceExpression};
+
+   std::set<ftags::SymbolType> actualTypes{betaReferences[0]->getType(), betaReferences[1]->getType()};
+
+   ASSERT_EQ(expectedTypes, actualTypes);
 }

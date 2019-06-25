@@ -141,7 +141,7 @@ struct Attributes
 {
    uint32_t lineSpan : 8;
 
-   uint32_t type : 16;
+   SymbolType type : 16;
 
    uint32_t isDeclaration : 1;
    uint32_t isDefinition : 1;
@@ -207,6 +207,11 @@ struct Record
    uint16_t    endLine;
 
    Attributes attributes;
+
+   SymbolType getType() const
+   {
+      return attributes.type;
+   }
 };
 
 static_assert(sizeof(Record) == 28, "sizeof(Record) exceeds 28 bytes");

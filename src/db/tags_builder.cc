@@ -228,6 +228,7 @@ static ftags::SymbolType getSymbolType(CXCursor clangCursor, ftags::Attributes& 
    case CXCursor_CallExpr:
       symbolType              = ftags::SymbolType::FunctionCallExpression;
       attributes.isExpression = true;
+      attributes.isReference  = true;
       break;
 
    case CXCursor_IntegerLiteral:
