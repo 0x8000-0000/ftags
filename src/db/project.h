@@ -328,15 +328,19 @@ public:
    void dumpRecords(std::ostream& os) const;
 
 private:
+   // key of the file name of the main translation unit
    Key m_fileNameKey = 0;
 
+   // persistent data
    std::vector<Record> m_records;
 
+   // tables managed by the owner of this translation unit
    StringTable& m_symbolTable;
    StringTable& m_fileNameTable;
 
    void updateIndices();
 
+   // indexes of records based of different traversal order
    std::vector<std::vector<Record>::size_type> m_recordsInSymbolKeyOrder;
    std::vector<std::vector<Record>::size_type> m_recordsInFileKeyOrder;
 };
