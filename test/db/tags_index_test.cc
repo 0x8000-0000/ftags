@@ -236,3 +236,50 @@ TEST(TagsIndexTest, ManageTwoTranslationUnits)
    const std::vector<const ftags::Record*> alphaDeclaration = tagsDb.findDeclaration("alpha");
    ASSERT_EQ(2, alphaDeclaration.size());
 }
+
+TEST(TagsIndexTest, MultiModuleEliminateDuplicates)
+{
+   ftags::ProjectDb tagsDb;
+
+   const auto path = std::filesystem::current_path();
+
+   const std::vector<const char*> arguments = {
+      "-Wall",
+      "-Wextra",
+      "-isystem",
+      "/usr/include",
+   };
+
+   {
+      const auto libPath = path / "test" / "db" / "data" / "multi-module" / "lib.cc";
+      ASSERT_TRUE(std::filesystem::exists(libPath));
+
+      ftags::StringTable           symbolTable;
+      ftags::StringTable           fileNameTable;
+      const ftags::TranslationUnit libCpp =
+         ftags::TranslationUnit::parse(libPath, arguments, symbolTable, fileNameTable);
+
+      tagsDb.addTranslationUnit(libPath, libCpp);
+   }
+
+   {
+      const auto testPath = path / "test" / "db" / "data" / "multi-module" / "test.cc";
+      ASSERT_TRUE(std::filesystem::exists(testPath));
+
+      ftags::StringTable           symbolTable;
+      ftags::StringTable           fileNameTable;
+      const ftags::TranslationUnit testCpp =
+         ftags::TranslationUnit::parse(testPath, arguments, symbolTable, fileNameTable);
+
+      tagsDb.addTranslationUnit(testPath, testCpp);
+   }
+
+   const std::vector<const ftags::Record*> mainDefinition = tagsDb.findDefinition("main");
+   ASSERT_EQ(1, mainDefinition.size());
+
+   const std::vector<const ftags::Record*> functionDefinition = tagsDb.findDefinition("function");
+   ASSERT_EQ(1, functionDefinition.size());
+
+   const std::vector<const ftags::Record*> functionDeclaration = tagsDb.findDeclaration("function");
+   ASSERT_EQ(1, functionDeclaration.size());
+}

@@ -28,6 +28,10 @@ configure_file (data/hello/hello.cc data/hello/hello.cc)
 
 configure_file (data/functions/alpha-beta.cc data/functions/alpha-beta.cc)
 
+configure_file (data/multi-module/lib.cc data/multi-module/lib.cc)
+configure_file (data/multi-module/lib.h data/multi-module/lib.h)
+configure_file (data/multi-module/test.cc data/multi-module/test.cc)
+
 #
 # Stand-alone tests
 #
