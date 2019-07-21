@@ -98,7 +98,7 @@ TEST(TagsIndexTest, HelloWorldHasMainFunction)
    ftags::ProjectDb tagsDb;
    tagsDb.addTranslationUnit(helloPath, helloCpp);
 
-   std::vector<const ftags::Record*> results = tagsDb.findDefinition("main");
+   const std::vector<const ftags::Record*> results = tagsDb.findDefinition("main");
    ASSERT_EQ(1, results.size());
 }
 
@@ -156,25 +156,79 @@ TEST(TagsIndexTest, DistinguishDeclarationFromDefinition)
    ftags::ProjectDb tagsDb;
    tagsDb.addTranslationUnit(translationUnitPath, translationUnit);
 
-   std::vector<const ftags::Record*> alphaDefinition = tagsDb.findDefinition("alpha");
+   const std::vector<const ftags::Record*> alphaDefinition = tagsDb.findDefinition("alpha");
    ASSERT_EQ(1, alphaDefinition.size());
 
-   std::vector<const ftags::Record*> alphaDeclaration = tagsDb.findDeclaration("alpha");
+   const std::vector<const ftags::Record*> alphaDeclaration = tagsDb.findDeclaration("alpha");
    ASSERT_EQ(2, alphaDeclaration.size());
 
-   std::vector<const ftags::Record*> betaDefinition = tagsDb.findDefinition("beta");
+   const std::vector<const ftags::Record*> betaDefinition = tagsDb.findDefinition("beta");
    ASSERT_EQ(1, betaDefinition.size());
 
-   std::vector<const ftags::Record*> betaDeclaration = tagsDb.findDeclaration("beta");
+   const std::vector<const ftags::Record*> betaDeclaration = tagsDb.findDeclaration("beta");
    ASSERT_EQ(3, betaDeclaration.size());
 
-   std::vector<const ftags::Record*> betaReferences = tagsDb.findReference("beta");
+   const std::vector<const ftags::Record*> betaReferences = tagsDb.findReference("beta");
    ASSERT_EQ(2, betaReferences.size());
 
-   std::set<ftags::SymbolType> expectedTypes{ftags::SymbolType::FunctionCallExpression,
-                                             ftags::SymbolType::DeclarationReferenceExpression};
+   const std::set<ftags::SymbolType> expectedTypes{ftags::SymbolType::FunctionCallExpression,
+                                                   ftags::SymbolType::DeclarationReferenceExpression};
 
-   std::set<ftags::SymbolType> actualTypes{betaReferences[0]->getType(), betaReferences[1]->getType()};
+   const std::set<ftags::SymbolType> actualTypes{betaReferences[0]->getType(), betaReferences[1]->getType()};
 
    ASSERT_EQ(expectedTypes, actualTypes);
+}
+
+TEST(TagsIndexTest, ManageTwoTranslationUnits)
+{
+   ftags::ProjectDb tagsDb;
+
+   {
+      const auto path = std::filesystem::current_path();
+
+      const auto helloPath = path / "test" / "db" / "data" / "hello" / "hello.cc";
+      ASSERT_TRUE(std::filesystem::exists(helloPath));
+
+      const std::vector<const char*> arguments = {
+         "-Wall",
+         "-Wextra",
+      };
+
+      ftags::StringTable     symbolTable;
+      ftags::StringTable     fileNameTable;
+      ftags::TranslationUnit helloCpp =
+         ftags::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
+
+      tagsDb.addTranslationUnit(helloPath, helloCpp);
+   }
+
+   {
+      const auto path = std::filesystem::current_path();
+
+      const auto translationUnitPath = path / "test" / "db" / "data" / "functions" / "alpha-beta.cc";
+      ASSERT_TRUE(std::filesystem::exists(translationUnitPath));
+
+      const std::vector<const char*> arguments = {
+         "-Wall",
+         "-Wextra",
+         "-isystem",
+         "/usr/include",
+      };
+
+      ftags::StringTable     symbolTable;
+      ftags::StringTable     fileNameTable;
+      ftags::TranslationUnit translationUnit =
+         ftags::TranslationUnit::parse(translationUnitPath, arguments, symbolTable, fileNameTable);
+
+      tagsDb.addTranslationUnit(translationUnitPath, translationUnit);
+   }
+
+   const std::vector<const ftags::Record*> mainDefinition = tagsDb.findDefinition("main");
+   ASSERT_EQ(1, mainDefinition.size());
+
+   const std::vector<const ftags::Record*> alphaDefinition = tagsDb.findDefinition("alpha");
+   ASSERT_EQ(1, alphaDefinition.size());
+
+   const std::vector<const ftags::Record*> alphaDeclaration = tagsDb.findDeclaration("alpha");
+   ASSERT_EQ(2, alphaDeclaration.size());
 }
