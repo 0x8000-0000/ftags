@@ -100,8 +100,14 @@ void parseTranslationUnit()
    }
 }
 
-int main(int /* argc */, char* argv[])
+int main(int argc, char* argv[])
 {
+   if (argc < 2)
+   {
+      spdlog::error("Compilation database argument missing");
+      return -1;
+   }
+
    CXCompilationDatabase_Error ccderror            = CXCompilationDatabase_NoError;
    CXCompilationDatabase       compilationDatabase = clang_CompilationDatabase_fromDirectory(argv[1], &ccderror);
 
