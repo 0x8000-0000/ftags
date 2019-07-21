@@ -39,9 +39,10 @@ TEST(TagsIndexTest, IndexOneFile)
       "-Wextra",
    };
 
-   ftags::StringTable     symbolTable;
-   ftags::StringTable     fileNameTable;
-   ftags::TranslationUnit helloCpp = ftags::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
+   ftags::StringTable           symbolTable;
+   ftags::StringTable           fileNameTable;
+   const ftags::TranslationUnit helloCpp =
+      ftags::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
 
    ftags::ProjectDb tagsDb;
    tagsDb.addTranslationUnit(helloPath, helloCpp);
@@ -66,16 +67,17 @@ TEST(TagsIndexTest, IndexOneFileHasFunctions)
       "-Wextra",
    };
 
-   ftags::StringTable     symbolTable;
-   ftags::StringTable     fileNameTable;
-   ftags::TranslationUnit helloCpp = ftags::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
+   ftags::StringTable           symbolTable;
+   ftags::StringTable           fileNameTable;
+   const ftags::TranslationUnit helloCpp =
+      ftags::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
 
    ftags::ProjectDb tagsDb;
    tagsDb.addTranslationUnit(helloPath, helloCpp);
 
    ASSERT_TRUE(tagsDb.isFileIndexed(helloPath));
 
-   std::vector<const ftags::Record*> functions = tagsDb.getFunctions();
+   const std::vector<const ftags::Record*> functions = tagsDb.getFunctions();
    ASSERT_LT(1, functions.size());
 }
 
@@ -91,9 +93,10 @@ TEST(TagsIndexTest, HelloWorldHasMainFunction)
       "-Wextra",
    };
 
-   ftags::StringTable     symbolTable;
-   ftags::StringTable     fileNameTable;
-   ftags::TranslationUnit helloCpp = ftags::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
+   ftags::StringTable           symbolTable;
+   ftags::StringTable           fileNameTable;
+   const ftags::TranslationUnit helloCpp =
+      ftags::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
 
    ftags::ProjectDb tagsDb;
    tagsDb.addTranslationUnit(helloPath, helloCpp);
@@ -116,9 +119,10 @@ TEST(TagsIndexTest, HelloWorldCallsPrintfFunction)
       "--gcc-toolchain=/usr",
    };
 
-   ftags::StringTable     symbolTable;
-   ftags::StringTable     fileNameTable;
-   ftags::TranslationUnit helloCpp = ftags::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
+   ftags::StringTable           symbolTable;
+   ftags::StringTable           fileNameTable;
+   const ftags::TranslationUnit helloCpp =
+      ftags::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
 
    ftags::ProjectDb tagsDb;
    tagsDb.addTranslationUnit(helloPath, helloCpp);
@@ -127,10 +131,10 @@ TEST(TagsIndexTest, HelloWorldCallsPrintfFunction)
 
    tagsDb.dumpRecords(output);
 
-   std::string result = output.str();
+   const std::string result = output.str();
    ASSERT_FALSE(result.empty());
 
-   std::vector<const ftags::Record*> results = tagsDb.findReference("printf");
+   const std::vector<const ftags::Record*> results = tagsDb.findReference("printf");
    ASSERT_EQ(2, results.size());
 }
 
@@ -148,9 +152,9 @@ TEST(TagsIndexTest, DistinguishDeclarationFromDefinition)
       "/usr/include",
    };
 
-   ftags::StringTable     symbolTable;
-   ftags::StringTable     fileNameTable;
-   ftags::TranslationUnit translationUnit =
+   ftags::StringTable           symbolTable;
+   ftags::StringTable           fileNameTable;
+   const ftags::TranslationUnit translationUnit =
       ftags::TranslationUnit::parse(translationUnitPath, arguments, symbolTable, fileNameTable);
 
    ftags::ProjectDb tagsDb;
@@ -194,9 +198,9 @@ TEST(TagsIndexTest, ManageTwoTranslationUnits)
          "-Wextra",
       };
 
-      ftags::StringTable     symbolTable;
-      ftags::StringTable     fileNameTable;
-      ftags::TranslationUnit helloCpp =
+      ftags::StringTable           symbolTable;
+      ftags::StringTable           fileNameTable;
+      const ftags::TranslationUnit helloCpp =
          ftags::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
 
       tagsDb.addTranslationUnit(helloPath, helloCpp);
@@ -215,9 +219,9 @@ TEST(TagsIndexTest, ManageTwoTranslationUnits)
          "/usr/include",
       };
 
-      ftags::StringTable     symbolTable;
-      ftags::StringTable     fileNameTable;
-      ftags::TranslationUnit translationUnit =
+      ftags::StringTable           symbolTable;
+      ftags::StringTable           fileNameTable;
+      const ftags::TranslationUnit translationUnit =
          ftags::TranslationUnit::parse(translationUnitPath, arguments, symbolTable, fileNameTable);
 
       tagsDb.addTranslationUnit(translationUnitPath, translationUnit);
