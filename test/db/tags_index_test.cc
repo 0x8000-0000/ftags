@@ -29,14 +29,15 @@ TEST(TagsIndexTest, IndexOneFile)
     * There's no portable way yet to get the path of the current running
     * binary.
     */
-   auto path = std::filesystem::current_path();
+   const auto path = std::filesystem::current_path();
 
-   auto helloPath = path / "test" / "db" / "data" / "hello" / "hello.cc";
+   const auto helloPath = path / "test" / "db" / "data" / "hello" / "hello.cc";
    ASSERT_TRUE(std::filesystem::exists(helloPath));
 
-   std::vector<const char*> arguments;
-   arguments.push_back("-Wall");
-   arguments.push_back("-Wextra");
+   const std::vector<const char*> arguments = {
+      "-Wall",
+      "-Wextra",
+   };
 
    ftags::StringTable     symbolTable;
    ftags::StringTable     fileNameTable;
@@ -55,14 +56,15 @@ TEST(TagsIndexTest, IndexOneFileHasFunctions)
     * There's no portable way yet to get the path of the current running
     * binary.
     */
-   auto path = std::filesystem::current_path();
+   const auto path = std::filesystem::current_path();
 
-   auto helloPath = path / "test" / "db" / "data" / "hello" / "hello.cc";
+   const auto helloPath = path / "test" / "db" / "data" / "hello" / "hello.cc";
    ASSERT_TRUE(std::filesystem::exists(helloPath));
 
-   std::vector<const char*> arguments;
-   arguments.push_back("-Wall");
-   arguments.push_back("-Wextra");
+   const std::vector<const char*> arguments = {
+      "-Wall",
+      "-Wextra",
+   };
 
    ftags::StringTable     symbolTable;
    ftags::StringTable     fileNameTable;
@@ -79,14 +81,15 @@ TEST(TagsIndexTest, IndexOneFileHasFunctions)
 
 TEST(TagsIndexTest, HelloWorldHasMainFunction)
 {
-   auto path = std::filesystem::current_path();
+   const auto path = std::filesystem::current_path();
 
-   auto helloPath = path / "test" / "db" / "data" / "hello" / "hello.cc";
+   const auto helloPath = path / "test" / "db" / "data" / "hello" / "hello.cc";
    ASSERT_TRUE(std::filesystem::exists(helloPath));
 
-   std::vector<const char*> arguments;
-   arguments.push_back("-Wall");
-   arguments.push_back("-Wextra");
+   const std::vector<const char*> arguments = {
+      "-Wall",
+      "-Wextra",
+   };
 
    ftags::StringTable     symbolTable;
    ftags::StringTable     fileNameTable;
@@ -101,16 +104,17 @@ TEST(TagsIndexTest, HelloWorldHasMainFunction)
 
 TEST(TagsIndexTest, HelloWorldCallsPrintfFunction)
 {
-   auto path = std::filesystem::current_path();
+   const auto path = std::filesystem::current_path();
 
-   auto helloPath = path / "test" / "db" / "data" / "hello" / "hello.cc";
+   const auto helloPath = path / "test" / "db" / "data" / "hello" / "hello.cc";
    ASSERT_TRUE(std::filesystem::exists(helloPath));
 
-   std::vector<const char*> arguments;
-   arguments.push_back("-Wall");
-   arguments.push_back("-Wextra");
-   arguments.push_back("-stdlib=libstdc++");
-   arguments.push_back("--gcc-toolchain=/usr");
+   const std::vector<const char*> arguments = {
+      "-Wall",
+      "-Wextra",
+      "-stdlib=libstdc++",
+      "--gcc-toolchain=/usr",
+   };
 
    ftags::StringTable     symbolTable;
    ftags::StringTable     fileNameTable;
@@ -132,16 +136,17 @@ TEST(TagsIndexTest, HelloWorldCallsPrintfFunction)
 
 TEST(TagsIndexTest, DistinguishDeclarationFromDefinition)
 {
-   auto path = std::filesystem::current_path();
+   const auto path = std::filesystem::current_path();
 
-   auto translationUnitPath = path / "test" / "db" / "data" / "functions" / "alpha-beta.cc";
+   const auto translationUnitPath = path / "test" / "db" / "data" / "functions" / "alpha-beta.cc";
    ASSERT_TRUE(std::filesystem::exists(translationUnitPath));
 
-   std::vector<const char*> arguments;
-   arguments.push_back("-Wall");
-   arguments.push_back("-Wextra");
-   arguments.push_back("-isystem");
-   arguments.push_back("/usr/include");
+   const std::vector<const char*> arguments = {
+      "-Wall",
+      "-Wextra",
+      "-isystem",
+      "/usr/include",
+   };
 
    ftags::StringTable     symbolTable;
    ftags::StringTable     fileNameTable;
