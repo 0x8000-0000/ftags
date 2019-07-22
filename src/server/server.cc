@@ -1,6 +1,10 @@
 #include <ftags.pb.h>
 
+#include <project.h>
+
 #include <zmq.hpp>
+
+#include <spdlog/spdlog.h>
 
 #include <chrono>
 #include <iomanip>
@@ -21,9 +25,19 @@ std::string getTimeStamp()
    return ss.str();
 }
 
-int main()
+int main(int argc, char* argv[])
 {
    GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+   if (argc < 2)
+   {
+      spdlog::error("Compilation database argument missing");
+      return -1;
+   }
+
+   ftags::ProjectDb projectDb;
+
+   ftags::parseProject(argv[1], projectDb);
 
    //  Prepare our context and socket
    zmq::context_t context(1);
@@ -40,8 +54,10 @@ int main()
       command.ParseFromArray(request.data(), static_cast<int>(request.size()));
       std::cout << "Received request from " << command.source() << std::endl;
 
-      //  Do some 'work'
-      std::this_thread::sleep_for(std::chrono::seconds(1));
+      if (command.type() == ftags::Command_Type::Command_Type_QUERY)
+      {
+         const std::vector<const ftags::Record*> mainDefinition = projectDb.findDefinition(command.symbol());
+      }
 
       //  Send reply back to client
       ftags::Status status{};

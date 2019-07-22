@@ -12,11 +12,14 @@ message Command
       GET_STATUS = 3;
       FLUSH = 4;
       SAVE_DATABASE = 5;
+      QUERY = 6;
    }
 
    Type type = 1;
 
    string source = 2;
+
+   string symbol = 3;
 }
 
 message Status
