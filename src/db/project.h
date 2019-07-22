@@ -482,6 +482,8 @@ private:
    std::map<StringTable::Key, std::vector<TranslationUnit>::size_type> m_fileIndex;
 };
 
+void parseProject(const char* parentDirectory, ftags::ProjectDb& projectDb);
+
 } // namespace ftags
 
 #endif // DB_PROJECT_H_INCLUDED
