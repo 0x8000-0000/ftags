@@ -199,6 +199,19 @@ ftags::ProjectDb::ProjectDb() : m_operatingState{OptimizedForParse}
 {
 }
 
+ftags::Cursor ftags::ProjectDb::inflateRecord(const ftags::Record* record)
+{
+   ftags::Cursor cursor{};
+
+   cursor.symbolName = m_symbolTable.getString(record->symbolNameKey);
+
+   cursor.location.fileName = m_fileNameTable.getString(record->fileNameKey);
+   cursor.location.line     = static_cast<int>(record->startLine);
+   cursor.location.column   = record->startColumn;
+
+   return cursor;
+}
+
 void ftags::ProjectDb::addTranslationUnit(const std::string& fullPath, const TranslationUnit& translationUnit)
 {
    /*

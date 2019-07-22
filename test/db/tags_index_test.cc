@@ -136,6 +136,12 @@ TEST(TagsIndexTest, HelloWorldCallsPrintfFunction)
 
    const std::vector<const ftags::Record*> results = tagsDb.findReference("printf");
    ASSERT_EQ(2, results.size());
+
+   const ftags::Cursor cursor0 = tagsDb.inflateRecord(results[0]);
+   ASSERT_STREQ("printf", cursor0.symbolName);
+
+   const ftags::Cursor cursor1 = tagsDb.inflateRecord(results[0]);
+   ASSERT_STREQ("printf", cursor1.symbolName);
 }
 
 TEST(TagsIndexTest, DistinguishDeclarationFromDefinition)
