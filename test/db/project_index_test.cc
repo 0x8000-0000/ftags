@@ -38,12 +38,6 @@ struct CompilationRequest
    bool done = false;
 };
 
-ftags::ProjectDb g_projectDb;
-
-ftags::shared_queue<CompilationRequest> g_compilationRequests;
-
-std::mutex g_clangMutex;
-
 const char* g_defaultArguments[] = {
    "-isystem",
    "/usr/include",
@@ -55,11 +49,13 @@ const char* g_defaultArguments[] = {
    "/usr/lib/gcc/x86_64-linux-gnu/8/include",
 };
 
-void parseTranslationUnit()
+void parseTranslationUnit(ftags::ProjectDb&                        projectDb,
+                          ftags::shared_queue<CompilationRequest>& compilationRequests,
+                          std::mutex&                              clangMutex)
 {
    while (true)
    {
-      CompilationRequest request = g_compilationRequests.pop();
+      CompilationRequest request = compilationRequests.pop();
       if (request.done)
       {
          break;
@@ -85,13 +81,13 @@ void parseTranslationUnit()
 
       try
       {
-         std::lock_guard<std::mutex> lock(g_clangMutex);
-         ftags::TranslationUnit translationUnit =
+         std::lock_guard<std::mutex> lock(clangMutex);
+         ftags::TranslationUnit      translationUnit =
             ftags::TranslationUnit::parse(request.fileName, arguments, symbolTable, fileNameTable);
 
          spdlog::info("Loaded {} records from {}", translationUnit.getRecordCount(), request.fileName);
 
-         g_projectDb.addTranslationUnit(request.fileName, translationUnit);
+         projectDb.addTranslationUnit(request.fileName, translationUnit);
       }
       catch (const std::runtime_error& re)
       {
@@ -100,16 +96,14 @@ void parseTranslationUnit()
    }
 }
 
-int main(int argc, char* argv[])
+void parseProject(const char* parentDirectory, ftags::ProjectDb& projectDb)
 {
-   if (argc < 2)
-   {
-      spdlog::error("Compilation database argument missing");
-      return -1;
-   }
+   ftags::shared_queue<CompilationRequest> compilationRequests;
 
-   CXCompilationDatabase_Error ccderror            = CXCompilationDatabase_NoError;
-   CXCompilationDatabase       compilationDatabase = clang_CompilationDatabase_fromDirectory(argv[1], &ccderror);
+   std::mutex clangMutex;
+
+   CXCompilationDatabase_Error ccderror      = CXCompilationDatabase_NoError;
+   CXCompilationDatabase compilationDatabase = clang_CompilationDatabase_fromDirectory(parentDirectory, &ccderror);
 
    std::vector<std::thread> parserThreads;
    const auto               hardwareConcurrency = std::thread::hardware_concurrency();
@@ -120,7 +114,8 @@ int main(int argc, char* argv[])
 
    for (unsigned ii = 0; ii < threadCount; ii++)
    {
-      parserThreads.emplace_back(parseTranslationUnit);
+      parserThreads.emplace_back(
+         parseTranslationUnit, std::ref(projectDb), std::ref(compilationRequests), std::ref(clangMutex));
    }
 
    if (CXCompilationDatabase_NoError == ccderror)
@@ -173,7 +168,7 @@ int main(int argc, char* argv[])
             clang_disposeString(cxString);
          }
 
-         g_compilationRequests.push(std::move(compilationRequest));
+         compilationRequests.push(std::move(compilationRequest));
 
          clang_disposeString(fileNameString);
          clang_disposeString(dirNameString);
@@ -191,7 +186,7 @@ int main(int argc, char* argv[])
    {
       CompilationRequest doneSentinel;
       doneSentinel.done = true;
-      g_compilationRequests.push(doneSentinel);
+      compilationRequests.push(doneSentinel);
    }
 
    for (unsigned ii = 0; ii < threadCount; ii++)
@@ -202,5 +197,19 @@ int main(int argc, char* argv[])
    spdlog::info("All threads completed");
 
    clang_CompilationDatabase_dispose(compilationDatabase);
+}
+
+int main(int argc, char* argv[])
+{
+   if (argc < 2)
+   {
+      spdlog::error("Compilation database argument missing");
+      return -1;
+   }
+
+   ftags::ProjectDb projectDb;
+
+   parseProject(argv[1], projectDb);
+
    return 0;
 }
