@@ -164,13 +164,13 @@ TEST(TagsIndexTest, DistinguishDeclarationFromDefinition)
    ASSERT_EQ(1, alphaDefinition.size());
 
    const std::vector<const ftags::Record*> alphaDeclaration = tagsDb.findDeclaration("alpha");
-   ASSERT_EQ(2, alphaDeclaration.size());
+   ASSERT_EQ(1, alphaDeclaration.size());
 
    const std::vector<const ftags::Record*> betaDefinition = tagsDb.findDefinition("beta");
    ASSERT_EQ(1, betaDefinition.size());
 
    const std::vector<const ftags::Record*> betaDeclaration = tagsDb.findDeclaration("beta");
-   ASSERT_EQ(3, betaDeclaration.size());
+   ASSERT_EQ(2, betaDeclaration.size());
 
    const std::vector<const ftags::Record*> betaReferences = tagsDb.findReference("beta");
    ASSERT_EQ(2, betaReferences.size());
@@ -234,7 +234,7 @@ TEST(TagsIndexTest, ManageTwoTranslationUnits)
    ASSERT_EQ(1, alphaDefinition.size());
 
    const std::vector<const ftags::Record*> alphaDeclaration = tagsDb.findDeclaration("alpha");
-   ASSERT_EQ(2, alphaDeclaration.size());
+   ASSERT_EQ(1, alphaDeclaration.size());
 }
 
 TEST(TagsIndexTest, MultiModuleEliminateDuplicates)

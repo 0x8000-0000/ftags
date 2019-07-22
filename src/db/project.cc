@@ -54,6 +54,32 @@ private:
    const std::vector<ftags::Record>& m_records;
 };
 
+bool compareRecordsByLocation(const ftags::Record& leftRecord, const ftags::Record& rightRecord)
+{
+   if (leftRecord.fileNameKey < rightRecord.fileNameKey)
+   {
+      return true;
+   }
+
+   if (leftRecord.fileNameKey == rightRecord.fileNameKey)
+   {
+      if (leftRecord.startLine < rightRecord.startLine)
+      {
+         return true;
+      }
+
+      if (leftRecord.startLine == rightRecord.startLine)
+      {
+         if (leftRecord.startColumn < rightRecord.startColumn)
+         {
+            return true;
+         }
+      }
+   }
+
+   return false;
+}
+
 class OrderRecordsByFileKey
 {
 public:
@@ -66,33 +92,27 @@ public:
       const ftags::Record& leftRecord  = m_records[left];
       const ftags::Record& rightRecord = m_records[right];
 
-      if (leftRecord.fileNameKey < rightRecord.fileNameKey)
-      {
-         return true;
-      }
-
-      if (leftRecord.fileNameKey == rightRecord.fileNameKey)
-      {
-         if (leftRecord.startLine < rightRecord.startLine)
-         {
-            return true;
-         }
-
-         if (leftRecord.startLine == rightRecord.startLine)
-         {
-            if (leftRecord.startColumn < rightRecord.startColumn)
-            {
-               return true;
-            }
-         }
-      }
-
-      return false;
+      return compareRecordsByLocation(leftRecord, rightRecord);
    }
 
 private:
    const std::vector<ftags::Record>& m_records;
 };
+
+#if 0
+void filterDuplicates(std::vector<const ftags::Record*> records)
+{
+   const auto begin = records.begin();
+   const auto end   = records.end();
+
+   std::sort(begin, end, [](const ftags::Record* leftRecord, const ftags::Record* rightRecord) {
+      return compareRecordsByLocation(*leftRecord, *rightRecord);
+   });
+
+   auto last = std::unique(begin, end);
+   records.erase(last, end);
+}
+#endif
 
 } // anonymous namespace
 
@@ -257,7 +277,9 @@ std::vector<const ftags::Record*> ftags::ProjectDb::findDefinition(const std::st
 
 std::vector<const ftags::Record*> ftags::ProjectDb::findDeclaration(const std::string& symbolName) const
 {
-   return filterRecordsWithSymbol(symbolName, [](const Record* record) { return record->attributes.isDeclaration; });
+   return filterRecordsWithSymbol(symbolName, [](const Record* record) {
+      return record->attributes.isDeclaration && (!record->attributes.isDefinition);
+   });
 }
 
 std::vector<const ftags::Record*> ftags::ProjectDb::findReference(const std::string& symbolName) const
