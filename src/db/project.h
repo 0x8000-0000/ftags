@@ -345,6 +345,43 @@ private:
    std::vector<std::vector<Record>::size_type> m_recordsInFileKeyOrder;
 };
 
+class CursorSet
+{
+public:
+   CursorSet(std::vector<const Record*> records, const StringTable& symbolTable, const StringTable& fileNameTable);
+
+   Cursor inflateRecord(const Record& record);
+
+   std::vector<Record>::const_iterator begin() const
+   {
+      return m_records.cbegin();
+   }
+
+   std::vector<Record>::const_iterator end() const
+   {
+      return m_records.cend();
+   }
+
+   std::vector<Record>::size_type size() const
+   {
+      return m_records.size();
+   }
+
+   /*
+    * Serialization
+    */
+
+   std::vector<uint8_t> serialize() const;
+
+   static CursorSet deserialize(const uint8_t* buffer, size_t size);
+
+private:
+   // persistent data
+   std::vector<Record> m_records;
+   StringTable         m_symbolTable;
+   StringTable         m_fileNameTable;
+};
+
 class ProjectDb
 {
 public:
@@ -359,15 +396,17 @@ public:
 
    Cursor inflateRecord(const Record* record);
 
+   CursorSet inflateRecords(const std::vector<const Record*>& records);
+
    /*
     * General queries
     */
 
    std::vector<const Record*> getFunctions() const;
 
-   std::vector<Record*> getClasses() const;
+   std::vector<const Record*> getClasses() const;
 
-   std::vector<Record*> getGlobalVariables() const;
+   std::vector<const Record*> getGlobalVariables() const;
 
    bool isFileIndexed(const std::string& fileName) const;
 
