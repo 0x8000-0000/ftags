@@ -1,0 +1,3 @@
+https://burtleburtle.net/bob/hash/spooky.html
+
+SpookyHash is a public domain noncryptographic hash function producing well-distributed 128-bit hash values for byte arrays of any length. It can produce 64-bit and 32-bit hash values too, at the same speed, just use the bottom n bits. The C++ reference implementation is specific to 64-bit x86 platforms, in particular it assumes the processor is little endian. Long keys hash in 3 bytes per cycle, short keys take about 1 byte per cycle, and there is a 30 cycle startup cost. Keys can be supplied in fragments. The function allows a 128-bit seed. It's named SpookyHash because it was released on Halloween.
