@@ -17,7 +17,11 @@
 #ifndef SERIALIZATION_H_INCLUDED
 #define SERIALIZATION_H_INCLUDED
 
+#include <cstddef>
 #include <cstdint>
+
+namespace ftags
+{
 
 struct SerializedObjectHeader
 {
@@ -33,5 +37,19 @@ struct SerializedObjectHeader
    // 64 bit object size
    uint64_t m_size;
 };
+
+struct Serializable
+{
+   /*
+    * Serialization interface
+    */
+
+   std::size_t computeSerializedSize() const;
+
+   std::size_t serialize(std::byte* buffer, std::size_t size) const;
+
+};
+
+} // namespace ftags
 
 #endif // SERIALIZATION_H_INCLUDED

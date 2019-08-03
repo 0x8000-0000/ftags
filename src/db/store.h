@@ -112,6 +112,15 @@ public:
     */
    void validateInternalState() const;
 
+   /*
+    * Serialization interface
+    */
+   std::size_t computeSerializedSize() const;
+
+   std::size_t serialize(std::byte* buffer, std::size_t size) const;
+
+   static Store deserialize(const std::byte* buffer, std::size_t size);
+
 private:
    static constexpr block_size_type MaxSegmentSize      = (1U << SegmentSizeBits);
    static constexpr block_size_type MaxSegmentCount     = (1U << ((sizeof(K) * 8) - SegmentSizeBits));

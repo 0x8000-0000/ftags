@@ -115,10 +115,11 @@ public:
    /*
     * Serialization interface
     */
+   std::size_t computeSerializedSize() const;
 
-   std::vector<std::byte> serialize() const;
+   std::size_t serialize(std::byte* buffer, std::size_t size) const;
 
-   static StringTable deserialize(const std::byte* buffer, size_t size);
+   static StringTable deserialize(const std::byte* buffer, std::size_t size);
 
 private:
    static constexpr uint32_t k_bucketSize = 24;

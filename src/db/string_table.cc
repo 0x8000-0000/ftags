@@ -112,14 +112,3 @@ ftags::StringTable::Key ftags::StringTable::addKey(const char* inputString)
    return allocation.key;
 }
 
-std::vector<std::byte> ftags::StringTable::serialize() const
-{
-   std::vector<std::byte> retval;
-   return retval;
-}
-
-ftags::StringTable ftags::StringTable::deserialize(const std::byte* /* buffer */, size_t /* size */)
-{
-   ftags::StringTable retval;
-   return retval;
-}
