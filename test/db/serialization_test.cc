@@ -44,3 +44,24 @@ TEST(SerializationTest, MapUintToUint)
    ASSERT_NE(output.end(), iter);
    ASSERT_EQ(42, iter->second);
 }
+
+TEST(SerializationTest, CharVector)
+{
+   std::vector<char> input;
+   input.push_back('a');
+   input.push_back('b');
+   input.push_back('c');
+
+   using Serializer = ftags::Serializer<std::vector<char>>;
+
+   const size_t inputSerializedSize = Serializer::computeSerializedSize(input);
+   std::vector<std::byte> buffer(/* size = */ inputSerializedSize);
+
+   Serializer::serialize(input, buffer.data(), buffer.size());
+
+   const std::vector<char> output = Serializer::deserialize(buffer.data(), buffer.size());
+   
+   ASSERT_EQ(3, output.size());
+   ASSERT_EQ('a', output[0]);
+   ASSERT_EQ('c', output[2]);
+}
