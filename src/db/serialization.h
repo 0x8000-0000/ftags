@@ -38,15 +38,18 @@ struct SerializedObjectHeader
    uint64_t m_size;
 };
 
-struct Serializable
+template <typename T>
+struct Serializer
 {
    /*
     * Serialization interface
     */
 
-   std::size_t computeSerializedSize() const;
+   static std::size_t computeSerializedSize(const T& t);
 
-   std::size_t serialize(std::byte* buffer, std::size_t size) const;
+   static std::size_t serialize(const T& t, std::byte* buffer, std::size_t size);
+
+   static T deserialize(const std::byte* buffer, std::size_t size);
 
 };
 

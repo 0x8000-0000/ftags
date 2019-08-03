@@ -17,6 +17,8 @@
 #ifndef STORE_H_INCLUDED
 #define STORE_H_INCLUDED
 
+#include <serialization.h>
+
 #include <algorithm>
 #include <iterator>
 #include <map>
@@ -115,7 +117,10 @@ public:
    /*
     * Serialization interface
     */
-   std::size_t computeSerializedSize() const;
+   std::size_t computeSerializedSize() const
+   {
+      return ftags::Serializer<std::vector<T>>::computeSerializedSize(m_segment[0]);
+   }
 
    std::size_t serialize(std::byte* buffer, std::size_t size) const;
 

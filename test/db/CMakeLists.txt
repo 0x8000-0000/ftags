@@ -9,6 +9,13 @@ target_link_libraries (store_test PRIVATE ${GTEST_BOTH_LIBRARIES}
 
 gtest_discover_tests (store_test)
 
+add_executable (serialization_test serialization_test.cc)
+target_link_libraries (serialization_test PRIVATE project_options project_warnings)
+target_link_libraries (serialization_test PRIVATE ${GTEST_BOTH_LIBRARIES}
+   pthread db)
+
+gtest_discover_tests (serialization_test)
+
 add_executable (string_table_test string_table_test.cc)
 target_link_libraries (string_table_test PRIVATE project_options project_warnings)
 target_link_libraries (string_table_test PRIVATE ${GTEST_BOTH_LIBRARIES}
