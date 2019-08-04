@@ -42,24 +42,14 @@ struct SerializedObjectHeader
    uint64_t m_size;
 };
 
-template <typename T>
-struct Serializer
-{
-   /*
-    * Serialization interface
-    */
-
-   static std::size_t computeSerializedSize(const T& t);
-
-   static std::size_t serialize(const T& t, std::byte* buffer, std::size_t size);
-
-   static T deserialize(const std::byte* buffer, std::size_t size);
-};
-
 class BufferInsertor
 {
 public:
    BufferInsertor(std::byte* buffer, std::size_t size) : m_buffer{buffer}, m_size{size}
+   {
+   }
+
+   BufferInsertor(std::vector<std::byte>& buffer) : m_buffer{buffer.data()}, m_size{buffer.size()}
    {
    }
 
@@ -116,6 +106,10 @@ public:
    {
    }
 
+   BufferExtractor(std::vector<std::byte>& buffer) : m_buffer{buffer.data()}, m_size{buffer.size()}
+   {
+   }
+
    template <typename T>
    BufferExtractor& operator>>(T& value)
    {
@@ -161,6 +155,21 @@ private:
    const std::byte* m_buffer;
    std::size_t      m_size;
 };
+
+template <typename T>
+struct Serializer
+{
+   /*
+    * Serialization interface
+    */
+
+   static std::size_t computeSerializedSize(const T& t);
+
+   static void serialize(const T& t, BufferInsertor& BufferInsertor);
+
+   static T deserialize(BufferExtractor& bufferExtractor);
+};
+
 
 } // namespace ftags
 

@@ -296,9 +296,13 @@ TEST(StoreMapTest, SerializeSingleSegment)
    // serialize
    const size_t inputSerializedSize = store.computeSerializedSize();
    std::vector<std::byte> buffer(/* size = */ inputSerializedSize);
-   store.serialize(buffer.data(), buffer.size());
+   ftags::BufferInsertor insertor{buffer};
+   store.serialize(insertor);
+   insertor.assertEmpty();
 
-   Store rehydrated = Store::deserialize(buffer.data(), buffer.size());
+   ftags::BufferExtractor extractor{buffer};
+   Store rehydrated = Store::deserialize(extractor);
+   extractor.assertEmpty();
 
    // test
    const auto rehydratedBlockOne = rehydrated.get(blockOne.key);

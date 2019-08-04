@@ -27,7 +27,6 @@
 #include <vector>
 
 #include <cassert>
-#include <cstring>
 
 namespace ftags
 {
@@ -120,9 +119,9 @@ public:
     */
    std::size_t computeSerializedSize() const;
 
-   std::size_t serialize(std::byte* buffer, std::size_t size) const;
+   void serialize(ftags::BufferInsertor& insertor) const;
 
-   static Store deserialize(const std::byte* buffer, std::size_t size);
+   static Store deserialize(ftags::BufferExtractor& extractor);
 
 private:
    static constexpr block_size_type MaxSegmentSize      = (1U << SegmentSizeBits);
@@ -508,62 +507,40 @@ std::size_t Store<T, K, SegmentSizeBits>::computeSerializedSize() const
 }
 
 template <typename T, typename K, unsigned SegmentSizeBits>
-std::size_t Store<T, K, SegmentSizeBits>::serialize(std::byte* buffer, std::size_t size) const
+void Store<T, K, SegmentSizeBits>::serialize(ftags::BufferInsertor& insertor) const
 {
-   const auto originalBuffer = buffer;
-
    ftags::SerializedObjectHeader header = {};
-   std::memcpy(buffer, &header, sizeof(header));
-   buffer += sizeof(header);
+   insertor << header;
 
    const uint64_t segmentCount = m_segment.size();
-   std::memcpy(buffer, &segmentCount, sizeof(segmentCount));
-   buffer += sizeof(segmentCount);
+   insertor << segmentCount;
 
    const uint64_t spaceUsedInLastSegment = computeSpaceUsedInLastSegment();
-   std::memcpy(buffer, &spaceUsedInLastSegment, sizeof(spaceUsedInLastSegment));
-   buffer += sizeof(spaceUsedInLastSegment);
+   insertor << spaceUsedInLastSegment;
 
    for (uint64_t ii = 0; ii < (segmentCount - 1); ii++)
    {
-      std::memcpy(buffer, m_segment[ii].data(), MaxSegmentSize * sizeof(T));
-      buffer += MaxSegmentSize * sizeof(T);
+      insertor << m_segment[ii];
    }
 
-   std::memcpy(buffer, m_segment[segmentCount - 1].data(), spaceUsedInLastSegment * sizeof(T));
-   buffer += spaceUsedInLastSegment * sizeof(T);
+   insertor << m_segment[segmentCount - 1];
 
-   const auto usedSoFar = static_cast<size_t>(std::distance(originalBuffer, buffer));
-   assert(usedSoFar <= size);
-
-   const auto freeBlocksSerializedSize =
-      ftags::Serializer<std::map<K, block_size_type>>::serialize(m_freeBlocksIndex, buffer, size - usedSoFar);
-   buffer += freeBlocksSerializedSize;
-
-   const auto used = static_cast<size_t>(std::distance(originalBuffer, buffer));
-   assert(used == size);
-
-   return used;
+   ftags::Serializer<std::map<K, block_size_type>>::serialize(m_freeBlocksIndex, insertor);
 }
 
 template <typename T, typename K, unsigned SegmentSizeBits>
-Store<T, K, SegmentSizeBits> Store<T, K, SegmentSizeBits>::deserialize(const std::byte* buffer, size_t size)
+Store<T, K, SegmentSizeBits> Store<T, K, SegmentSizeBits>::deserialize(ftags::BufferExtractor& extractor)
 {
-   const auto originalBuffer = buffer;
-
    Store<T, K, SegmentSizeBits> retval;
 
    ftags::SerializedObjectHeader header = {};
-   std::memcpy(&header, buffer, sizeof(header));
-   buffer += sizeof(header);
+   extractor >> header;
 
    uint64_t segmentCount = 0;
-   std::memcpy(&segmentCount, buffer, sizeof(segmentCount));
-   buffer += sizeof(segmentCount);
+   extractor >> segmentCount;
 
    uint64_t spaceUsedInLastSegment = 0;
-   std::memcpy(&spaceUsedInLastSegment, buffer, sizeof(spaceUsedInLastSegment));
-   buffer += sizeof(spaceUsedInLastSegment);
+   extractor >> spaceUsedInLastSegment;
 
    /*
     * retval already has a segment allocated
@@ -573,34 +550,23 @@ Store<T, K, SegmentSizeBits> Store<T, K, SegmentSizeBits>::deserialize(const std
    {
       auto& segment = retval.m_segment.back();
 
-      std::memcpy(segment.data(), buffer, MaxSegmentSize * sizeof(T));
-      buffer += MaxSegmentSize * sizeof(T);
+      extractor >> segment;
 
       retval.m_segment.emplace_back(std::vector<T>(/* size = */ MaxSegmentSize));
    }
 
    {
       auto& segment = retval.m_segment.back();
-      std::memcpy(segment.data(), buffer, spaceUsedInLastSegment * sizeof(T));
-      buffer += spaceUsedInLastSegment * sizeof(T);
+      extractor >> segment;
    }
 
-   const auto usedSoFar = static_cast<size_t>(std::distance(originalBuffer, buffer));
-   assert(usedSoFar <= size);
-
-   retval.m_freeBlocksIndex = ftags::Serializer<std::map<K, block_size_type>>::deserialize(buffer, size - usedSoFar);
-   const auto freeBlocksSerializedSize =
-      ftags::Serializer<std::map<K, block_size_type>>::computeSerializedSize(retval.m_freeBlocksIndex);
-   buffer += freeBlocksSerializedSize;
+   retval.m_freeBlocksIndex = ftags::Serializer<std::map<K, block_size_type>>::deserialize(extractor);
 
    // reconstruct free blocks index from free block
    for (const auto& iter : retval.m_freeBlocksIndex)
    {
       retval.m_freeBlocks.insert({iter.second, iter.first});
    }
-
-   const auto used = static_cast<size_t>(std::distance(originalBuffer, buffer));
-   assert(used == size);
 
    return retval;
 }

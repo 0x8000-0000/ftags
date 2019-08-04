@@ -42,67 +42,41 @@ ftags::Serializer<std::map<uint32_t, uint32_t>>::computeSerializedSize(const std
 }
 
 template <>
-std::size_t ftags::Serializer<std::map<uint32_t, uint32_t>>::serialize(const std::map<uint32_t, uint32_t>& val,
-                                                                       std::byte*                          buffer,
-                                                                       std::size_t                         size)
+void ftags::Serializer<std::map<uint32_t, uint32_t>>::serialize(const std::map<uint32_t, uint32_t>& val,
+                                                                       ftags::BufferInsertor& insertor)
 {
-   const auto originalBuffer = buffer;
-
    ftags::SerializedObjectHeader header = {};
-   std::memcpy(buffer, &header, sizeof(header));
-   buffer += sizeof(header);
+   insertor << header;
 
    const uint64_t mapSize = val.size();
-   std::memcpy(buffer, &mapSize, sizeof(mapSize));
-   buffer += sizeof(mapSize);
+   insertor << mapSize;
 
    for (const auto& iter : val)
    {
-      std::memcpy(buffer, &iter.first, sizeof(iter.first));
-      buffer += sizeof(iter.first);
-
-      std::memcpy(buffer, &iter.second, sizeof(iter.second));
-      buffer += sizeof(iter.second);
+      insertor << iter.first << iter.second;
    }
-
-   const auto used = static_cast<size_t>(std::distance(originalBuffer, buffer));
-   assert(used == size);
-
-   return used;
 }
 
 template <>
-std::map<uint32_t, uint32_t> ftags::Serializer<std::map<uint32_t, uint32_t>>::deserialize(const std::byte* buffer,
-                                                                                          std::size_t      size)
+std::map<uint32_t, uint32_t> ftags::Serializer<std::map<uint32_t, uint32_t>>::deserialize(ftags::BufferExtractor& extractor)
 {
-   const auto originalBuffer = buffer;
-
    std::map<uint32_t, uint32_t> retval;
 
    ftags::SerializedObjectHeader header = {};
-   std::memcpy(&header, buffer, sizeof(header));
-   buffer += sizeof(header);
+   extractor >> header;
 
    uint64_t mapSize = 0;
-   std::memcpy(&mapSize, buffer, sizeof(mapSize));
-   buffer += sizeof(mapSize);
+   extractor >> mapSize;
 
    for (uint64_t ii = 0; ii < mapSize; ii++)
    {
       uint32_t key   = 0;
       uint32_t value = 0;
 
-      std::memcpy(&key, buffer, sizeof(key));
-      buffer += sizeof(key);
-
-      std::memcpy(&value, buffer, sizeof(value));
-      buffer += sizeof(value);
+      extractor >> key >> value;
 
       retval[key] = value;
    }
-
-   const auto used = static_cast<size_t>(std::distance(originalBuffer, buffer));
-   assert(used == size);
 
    return retval;
 }
@@ -118,46 +92,28 @@ std::size_t ftags::Serializer<std::vector<char>>::computeSerializedSize(const st
 }
 
 template <>
-std::size_t ftags::Serializer<std::vector<char>>::serialize(const std::vector<char>& val, std::byte* buffer, std::size_t size)
+void ftags::Serializer<std::vector<char>>::serialize(const std::vector<char>& val, ftags::BufferInsertor& insertor)
 {
-   const auto originalBuffer = buffer;
-
    ftags::SerializedObjectHeader header = {};
-   std::memcpy(buffer, &header, sizeof(header));
-   buffer += sizeof(header);
+   insertor << header;
 
    const uint64_t vecSize = val.size();
-   std::memcpy(buffer, &vecSize, sizeof(vecSize));
-   buffer += sizeof(vecSize);
+   insertor << vecSize;
 
-   std::memcpy(buffer, val.data(), vecSize);
-   buffer += vecSize;
-
-   const auto used = static_cast<size_t>(std::distance(originalBuffer, buffer));
-   assert(used == size);
-
-   return used;
+   insertor << val;
 }
 
 template <>
-std::vector<char> ftags::Serializer<std::vector<char>>::deserialize(const std::byte* buffer, std::size_t size)
+std::vector<char> ftags::Serializer<std::vector<char>>::deserialize(ftags::BufferExtractor& extractor)
 {
-   const auto originalBuffer = buffer;
-
    ftags::SerializedObjectHeader header = {};
-   std::memcpy(&header, buffer, sizeof(header));
-   buffer += sizeof(header);
+   extractor >> header;
 
    uint64_t vecSize = 0;
-   std::memcpy(&vecSize, buffer, sizeof(vecSize));
-   buffer += sizeof(vecSize);
+   extractor >> vecSize; 
 
    std::vector<char> retval(/* size = */ vecSize);
-   std::memcpy(retval.data(), buffer, vecSize);
-   buffer += vecSize;
-
-   const auto used = static_cast<size_t>(std::distance(originalBuffer, buffer));
-   assert(used == size);
+   extractor >> retval;
 
    return retval;
 }

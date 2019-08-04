@@ -36,9 +36,13 @@ TEST(SerializationTest, MapUintToUint)
    const size_t inputSerializedSize = Serializer::computeSerializedSize(input);
    std::vector<std::byte> buffer(/* size = */ inputSerializedSize);
 
-   Serializer::serialize(input, buffer.data(), buffer.size());
+   ftags::BufferInsertor insertor{buffer};
+   Serializer::serialize(input, insertor);
+   insertor.assertEmpty();
 
-   const std::map<uint32_t, uint32_t> output = Serializer::deserialize(buffer.data(), buffer.size());
+   ftags::BufferExtractor extractor{buffer};
+   const std::map<uint32_t, uint32_t> output = Serializer::deserialize(extractor);
+   extractor.assertEmpty();
    
    auto iter = output.find(4);
    ASSERT_NE(output.end(), iter);
@@ -57,9 +61,14 @@ TEST(SerializationTest, CharVector)
    const size_t inputSerializedSize = Serializer::computeSerializedSize(input);
    std::vector<std::byte> buffer(/* size = */ inputSerializedSize);
 
-   Serializer::serialize(input, buffer.data(), buffer.size());
+   ftags::BufferInsertor insertor{buffer};
 
-   const std::vector<char> output = Serializer::deserialize(buffer.data(), buffer.size());
+   Serializer::serialize(input, insertor);
+   insertor.assertEmpty();
+
+   ftags::BufferExtractor extractor{buffer};
+   const std::vector<char> output = Serializer::deserialize(extractor);
+   extractor.assertEmpty();
    
    ASSERT_EQ(3, output.size());
    ASSERT_EQ('a', output[0]);
