@@ -17,8 +17,12 @@
 #ifndef SERIALIZATION_H_INCLUDED
 #define SERIALIZATION_H_INCLUDED
 
+#include <vector>
+
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 
 namespace ftags
 {
@@ -50,7 +54,112 @@ struct Serializer
    static std::size_t serialize(const T& t, std::byte* buffer, std::size_t size);
 
    static T deserialize(const std::byte* buffer, std::size_t size);
+};
 
+class BufferInsertor
+{
+public:
+   BufferInsertor(std::byte* buffer, std::size_t size) : m_buffer{buffer}, m_size{size}
+   {
+   }
+
+   template <typename T>
+   BufferInsertor& operator<<(const T& value)
+   {
+#ifndef NDEBUG
+      assert(sizeof(value) <= m_size);
+      m_size -= sizeof(value);
+#endif
+      std::memcpy(m_buffer, &value, sizeof(value));
+      m_buffer += sizeof(value);
+
+      return *this;
+   }
+
+   template <typename T>
+   BufferInsertor& operator<<(const std::vector<T>& value)
+   {
+      const std::size_t size = value.size() * sizeof(T);
+#ifndef NDEBUG
+      assert(size <= m_size);
+      m_size -= size;
+#endif
+      std::memcpy(m_buffer, value.data(), size);
+      m_buffer += size;
+
+      return *this;
+   }
+
+   void assertEmpty()
+   {
+#ifndef NDEBUG
+      assert(m_size == 0);
+#else
+      (void)m_size;
+#endif
+   }
+
+   std::byte* getBuffer()
+   {
+      return m_buffer;
+   }
+
+private:
+   std::byte*  m_buffer;
+   std::size_t m_size;
+};
+
+class BufferExtractor
+{
+public:
+   BufferExtractor(const std::byte* buffer, std::size_t size) : m_buffer{buffer}, m_size{size}
+   {
+   }
+
+   template <typename T>
+   BufferExtractor& operator>>(T& value)
+   {
+#ifndef NDEBUG
+      assert(sizeof(value) <= m_size);
+      m_size -= sizeof(value);
+#endif
+      std::memcpy(&value, m_buffer, sizeof(value));
+      m_buffer += sizeof(value);
+
+      return *this;
+   }
+
+   template <typename T>
+   BufferExtractor& operator>>(std::vector<T>& value)
+   {
+      const std::size_t size = value.size() * sizeof(T);
+#ifndef NDEBUG
+      assert(size <= m_size);
+      m_size -= size;
+#endif
+      std::memcpy(value.data(), m_buffer, size);
+      m_buffer += size;
+
+      return *this;
+   }
+
+   void assertEmpty()
+   {
+#ifndef NDEBUG
+      assert(m_size == 0);
+#else
+      (void)m_size;
+#endif
+   }
+
+   const std::byte* getBuffer()
+   {
+      return m_buffer;
+   }
+
+private:
+   const std::byte* m_buffer;
+   std::size_t      m_size;
 };
 
 } // namespace ftags
