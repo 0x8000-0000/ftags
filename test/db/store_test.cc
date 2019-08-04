@@ -18,6 +18,8 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
+
 /*
  * Intrusive, black-box tests for Store.
  */
@@ -269,4 +271,37 @@ TEST(StoreMapTest, ExtendAllocatedBlock5)
    const auto blockFour = store.allocate(blockSize);
    ASSERT_EQ(blockFour.key, store.FirstKeyValue + 2 * blockSize);
    std::fill_n(blockFour.iterator, blockSize, 4);
+}
+
+
+TEST(StoreMapTest, SerializeSingleSegment)
+{
+   Store store;
+
+   const std::size_t blockSize = 8;
+
+   // setup
+   const auto blockOne = store.allocate(blockSize);
+   ASSERT_EQ(blockOne.key, store.FirstKeyValue);
+   std::fill_n(blockOne.iterator, blockSize, 1);
+
+   const auto blockTwo = store.allocate(2 * blockSize);
+   std::fill_n(blockTwo.iterator, 2 * blockSize, 2);
+
+   const auto blockThree = store.allocate(blockSize);
+   std::fill_n(blockThree.iterator, blockSize, 3);
+
+   store.deallocate(blockTwo.key, 2 * blockSize);
+
+   // serialize
+   const size_t inputSerializedSize = store.computeSerializedSize();
+   std::vector<std::byte> buffer(/* size = */ inputSerializedSize);
+   store.serialize(buffer.data(), buffer.size());
+
+   Store rehydrated = Store::deserialize(buffer.data(), buffer.size());
+
+   // test
+   const auto rehydratedBlockOne = rehydrated.get(blockOne.key);
+   const auto valuesCount = std::count(rehydratedBlockOne.first, rehydratedBlockOne.first + blockSize, 1);
+   ASSERT_EQ(blockSize, valuesCount);
 }

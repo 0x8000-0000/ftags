@@ -27,6 +27,7 @@
 #include <vector>
 
 #include <cassert>
+#include <cstring>
 
 namespace ftags
 {
@@ -117,10 +118,7 @@ public:
    /*
     * Serialization interface
     */
-   std::size_t computeSerializedSize() const
-   {
-      return ftags::Serializer<std::vector<T>>::computeSerializedSize(m_segment[0]);
-   }
+   std::size_t computeSerializedSize() const;
 
    std::size_t serialize(std::byte* buffer, std::size_t size) const;
 
@@ -159,8 +157,7 @@ private:
          throw std::length_error("Exceeded data structure capacity");
       }
 
-      m_segment.emplace_back(std::vector<T>());
-      m_segment.back().resize(MaxSegmentSize);
+      m_segment.emplace_back(std::vector<T>(/* size = */ MaxSegmentSize));
 
       const K key{makeKey(segmentsInUse, FirstKeyValue)};
 
@@ -186,6 +183,8 @@ private:
       m_freeBlocksIndex.erase(iterIndex);
       m_freeBlocks.erase(iter);
    }
+
+   std::size_t computeSpaceUsedInLastSegment() const;
 
    /** Segment of contiguous T, up to (1<<B) elements in size.
     */
@@ -486,6 +485,124 @@ void Store<T, K, SegmentSizeBits>::deallocate(K key, block_size_type size)
    }
 
    recordFreeBlock(newBlockKey, newBlockSize);
+}
+
+template <typename T, typename K, unsigned SegmentSizeBits>
+std::size_t Store<T, K, SegmentSizeBits>::computeSpaceUsedInLastSegment() const
+{
+   // TODO: compute this more accurately
+   return MaxSegmentSize;
+}
+
+template <typename T, typename K, unsigned SegmentSizeBits>
+std::size_t Store<T, K, SegmentSizeBits>::computeSerializedSize() const
+{
+   const std::size_t segmentCount = m_segment.size();
+
+   return sizeof(ftags::SerializedObjectHeader) +           // header
+          sizeof(uint64_t) +                                // number of segments
+          sizeof(uint64_t) +                                // size (used) of last segment
+          (segmentCount - 1) * MaxSegmentSize * sizeof(T) + // full segments
+          computeSpaceUsedInLastSegment() * sizeof(T) +     // last segment
+          ftags::Serializer<std::map<K, block_size_type>>::computeSerializedSize(m_freeBlocksIndex);
+}
+
+template <typename T, typename K, unsigned SegmentSizeBits>
+std::size_t Store<T, K, SegmentSizeBits>::serialize(std::byte* buffer, std::size_t size) const
+{
+   const auto originalBuffer = buffer;
+
+   ftags::SerializedObjectHeader header = {};
+   std::memcpy(buffer, &header, sizeof(header));
+   buffer += sizeof(header);
+
+   const uint64_t segmentCount = m_segment.size();
+   std::memcpy(buffer, &segmentCount, sizeof(segmentCount));
+   buffer += sizeof(segmentCount);
+
+   const uint64_t spaceUsedInLastSegment = computeSpaceUsedInLastSegment();
+   std::memcpy(buffer, &spaceUsedInLastSegment, sizeof(spaceUsedInLastSegment));
+   buffer += sizeof(spaceUsedInLastSegment);
+
+   for (uint64_t ii = 0; ii < (segmentCount - 1); ii++)
+   {
+      std::memcpy(buffer, m_segment[ii].data(), MaxSegmentSize * sizeof(T));
+      buffer += MaxSegmentSize * sizeof(T);
+   }
+
+   std::memcpy(buffer, m_segment[segmentCount - 1].data(), spaceUsedInLastSegment * sizeof(T));
+   buffer += spaceUsedInLastSegment * sizeof(T);
+
+   const auto usedSoFar = static_cast<size_t>(std::distance(originalBuffer, buffer));
+   assert(usedSoFar <= size);
+
+   const auto freeBlocksSerializedSize =
+      ftags::Serializer<std::map<K, block_size_type>>::serialize(m_freeBlocksIndex, buffer, size - usedSoFar);
+   buffer += freeBlocksSerializedSize;
+
+   const auto used = static_cast<size_t>(std::distance(originalBuffer, buffer));
+   assert(used == size);
+
+   return used;
+}
+
+template <typename T, typename K, unsigned SegmentSizeBits>
+Store<T, K, SegmentSizeBits> Store<T, K, SegmentSizeBits>::deserialize(const std::byte* buffer, size_t size)
+{
+   const auto originalBuffer = buffer;
+
+   Store<T, K, SegmentSizeBits> retval;
+
+   ftags::SerializedObjectHeader header = {};
+   std::memcpy(&header, buffer, sizeof(header));
+   buffer += sizeof(header);
+
+   uint64_t segmentCount = 0;
+   std::memcpy(&segmentCount, buffer, sizeof(segmentCount));
+   buffer += sizeof(segmentCount);
+
+   uint64_t spaceUsedInLastSegment = 0;
+   std::memcpy(&spaceUsedInLastSegment, buffer, sizeof(spaceUsedInLastSegment));
+   buffer += sizeof(spaceUsedInLastSegment);
+
+   /*
+    * retval already has a segment allocated
+    */
+
+   for (uint64_t ii = 0; ii < (segmentCount - 1); ii++)
+   {
+      auto& segment = retval.m_segment.back();
+
+      std::memcpy(segment.data(), buffer, MaxSegmentSize * sizeof(T));
+      buffer += MaxSegmentSize * sizeof(T);
+
+      retval.m_segment.emplace_back(std::vector<T>(/* size = */ MaxSegmentSize));
+   }
+
+   {
+      auto& segment = retval.m_segment.back();
+      std::memcpy(segment.data(), buffer, spaceUsedInLastSegment * sizeof(T));
+      buffer += spaceUsedInLastSegment * sizeof(T);
+   }
+
+   const auto usedSoFar = static_cast<size_t>(std::distance(originalBuffer, buffer));
+   assert(usedSoFar <= size);
+
+   retval.m_freeBlocksIndex = ftags::Serializer<std::map<K, block_size_type>>::deserialize(buffer, size - usedSoFar);
+   const auto freeBlocksSerializedSize =
+      ftags::Serializer<std::map<K, block_size_type>>::computeSerializedSize(retval.m_freeBlocksIndex);
+   buffer += freeBlocksSerializedSize;
+
+   // reconstruct free blocks index from free block
+   for (const auto& iter : retval.m_freeBlocksIndex)
+   {
+      retval.m_freeBlocks.insert({iter.second, iter.first});
+   }
+
+   const auto used = static_cast<size_t>(std::distance(originalBuffer, buffer));
+   assert(used == size);
+
+   return retval;
 }
 
 template <typename T, typename K, unsigned SegmentSizeBits>
