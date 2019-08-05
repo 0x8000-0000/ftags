@@ -110,6 +110,21 @@ public:
     */
    iterator extend(K key, block_size_type oldSize, block_size_type newSize);
 
+   /*
+    * iteration over contiguously allocated areas
+    */
+   // TODO: add begin(), next() and end() for used blocks iterator
+   struct AllocatedSequence
+   {
+      K                                 key;
+      block_size_type                   size;
+      typename std::vector<T>::iterator iterator;
+   };
+
+   AllocatedSequence getFirstAllocatedSequence() const;
+   bool              isValidAllocatedSequence(const AllocatedSequence& allocatedSequence) const;
+   bool              getNextAllocatedSequence(AllocatedSequence& allocatedSequence) const;
+
    /** Runs a self-check
     */
    void validateInternalState() const;
@@ -569,6 +584,32 @@ Store<T, K, SegmentSizeBits> Store<T, K, SegmentSizeBits>::deserialize(ftags::Bu
    }
 
    return retval;
+}
+
+template <typename T, typename K, unsigned SegmentSizeBits>
+typename Store<T, K, SegmentSizeBits>::AllocatedSequence Store<T, K, SegmentSizeBits>::getFirstAllocatedSequence() const
+{
+   Store<T, K, SegmentSizeBits>::AllocatedSequence retval = {};
+   return retval;
+}
+
+template <typename T, typename K, unsigned SegmentSizeBits>
+bool Store<T, K, SegmentSizeBits>::isValidAllocatedSequence(
+   const Store<T, K, SegmentSizeBits>::AllocatedSequence& allocatedSequence) const
+{
+   return (allocatedSequence.key != 0);
+}
+
+template <typename T, typename K, unsigned SegmentSizeBits>
+bool Store<T, K, SegmentSizeBits>::getNextAllocatedSequence(
+   Store<T, K, SegmentSizeBits>::AllocatedSequence& allocatedSequence) const
+{
+   if (allocatedSequence.key == 0)
+   {
+      return false;
+   }
+
+   return true;
 }
 
 template <typename T, typename K, unsigned SegmentSizeBits>
