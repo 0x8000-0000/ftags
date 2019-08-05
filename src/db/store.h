@@ -116,14 +116,13 @@ public:
    // TODO: add begin(), next() and end() for used blocks iterator
    struct AllocatedSequence
    {
-      K                                 key;
-      block_size_type                   size;
-      typename std::vector<T>::iterator iterator;
+      K               key;
+      block_size_type size;
    };
 
-   AllocatedSequence getFirstAllocatedSequence() const;
+   AllocatedSequence getFirstAllocatedSequence();
    bool              isValidAllocatedSequence(const AllocatedSequence& allocatedSequence) const;
-   bool              getNextAllocatedSequence(AllocatedSequence& allocatedSequence) const;
+   bool              getNextAllocatedSequence(AllocatedSequence& allocatedSequence);
 
    /** Runs a self-check
     */
@@ -587,10 +586,34 @@ Store<T, K, SegmentSizeBits> Store<T, K, SegmentSizeBits>::deserialize(ftags::Bu
 }
 
 template <typename T, typename K, unsigned SegmentSizeBits>
-typename Store<T, K, SegmentSizeBits>::AllocatedSequence Store<T, K, SegmentSizeBits>::getFirstAllocatedSequence() const
+typename Store<T, K, SegmentSizeBits>::AllocatedSequence Store<T, K, SegmentSizeBits>::getFirstAllocatedSequence()
 {
-   Store<T, K, SegmentSizeBits>::AllocatedSequence retval = {};
-   return retval;
+   const auto nextFreeBlock{m_freeBlocksIndex.upper_bound(FirstKeyValue - 1)};
+
+   Store<T, K, SegmentSizeBits>::AllocatedSequence allocatedSequence = {};
+
+   if (nextFreeBlock->first != FirstKeyValue)
+   {
+      allocatedSequence.key  = FirstKeyValue;
+      allocatedSequence.size = nextFreeBlock->first - FirstKeyValue;
+   }
+   else
+   {
+      // TODO: test crossing of segments
+      allocatedSequence.key = nextFreeBlock->first + nextFreeBlock->second;
+
+      const auto subsequentFreeBlock{m_freeBlocksIndex.upper_bound(allocatedSequence.key)};
+
+      if (subsequentFreeBlock == m_freeBlocksIndex.end())
+      {
+         allocatedSequence.key  = 0;
+         allocatedSequence.size = 0;
+      }
+
+      allocatedSequence.size = subsequentFreeBlock->first - allocatedSequence.key;
+   }
+
+   return allocatedSequence;
 }
 
 template <typename T, typename K, unsigned SegmentSizeBits>
@@ -602,12 +625,35 @@ bool Store<T, K, SegmentSizeBits>::isValidAllocatedSequence(
 
 template <typename T, typename K, unsigned SegmentSizeBits>
 bool Store<T, K, SegmentSizeBits>::getNextAllocatedSequence(
-   Store<T, K, SegmentSizeBits>::AllocatedSequence& allocatedSequence) const
+   Store<T, K, SegmentSizeBits>::AllocatedSequence& allocatedSequence)
 {
    if (allocatedSequence.key == 0)
    {
       return false;
    }
+
+   const K    nextKey{allocatedSequence.key + allocatedSequence.size};
+   const auto nextFreeBlock{m_freeBlocksIndex.find(nextKey)};
+
+   if (nextFreeBlock == m_freeBlocksIndex.end())
+   {
+      allocatedSequence.key  = 0;
+      allocatedSequence.size = 0;
+      return false;
+   }
+
+   allocatedSequence.key = nextFreeBlock->first + nextFreeBlock->second;
+
+   const auto subsequentFreeBlock{m_freeBlocksIndex.upper_bound(allocatedSequence.key)};
+   if (subsequentFreeBlock == m_freeBlocksIndex.end())
+   {
+      // TODO: handle multiple segments
+      allocatedSequence.key  = 0;
+      allocatedSequence.size = 0;
+      return false;
+   }
+
+   allocatedSequence.size = subsequentFreeBlock->first - allocatedSequence.key;
 
    return true;
 }

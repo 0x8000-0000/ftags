@@ -334,7 +334,8 @@ TEST(StoreAllocatorIteratorTest, SingleAllocationAtTheBeginning)
 
    ASSERT_EQ(blockOne.key, allocSeq.key);
    ASSERT_EQ(blockSize, allocSeq.size);
-   ASSERT_EQ(blockOne.iterator, allocSeq.iterator);
+   const auto allocSeqIter = store.get(allocSeq.key).first;
+   ASSERT_EQ(blockOne.iterator, allocSeqIter);
 
    const bool nextSeqValid = store.getNextAllocatedSequence(allocSeq);
    ASSERT_FALSE(nextSeqValid);
@@ -357,7 +358,8 @@ TEST(StoreAllocatorIteratorTest, TwoContiguousAllocations)
 
    ASSERT_EQ(blockOne.key, allocSeq.key);
    ASSERT_EQ(blockSize + 2 * blockSize, allocSeq.size);
-   ASSERT_EQ(blockOne.iterator, allocSeq.iterator);
+   const auto allocSeqIter = store.get(allocSeq.key).first;
+   ASSERT_EQ(blockOne.iterator, allocSeqIter);
 
    const bool nextSeqValid = store.getNextAllocatedSequence(allocSeq);
    ASSERT_FALSE(nextSeqValid);
@@ -374,6 +376,8 @@ TEST(StoreAllocatorIteratorTest, SingleAllocationAfterGap)
    std::fill_n(blockOne.iterator, blockSize, 1);
    const auto blockTwo = store.allocate(2 * blockSize);
    std::fill_n(blockTwo.iterator, 2 * blockSize, 2);
+
+   std::fill_n(blockOne.iterator, blockSize, 9);
    store.deallocate(blockOne.key, blockSize);
 
    Store::AllocatedSequence allocSeq = store.getFirstAllocatedSequence();
@@ -381,7 +385,8 @@ TEST(StoreAllocatorIteratorTest, SingleAllocationAfterGap)
 
    ASSERT_EQ(blockTwo.key, allocSeq.key);
    ASSERT_EQ(2 * blockSize, allocSeq.size);
-   ASSERT_EQ(blockTwo.iterator, allocSeq.iterator);
+   const auto allocSeqIter = store.get(allocSeq.key).first;
+   ASSERT_EQ(blockTwo.iterator, allocSeqIter);
 
    const bool nextSeqValid = store.getNextAllocatedSequence(allocSeq);
    ASSERT_FALSE(nextSeqValid);
@@ -399,15 +404,18 @@ TEST(StoreAllocatorIteratorTest, TwoAllocationsWithGap)
    const auto blockTwo = store.allocate(2 * blockSize);
    std::fill_n(blockTwo.iterator, 2 * blockSize, 2);
    const auto blockThree = store.allocate(3 * blockSize);
-   std::fill_n(blockTwo.iterator, 3 * blockSize, 3);
-   store.deallocate(blockOne.key, blockSize);
+   std::fill_n(blockThree.iterator, 3 * blockSize, 3);
+
+   std::fill_n(blockTwo.iterator, 2 * blockSize, 9);
+   store.deallocate(blockTwo.key, 2 * blockSize);
 
    Store::AllocatedSequence allocSeq = store.getFirstAllocatedSequence();
    ASSERT_TRUE(store.isValidAllocatedSequence(allocSeq));
 
    ASSERT_EQ(blockOne.key, allocSeq.key);
    ASSERT_EQ(blockSize, allocSeq.size);
-   ASSERT_EQ(blockOne.iterator, allocSeq.iterator);
+   const auto allocSeqIter = store.get(allocSeq.key).first;
+   ASSERT_EQ(blockOne.iterator, allocSeqIter);
 
    const bool nextSeqValid = store.getNextAllocatedSequence(allocSeq);
    ASSERT_TRUE(nextSeqValid);
@@ -415,10 +423,63 @@ TEST(StoreAllocatorIteratorTest, TwoAllocationsWithGap)
 
    ASSERT_EQ(blockThree.key, allocSeq.key);
    ASSERT_EQ(3 * blockSize, allocSeq.size);
-   ASSERT_EQ(blockThree.iterator, allocSeq.iterator);
+   const auto allocSeqIter2 = store.get(allocSeq.key).first;
+   ASSERT_EQ(blockThree.iterator, allocSeqIter2);
+
+   const bool nextSeqValid2 = store.getNextAllocatedSequence(allocSeq);
+   ASSERT_FALSE(nextSeqValid2);
+   ASSERT_FALSE(store.isValidAllocatedSequence(allocSeq));
+}
+
+TEST(StoreAllocatorIteratorTest, ThreeAllocationsWithTwoGaps)
+{
+   Store store;
+
+   const std::size_t blockSize = 8;
+
+   const auto blockOne = store.allocate(blockSize);
+   std::fill_n(blockOne.iterator, blockSize, 1);
+   const auto blockTwo = store.allocate(2 * blockSize);
+   std::fill_n(blockTwo.iterator, 2 * blockSize, 2);
+   const auto blockThree = store.allocate(3 * blockSize);
+   std::fill_n(blockThree.iterator, 3 * blockSize, 3);
+   const auto blockFour = store.allocate(blockSize);
+   std::fill_n(blockFour.iterator, blockSize, 4);
+   const auto blockFive = store.allocate(blockSize);
+   std::fill_n(blockFive.iterator, blockSize, 4);
+
+   std::fill_n(blockTwo.iterator, 2 * blockSize, 9);
+   store.deallocate(blockTwo.key, 2 * blockSize);
+   std::fill_n(blockFour.iterator, blockSize, 9);
+   store.deallocate(blockFour.key, blockSize);
+
+   Store::AllocatedSequence allocSeq = store.getFirstAllocatedSequence();
+   ASSERT_TRUE(store.isValidAllocatedSequence(allocSeq));
+
+   ASSERT_EQ(blockOne.key, allocSeq.key);
+   ASSERT_EQ(blockSize, allocSeq.size);
+   const auto allocSeqIter = store.get(allocSeq.key).first;
+   ASSERT_EQ(blockOne.iterator, allocSeqIter);
+
+   const bool nextSeqValid = store.getNextAllocatedSequence(allocSeq);
+   ASSERT_TRUE(nextSeqValid);
+   ASSERT_TRUE(store.isValidAllocatedSequence(allocSeq));
+
+   ASSERT_EQ(blockThree.key, allocSeq.key);
+   ASSERT_EQ(3 * blockSize, allocSeq.size);
+   const auto allocSeqIter2 = store.get(allocSeq.key).first;
+   ASSERT_EQ(blockThree.iterator, allocSeqIter2);
 
    const bool nextSeqValid2 = store.getNextAllocatedSequence(allocSeq);
    ASSERT_TRUE(nextSeqValid2);
    ASSERT_TRUE(store.isValidAllocatedSequence(allocSeq));
-}
 
+   ASSERT_EQ(blockFive.key, allocSeq.key);
+   ASSERT_EQ(blockSize, allocSeq.size);
+   const auto allocSeqIter3 = store.get(allocSeq.key).first;
+   ASSERT_EQ(blockFive.iterator, allocSeqIter3);
+
+   const bool nextSeqValid3 = store.getNextAllocatedSequence(allocSeq);
+   ASSERT_FALSE(nextSeqValid3);
+   ASSERT_FALSE(store.isValidAllocatedSequence(allocSeq));
+}
