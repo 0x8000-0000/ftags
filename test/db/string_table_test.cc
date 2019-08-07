@@ -96,7 +96,7 @@ TEST(StringTableTest, AddTwoAndGetThemBack)
    ASSERT_STREQ(barKey, barString);
 }
 
-TEST(StringTableTest, Serialize)
+TEST(StringTableTest, SerializeTwoStrings)
 {
    ftags::StringTable st;
 
@@ -105,6 +105,47 @@ TEST(StringTableTest, Serialize)
 
    st.addKey(fooString);
    st.addKey(barString);
+
+   const auto estimatedSerializedSize = st.computeSerializedSize();
+
+   std::vector<std::byte> serializedFormat(/* size = */ estimatedSerializedSize);
+
+   ftags::BufferInsertor insertor{serializedFormat};
+   st.serialize(insertor);
+   insertor.assertEmpty();
+
+   ftags::BufferExtractor extractor{serializedFormat};
+   ftags::StringTable rec = ftags::StringTable::deserialize(extractor);
+   extractor.assertEmpty();
+
+   const uint32_t keyForFoo = st.getKey(fooString);
+
+   const uint32_t rec_keyForFoo = rec.getKey(fooString);
+   ASSERT_EQ(keyForFoo, rec_keyForFoo);
+   const char* rec_fooKey = rec.getString(rec_keyForFoo);
+   ASSERT_STREQ(rec_fooKey, fooString);
+
+   const uint32_t keyForBar = st.getKey(barString);
+
+   const uint32_t rec_keyForBar = rec.getKey(barString);
+   ASSERT_EQ(keyForBar, rec_keyForBar);
+   const char* rec_barKey = rec.getString(rec_keyForBar);
+   ASSERT_STREQ(rec_barKey, barString);
+}
+
+TEST(StringTableTest, SerializeTwoStringsWithGap)
+{
+   ftags::StringTable st;
+
+   const char fooString[] = "foo";
+   const char alphaString[] = "alpha";
+   const char barString[] = "bar";
+
+   st.addKey(fooString);
+   st.addKey(alphaString);
+   st.addKey(barString);
+
+   st.removeKey(alphaString);
 
    const auto estimatedSerializedSize = st.computeSerializedSize();
 

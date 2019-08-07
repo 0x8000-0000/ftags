@@ -112,3 +112,44 @@ ftags::StringTable::Key ftags::StringTable::addKey(const char* inputString)
    return allocation.key;
 }
 
+void ftags::StringTable::removeKey(const char* inputString)
+{
+   if (m_useSafeConcurrentAccess)
+   {
+      m_mutex.lock_shared();
+   }
+
+   auto iter = m_index.find(inputString);
+
+   if (m_useSafeConcurrentAccess)
+   {
+      m_mutex.unlock_shared();
+   }
+
+   if (m_index.end() == iter)
+   {
+      return;
+   }
+
+   const auto inputLength{static_cast<uint32_t>(strlen(inputString))};
+
+   if (m_useSafeConcurrentAccess)
+   {
+      m_mutex.lock();
+   }
+
+#ifndef NDEBUG
+   auto buffer = m_store.get(iter->second).first;
+   std::fill_n(buffer, inputLength + 1, '\0');
+#endif
+
+   // allocated extra byte for NUL
+   m_store.deallocate(iter->second, inputLength + 1);
+
+   m_index.erase(iter);
+
+   if (m_useSafeConcurrentAccess)
+   {
+      m_mutex.unlock();
+   }
+}
