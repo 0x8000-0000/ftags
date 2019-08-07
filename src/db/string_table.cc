@@ -96,7 +96,7 @@ ftags::StringTable::Key ftags::StringTable::addKey(const char* inputString)
       m_mutex.lock();
    }
 
-   // allocate extra bite for NUL
+   // allocate extra byte for NUL
    auto allocation{m_store.allocate(inputLength + 1)};
 
    // also copy NUL

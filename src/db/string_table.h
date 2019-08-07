@@ -117,14 +117,16 @@ public:
     */
    std::size_t computeSerializedSize() const;
 
-   std::size_t serialize(std::byte* buffer, std::size_t size) const;
+   void serialize(ftags::BufferInsertor& insertor) const;
 
-   static StringTable deserialize(const std::byte* buffer, std::size_t size);
+   static StringTable deserialize(ftags::BufferExtractor& extractor);
 
 private:
    static constexpr uint32_t k_bucketSize = 24;
 
-   ftags::Store<char, Key, k_bucketSize> m_store;
+   using StoreType = ftags::Store<char, Key, k_bucketSize>;
+
+   StoreType m_store;
 
    /*
     * Lookup table; can be reconstructed from the store above.

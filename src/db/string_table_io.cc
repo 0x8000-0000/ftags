@@ -23,13 +23,52 @@ std::size_t ftags::StringTable::computeSerializedSize() const
    return sizeof(ftags::SerializedObjectHeader) + m_store.computeSerializedSize();
 }
 
-size_t ftags::StringTable::serialize(std::byte* /* buffer */, std::size_t /* size */) const
+void ftags::StringTable::serialize(ftags::BufferInsertor& insertor) const
 {
-   return 0;
+   ftags::SerializedObjectHeader header = {};
+   insertor << header;
+
+   m_store.serialize(insertor);
 }
 
-ftags::StringTable ftags::StringTable::deserialize(const std::byte* /* buffer */, std::size_t /* size */)
+ftags::StringTable ftags::StringTable::deserialize(ftags::BufferExtractor& extractor)
 {
    ftags::StringTable retval;
+
+   ftags::SerializedObjectHeader header = {};
+   extractor >> header;
+
+   retval.m_store = StoreType::deserialize(extractor);
+
+   /*
+    * traverse m_store and find the strings
+    */
+   auto allocSeq = retval.m_store.getFirstAllocatedSequence();
+   while (retval.m_store.isValidAllocatedSequence(allocSeq))
+   {
+      auto iter = retval.m_store.get(allocSeq.key).first;
+
+      const char* symbol = &*iter;
+      StoreType::block_size_type key = allocSeq.key;
+      for (StoreType::block_size_type ii = 0; ii < allocSeq.size; ii++)
+      {
+         if (*iter == '\0')
+         {
+            retval.m_index[symbol] = key;
+
+            ++ iter;
+
+            symbol = &*iter;
+            key = allocSeq.key + ii + 1;
+         }
+         else
+         {
+            ++ iter;
+         }
+      }
+
+      retval.m_store.getNextAllocatedSequence(allocSeq);
+   }
+
    return retval;
 }
