@@ -632,27 +632,68 @@ bool Store<T, K, SegmentSizeBits>::getNextAllocatedSequence(
       return false;
    }
 
-   const K    nextKey{allocatedSequence.key + allocatedSequence.size};
-   const auto nextFreeBlock{m_freeBlocksIndex.find(nextKey)};
+   /*
+    * Given a key pointing at the beginning of an allocation sequence and the
+    * size of the allocation sequence, we compute the end of the current
+    * allocation sequence.
+    */
+   const K endOfAllocatedSequence = allocatedSequence.key + allocatedSequence.size;
 
-   if (nextFreeBlock == m_freeBlocksIndex.end())
-   {
-      allocatedSequence.key  = 0;
-      allocatedSequence.size = 0;
-      return false;
-   }
+   /*
+    * Then we need to find the next two free blocks that occur after the
+    * end of the current allocated sequence.
+    */
+   const auto nextFreeBlock{m_freeBlocksIndex.find(endOfAllocatedSequence)};
 
+   /*
+    * There is always a free block after an allocated block so we should find
+    * it here.
+    */
+   assert(nextFreeBlock != m_freeBlocksIndex.end());
+
+   /*
+    * After this free block, there *might* be another allocated sequence
+    * and another free block.
+    */
    allocatedSequence.key = nextFreeBlock->first + nextFreeBlock->second;
 
+   if ((allocatedSequence.key & OffsetInSegmentMask) == 0)
+   {
+      /*
+       * The first key in a segment is not used, and we waste four entries
+       * to ensure word alignment.
+       */
+      allocatedSequence.key += FirstKeyValue;
+
+      const auto possibleFreeBlockAtBeginningOfSegment{m_freeBlocksIndex.find(allocatedSequence.key)};
+      if (possibleFreeBlockAtBeginningOfSegment != m_freeBlocksIndex.end())
+      {
+         /*
+          * Skip over this free block.
+          */
+         allocatedSequence.key += possibleFreeBlockAtBeginningOfSegment->second;
+      }
+   }
+
+   /*
+    * Look for the next free block that follows our candidate allocation.
+    */
    const auto subsequentFreeBlock{m_freeBlocksIndex.upper_bound(allocatedSequence.key)};
    if (subsequentFreeBlock == m_freeBlocksIndex.end())
    {
-      // TODO: handle multiple segments
+      /*
+      * If there are no more free blocks, we're done.
+      */
+
       allocatedSequence.key  = 0;
       allocatedSequence.size = 0;
       return false;
    }
 
+   /*
+    * The allocated sequence is situated between 'next' and 'subsequent'
+    * free blocks.
+    */
    allocatedSequence.size = subsequentFreeBlock->first - allocatedSequence.key;
 
    return true;
