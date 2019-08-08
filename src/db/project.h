@@ -18,6 +18,7 @@
 #define DB_PROJECT_H_INCLUDED
 
 #include <string_table.h>
+#include <serialization.h>
 
 #include <algorithm>
 #include <iosfwd>
@@ -368,14 +369,18 @@ public:
    }
 
    /*
-    * Serialization
+    * Serialization interface
     */
+   std::size_t computeSerializedSize() const;
 
-   std::vector<uint8_t> serialize() const;
+   void serialize(ftags::BufferInsertor& insertor) const;
 
-   static CursorSet deserialize(const uint8_t* buffer, size_t size);
+   static CursorSet deserialize(ftags::BufferExtractor& extractor);
 
 private:
+
+   CursorSet();
+
    // persistent data
    std::vector<Record> m_records;
    StringTable         m_symbolTable;
