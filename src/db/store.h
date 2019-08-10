@@ -503,8 +503,12 @@ void Store<T, K, SegmentSizeBits>::deallocate(K key, block_size_type size)
 template <typename T, typename K, unsigned SegmentSizeBits>
 std::size_t Store<T, K, SegmentSizeBits>::computeSpaceUsedInLastSegment() const
 {
-   // TODO: compute this more accurately
-   return MaxSegmentSize;
+   const auto lastFreeBlockIter = m_freeBlocksIndex.crbegin();
+   assert(lastFreeBlockIter != m_freeBlocksIndex.crend());
+
+   const std::size_t sizeOfLastFreeBlock = lastFreeBlockIter->second;
+
+   return MaxSegmentSize - sizeOfLastFreeBlock;
 }
 
 template <typename T, typename K, unsigned SegmentSizeBits>
@@ -537,7 +541,7 @@ void Store<T, K, SegmentSizeBits>::serialize(ftags::BufferInsertor& insertor) co
       insertor << m_segment[ii];
    }
 
-   insertor << m_segment[segmentCount - 1];
+   insertor.serialize(m_segment[segmentCount - 1], spaceUsedInLastSegment);
 
    ftags::Serializer<std::map<K, block_size_type>>::serialize(m_freeBlocksIndex, insertor);
 }
@@ -571,8 +575,13 @@ Store<T, K, SegmentSizeBits> Store<T, K, SegmentSizeBits>::deserialize(ftags::Bu
 
    {
       auto& segment = retval.m_segment.back();
-      extractor >> segment;
+      extractor.deserialize(segment, spaceUsedInLastSegment);
    }
+
+   assert(retval.m_freeBlocksIndex.size() == 1);
+   assert(retval.m_freeBlocks.size() == 1);
+
+   retval.m_freeBlocks.clear();
 
    retval.m_freeBlocksIndex = ftags::Serializer<std::map<K, block_size_type>>::deserialize(extractor);
 
@@ -682,8 +691,8 @@ bool Store<T, K, SegmentSizeBits>::getNextAllocatedSequence(
    if (subsequentFreeBlock == m_freeBlocksIndex.end())
    {
       /*
-      * If there are no more free blocks, we're done.
-      */
+       * If there are no more free blocks, we're done.
+       */
 
       allocatedSequence.key  = 0;
       allocatedSequence.size = 0;

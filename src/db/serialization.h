@@ -97,6 +97,22 @@ public:
       return *this;
    }
 
+   template <typename T>
+   BufferInsertor& serialize(const std::vector<T>& value, std::size_t size)
+   {
+      assert(size <= value.size());
+      const std::size_t byteSize = size * sizeof(T);
+
+#ifndef NDEBUG
+      assert(byteSize <= m_size);
+      m_size -= byteSize;
+#endif
+      std::memcpy(m_buffer, value.data(), byteSize);
+      m_buffer += byteSize;
+
+      return *this;
+   }
+
    void assertEmpty()
    {
 #ifndef NDEBUG
@@ -154,6 +170,21 @@ public:
       return *this;
    }
 
+   template <typename T>
+   BufferExtractor& deserialize(std::vector<T>& value, std::size_t size)
+   {
+      assert(size <= value.size());
+      const std::size_t byteSize = size * sizeof(T);
+#ifndef NDEBUG
+      assert(byteSize <= m_size);
+      m_size -= byteSize;
+#endif
+      std::memcpy(value.data(), m_buffer, byteSize);
+      m_buffer += byteSize;
+
+      return *this;
+   }
+
    void assertEmpty()
    {
 #ifndef NDEBUG
@@ -186,7 +217,6 @@ struct Serializer
 
    static T deserialize(BufferExtractor& bufferExtractor);
 };
-
 
 } // namespace ftags
 
