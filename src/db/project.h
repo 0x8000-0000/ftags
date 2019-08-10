@@ -351,7 +351,7 @@ class CursorSet
 public:
    CursorSet(std::vector<const Record*> records, const StringTable& symbolTable, const StringTable& fileNameTable);
 
-   Cursor inflateRecord(const Record& record);
+   Cursor inflateRecord(const Record& record) const;
 
    std::vector<Record>::const_iterator begin() const
    {
@@ -379,7 +379,7 @@ public:
 
 private:
 
-   CursorSet();
+   CursorSet() = default;
 
    // persistent data
    std::vector<Record> m_records;
@@ -399,9 +399,9 @@ public:
 
    void removeTranslationUnit(const std::string& fileName);
 
-   Cursor inflateRecord(const Record* record);
+   Cursor inflateRecord(const Record* record) const;
 
-   CursorSet inflateRecords(const std::vector<const Record*>& records);
+   CursorSet inflateRecords(const std::vector<const Record*>& records) const;
 
    /*
     * General queries

@@ -199,7 +199,7 @@ ftags::ProjectDb::ProjectDb() : m_operatingState{OptimizedForParse}
 {
 }
 
-ftags::Cursor ftags::ProjectDb::inflateRecord(const ftags::Record* record)
+ftags::Cursor ftags::ProjectDb::inflateRecord(const ftags::Record* record) const
 {
    ftags::Cursor cursor{};
 
@@ -305,4 +305,85 @@ std::vector<const ftags::Record*> ftags::ProjectDb::findSymbol(const std::string
 {
    return filterRecordsWithSymbol(
       symbolName, [symbolType](const Record* record) { return record->attributes.type == symbolType; });
+}
+
+ftags::CursorSet ftags::ProjectDb::inflateRecords(const std::vector<const Record*>& records) const
+{
+   ftags::CursorSet retval(records, m_symbolTable, m_fileNameTable);
+
+   return retval;
+}
+
+/*
+ * CursorSet
+ */
+ftags::CursorSet::CursorSet(std::vector<const Record*> records,
+                            const StringTable&         symbolTable,
+                            const StringTable&         fileNameTable)
+{
+   m_records.reserve(records.size());
+
+   for (auto record : records)
+   {
+      m_records.push_back(*record);
+      auto& newRecord = m_records.back();
+
+      const char* symbolName = symbolTable.getString(record->symbolNameKey);
+      const char* fileName   = fileNameTable.getString(record->fileNameKey);
+
+      newRecord.symbolNameKey = m_symbolTable.addKey(symbolName);
+      newRecord.fileNameKey   = m_fileNameTable.addKey(fileName);
+   }
+}
+
+ftags::Cursor ftags::CursorSet::inflateRecord(const ftags::Record& record) const
+{
+   ftags::Cursor cursor{};
+
+   cursor.symbolName = m_symbolTable.getString(record.symbolNameKey);
+
+   cursor.location.fileName = m_fileNameTable.getString(record.fileNameKey);
+   cursor.location.line     = static_cast<int>(record.startLine);
+   cursor.location.column   = record.startColumn;
+
+   return cursor;
+}
+
+/*
+ * Record serialization
+ */
+template <>
+std::size_t
+ftags::Serializer<std::vector<ftags::Record>>::computeSerializedSize(const std::vector<ftags::Record>& val)
+{
+   return sizeof(ftags::SerializedObjectHeader) + sizeof(uint64_t) + val.size() * sizeof(ftags::Record);
+}
+
+template <>
+void ftags::Serializer<std::vector<ftags::Record>>::serialize(const std::vector<ftags::Record>& val,
+                                                              ftags::BufferInsertor&            insertor)
+{
+   ftags::SerializedObjectHeader header{"std::vector<ftags::Record>"};
+   insertor << header;
+
+   const uint64_t vecSize = val.size();
+   insertor << vecSize;
+
+   insertor << val;
+}
+
+template <>
+std::vector<ftags::Record>
+ftags::Serializer<std::vector<ftags::Record>>::deserialize(ftags::BufferExtractor& extractor)
+{
+   ftags::SerializedObjectHeader header;
+   extractor >> header;
+
+   uint64_t vecSize = 0;
+   extractor >> vecSize;
+
+   std::vector<ftags::Record> retval(/* size = */ vecSize);
+   extractor >> retval;
+
+   return retval;
 }

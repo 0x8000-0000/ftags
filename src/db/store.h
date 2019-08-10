@@ -523,7 +523,7 @@ std::size_t Store<T, K, SegmentSizeBits>::computeSerializedSize() const
 template <typename T, typename K, unsigned SegmentSizeBits>
 void Store<T, K, SegmentSizeBits>::serialize(ftags::BufferInsertor& insertor) const
 {
-   ftags::SerializedObjectHeader header = {};
+   ftags::SerializedObjectHeader header{"Store<T, K, SegmentSizeBits>"};
    insertor << header;
 
    const uint64_t segmentCount = m_segment.size();
@@ -547,7 +547,7 @@ Store<T, K, SegmentSizeBits> Store<T, K, SegmentSizeBits>::deserialize(ftags::Bu
 {
    Store<T, K, SegmentSizeBits> retval;
 
-   ftags::SerializedObjectHeader header = {};
+   ftags::SerializedObjectHeader header;
    extractor >> header;
 
    uint64_t segmentCount = 0;

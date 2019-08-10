@@ -17,6 +17,7 @@
 #ifndef SERIALIZATION_H_INCLUDED
 #define SERIALIZATION_H_INCLUDED
 
+#include <algorithm>
 #include <vector>
 
 #include <cassert>
@@ -30,16 +31,32 @@ namespace ftags
 struct SerializedObjectHeader
 {
    // 128 bit hash of the rest of the header + body; uses SpookyV2 Hash
-   uint64_t m_hash[2];
+   uint64_t m_hash[2] = {};
 
    // object name or uuid or whatever
-   char m_objectType[16];
+   char m_objectType[16] = {};
 
    // the version of serialization for this type
-   uint64_t m_version;
+   uint64_t m_version = 1;
 
    // 64 bit object size
-   uint64_t m_size;
+   uint64_t m_size = 0;
+
+   SerializedObjectHeader(const char* name)
+   {
+      size_t len = strlen(name);
+      if (len >= (sizeof(m_objectType) - 1))
+      {
+         len = sizeof(m_objectType) - 1;
+      }
+      std::copy_n(name, len, m_objectType);
+      std::fill_n(m_objectType + len, sizeof(m_objectType) - len, '\0');
+   }
+
+   SerializedObjectHeader()
+   {
+      std::fill_n(m_objectType, sizeof(m_objectType), '\0');
+   }
 };
 
 class BufferInsertor
@@ -117,7 +134,7 @@ public:
       assert(sizeof(value) <= m_size);
       m_size -= sizeof(value);
 #endif
-      std::memcpy(&value, m_buffer, sizeof(value));
+      std::memcpy(static_cast<void*>(&value), m_buffer, sizeof(value));
       m_buffer += sizeof(value);
 
       return *this;

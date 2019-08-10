@@ -25,21 +25,21 @@ std::size_t ftags::CursorSet::computeSerializedSize() const
 
 void ftags::CursorSet::serialize(ftags::BufferInsertor& insertor) const
 {
-   ftags::SerializedObjectHeader header = {};
+   ftags::SerializedObjectHeader header{"ftags::CursorSet"};
    insertor << header;
 
    ftags::Serializer<std::vector<Record>>::serialize(m_records, insertor);
 
-   insertor << m_symbolTable;
+   m_symbolTable.serialize(insertor);
 
-   insertor << m_fileNameTable;
+   m_fileNameTable.serialize(insertor);
 }
 
 ftags::CursorSet ftags::CursorSet::deserialize(ftags::BufferExtractor& extractor)
 {
    ftags::CursorSet retval;
 
-   ftags::SerializedObjectHeader header = {};
+   ftags::SerializedObjectHeader header;
    extractor >> header;
 
    retval.m_records = ftags::Serializer<std::vector<Record>>::deserialize(extractor);

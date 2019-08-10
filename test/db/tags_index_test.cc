@@ -289,3 +289,115 @@ TEST(TagsIndexTest, MultiModuleEliminateDuplicates)
    const std::vector<const ftags::Record*> functionDeclaration = tagsDb.findDeclaration("function");
    ASSERT_EQ(1, functionDeclaration.size());
 }
+
+TEST(TagsIndexTest, InflateResults)
+{
+   ftags::ProjectDb tagsDb;
+
+   const auto path = std::filesystem::current_path();
+
+   const std::vector<const char*> arguments = {
+      "-Wall",
+      "-Wextra",
+      "-isystem",
+      "/usr/include",
+   };
+
+   {
+      const auto libPath = path / "test" / "db" / "data" / "multi-module" / "lib.cc";
+      ASSERT_TRUE(std::filesystem::exists(libPath));
+
+      ftags::StringTable           symbolTable;
+      ftags::StringTable           fileNameTable;
+      const ftags::TranslationUnit libCpp =
+         ftags::TranslationUnit::parse(libPath, arguments, symbolTable, fileNameTable);
+
+      tagsDb.addTranslationUnit(libPath, libCpp);
+   }
+
+   {
+      const auto testPath = path / "test" / "db" / "data" / "multi-module" / "test.cc";
+      ASSERT_TRUE(std::filesystem::exists(testPath));
+
+      ftags::StringTable           symbolTable;
+      ftags::StringTable           fileNameTable;
+      const ftags::TranslationUnit testCpp =
+         ftags::TranslationUnit::parse(testPath, arguments, symbolTable, fileNameTable);
+
+      tagsDb.addTranslationUnit(testPath, testCpp);
+   }
+
+   const std::vector<const ftags::Record*> functionDeclaration = tagsDb.findDeclaration("function");
+   ASSERT_EQ(1, functionDeclaration.size());
+
+   const ftags::CursorSet originalCursorSet = tagsDb.inflateRecords(functionDeclaration);
+
+   auto iter = originalCursorSet.begin();
+   ASSERT_NE(iter, originalCursorSet.end());
+
+   const ftags::Cursor cursor = originalCursorSet.inflateRecord(*iter);
+   ASSERT_STREQ("function", cursor.symbolName);
+
+   ++ iter;
+   ASSERT_EQ(iter, originalCursorSet.end());
+}
+
+TEST(TagsIndexTest, SerializeDeserializeResults)
+{
+   ftags::ProjectDb tagsDb;
+
+   const auto path = std::filesystem::current_path();
+
+   const std::vector<const char*> arguments = {
+      "-Wall",
+      "-Wextra",
+      "-isystem",
+      "/usr/include",
+   };
+
+   {
+      const auto libPath = path / "test" / "db" / "data" / "multi-module" / "lib.cc";
+      ASSERT_TRUE(std::filesystem::exists(libPath));
+
+      ftags::StringTable           symbolTable;
+      ftags::StringTable           fileNameTable;
+      const ftags::TranslationUnit libCpp =
+         ftags::TranslationUnit::parse(libPath, arguments, symbolTable, fileNameTable);
+
+      tagsDb.addTranslationUnit(libPath, libCpp);
+   }
+
+   {
+      const auto testPath = path / "test" / "db" / "data" / "multi-module" / "test.cc";
+      ASSERT_TRUE(std::filesystem::exists(testPath));
+
+      ftags::StringTable           symbolTable;
+      ftags::StringTable           fileNameTable;
+      const ftags::TranslationUnit testCpp =
+         ftags::TranslationUnit::parse(testPath, arguments, symbolTable, fileNameTable);
+
+      tagsDb.addTranslationUnit(testPath, testCpp);
+   }
+
+   const std::vector<const ftags::Record*> functionDeclaration = tagsDb.findDeclaration("function");
+   ASSERT_EQ(1, functionDeclaration.size());
+
+   const ftags::CursorSet originalCursorSet = tagsDb.inflateRecords(functionDeclaration);
+
+   const std::size_t bufferSpace = originalCursorSet.computeSerializedSize();
+   std::vector<std::byte> buffer(/* size = */ bufferSpace);
+   ftags::BufferInsertor insertor(buffer);
+   originalCursorSet.serialize(insertor);
+   ftags::BufferExtractor extractor(buffer);
+
+   const ftags::CursorSet restoredCursorSet = ftags::CursorSet::deserialize(extractor);
+
+   auto iter = restoredCursorSet.begin();
+   ASSERT_NE(iter, restoredCursorSet.end());
+
+   const ftags::Cursor cursor = restoredCursorSet.inflateRecord(*iter);
+   ASSERT_STREQ("function", cursor.symbolName);
+
+   ++ iter;
+   ASSERT_EQ(iter, restoredCursorSet.end());
+}

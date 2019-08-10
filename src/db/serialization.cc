@@ -94,7 +94,7 @@ std::size_t ftags::Serializer<std::vector<char>>::computeSerializedSize(const st
 template <>
 void ftags::Serializer<std::vector<char>>::serialize(const std::vector<char>& val, ftags::BufferInsertor& insertor)
 {
-   ftags::SerializedObjectHeader header = {};
+   ftags::SerializedObjectHeader header{"std::vector<char>"};
    insertor << header;
 
    const uint64_t vecSize = val.size();

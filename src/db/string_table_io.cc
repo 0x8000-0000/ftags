@@ -25,7 +25,7 @@ std::size_t ftags::StringTable::computeSerializedSize() const
 
 void ftags::StringTable::serialize(ftags::BufferInsertor& insertor) const
 {
-   ftags::SerializedObjectHeader header = {};
+   ftags::SerializedObjectHeader header{"ftags::StringTable"};
    insertor << header;
 
    m_store.serialize(insertor);
@@ -35,7 +35,7 @@ ftags::StringTable ftags::StringTable::deserialize(ftags::BufferExtractor& extra
 {
    ftags::StringTable retval;
 
-   ftags::SerializedObjectHeader header = {};
+   ftags::SerializedObjectHeader header;
    extractor >> header;
 
    retval.m_store = StoreType::deserialize(extractor);
