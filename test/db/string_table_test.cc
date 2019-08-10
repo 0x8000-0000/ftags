@@ -174,3 +174,43 @@ TEST(StringTableTest, SerializeTwoStringsWithGap)
    ASSERT_STREQ(rec_barKey, barString);
 }
 
+TEST(StringTableTest, MergeStringTables)
+{
+   using Key = ftags::StringTable::Key;
+
+   ftags::StringTable left;
+   ftags::StringTable right;
+
+   const char fooString[] = "foo";
+   const char barString[] = "bar";
+   const char bazString[] = "baz";
+
+   left.addKey(fooString);
+   left.addKey(barString);
+
+   right.addKey(barString);
+   right.addKey(bazString);
+
+   ASSERT_EQ(0, left.getKey(bazString));
+   const uint32_t oldKeyForFoo = left.getKey(fooString);
+   const uint32_t oldKeyForBar = left.getKey(barString);
+
+   std::map<Key, Key> mapping = left.mergeStringTable(right);
+
+   ASSERT_NE(0, left.getKey(bazString));
+   ASSERT_EQ(oldKeyForFoo, left.getKey(fooString));
+   ASSERT_EQ(oldKeyForBar, left.getKey(barString));
+
+   Key barKeyInRight = right.getKey(barString);
+   auto barKeyInMergedIter = mapping.find(barKeyInRight);
+   ASSERT_NE(mapping.end(), barKeyInMergedIter);
+   Key barKeyInMerged = barKeyInMergedIter->second;
+   ASSERT_STREQ(barString, left.getString(barKeyInMerged));
+
+   Key bazKeyInRight = right.getKey(bazString);
+   auto bazKeyInMergedIter = mapping.find(bazKeyInRight);
+   ASSERT_NE(mapping.end(), bazKeyInMergedIter);
+   Key bazKeyInMerged = bazKeyInMergedIter->second;
+   ASSERT_STREQ(bazString, left.getString(bazKeyInMerged));
+}
+

@@ -112,6 +112,12 @@ public:
    Key  addKey(const char* string);
    void removeKey(const char* string);
 
+   /* Add all the keys from other that are missing in this table.
+    *
+    * @return a mapping between the keys in the old table and the keys in the updated table
+    */
+   std::map<Key, Key> mergeStringTable(const StringTable& other);
+
    /*
     * Serialization interface
     */
@@ -122,6 +128,10 @@ public:
    static StringTable deserialize(ftags::BufferExtractor& extractor);
 
 private:
+
+   // not-thread safe method
+   Key insertString(const char* aString);
+
    static constexpr uint32_t k_bucketSize = 24;
 
    using StoreType = ftags::Store<char, Key, k_bucketSize>;

@@ -89,25 +89,32 @@ ftags::StringTable::Key ftags::StringTable::addKey(const char* inputString)
       return currentPosition;
    }
 
-   const auto inputLength{static_cast<uint32_t>(strlen(inputString))};
-
    if (m_useSafeConcurrentAccess)
    {
       m_mutex.lock();
    }
 
-   // allocate extra byte for NUL
-   auto allocation{m_store.allocate(inputLength + 1)};
-
-   // also copy NUL
-   std::copy_n(inputString, inputLength + 1, allocation.iterator);
-
-   m_index[&*allocation.iterator] = allocation.key;
+   Key key = insertString(inputString);
 
    if (m_useSafeConcurrentAccess)
    {
       m_mutex.unlock();
    }
+
+   return key;
+}
+
+ftags::StringTable::Key ftags::StringTable::insertString(const char* aString)
+{
+   const auto inputLength{static_cast<uint32_t>(strlen(aString))};
+
+   // allocate extra byte for NUL
+   auto allocation{m_store.allocate(inputLength + 1)};
+
+   // also copy NUL
+   std::copy_n(aString, inputLength + 1, allocation.iterator);
+
+   m_index[&*allocation.iterator] = allocation.key;
 
    return allocation.key;
 }
@@ -152,4 +159,34 @@ void ftags::StringTable::removeKey(const char* inputString)
    {
       m_mutex.unlock();
    }
+}
+
+std::map<ftags::StringTable::Key, ftags::StringTable::Key> ftags::StringTable::mergeStringTable(const StringTable& other)
+{
+   std::map<ftags::StringTable::Key, ftags::StringTable::Key> newKeys;
+
+   if (m_useSafeConcurrentAccess)
+   {
+      m_mutex.lock();
+   }
+
+   for (const auto& pair: other.m_index)
+   {
+      auto iter = m_index.find(pair.first);
+      if (iter == m_index.end())
+      {
+         newKeys[pair.second] = insertString(pair.first);
+      }
+      else
+      {
+         newKeys[pair.second] = iter->second;
+      }
+   }
+
+   if (m_useSafeConcurrentAccess)
+   {
+      m_mutex.unlock();
+   }
+
+   return newKeys;
 }
