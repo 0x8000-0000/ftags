@@ -139,35 +139,21 @@ void ftags::TranslationUnit::copyRecords(const TranslationUnit& original)
     * database
     */
 
-   // update file keys
-   {
-      Key currentOriginalFileKey = 0;
-      Key currentFileKey         = 0;
+   ftags::FlatMap<Key, Key> fileNameKeyMapping = m_fileNameTable.mergeStringTable(original.m_fileNameTable);
+   ftags::FlatMap<Key, Key> symbolKeyMapping   = m_symbolTable.mergeStringTable(original.m_symbolTable);
 
-      for (auto recordPos : original.m_recordsInFileKeyOrder)
+   for (auto& record : m_records)
+   {
       {
-         Record& record = m_records[recordPos];
-         if (record.fileNameKey != currentOriginalFileKey)
-         {
-            currentFileKey = m_fileNameTable.addKey(original.getFileName(record));
-         }
-         record.fileNameKey = currentFileKey;
+         auto fileNameIter = fileNameKeyMapping.lookup(record.fileNameKey);
+         assert(fileNameIter != fileNameKeyMapping.none());
+         record.fileNameKey = fileNameIter->second;
       }
-   }
 
-   // update symbol keys
-   {
-      Key currentOriginalSymbolKey = 0;
-      Key currentSymbolKey         = 0;
-
-      for (auto recordPos : original.m_recordsInSymbolKeyOrder)
       {
-         Record& record = m_records[recordPos];
-         if (record.symbolNameKey != currentOriginalSymbolKey)
-         {
-            currentSymbolKey = m_symbolTable.addKey(original.getSymbolName(record));
-         }
-         record.symbolNameKey = currentSymbolKey;
+         auto symbolNameIter = symbolKeyMapping.lookup(record.symbolNameKey);
+         assert(symbolNameIter != symbolKeyMapping.none());
+         record.symbolNameKey = symbolNameIter->second;
       }
    }
 
