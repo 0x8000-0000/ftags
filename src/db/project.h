@@ -17,13 +17,14 @@
 #ifndef DB_PROJECT_H_INCLUDED
 #define DB_PROJECT_H_INCLUDED
 
-#include <string_table.h>
 #include <serialization.h>
+#include <string_table.h>
 
 #include <algorithm>
 #include <iosfwd>
 #include <map>
 #include <mutex>
+#include <numeric>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -217,18 +218,24 @@ struct Record
 
 static_assert(sizeof(Record) == 28, "sizeof(Record) exceeds 28 bytes");
 
-class TranslationUnit
+/** Contains all the symbols in a C++ translation unit that are adjacent in
+ * a physical file.
+ *
+ * For example, an include file that does not include any other files would
+ * define a record span. If a file includes another file, that creates at
+ * least three record spans, one before the include, one for the included file
+ * and one after the include.
+ */
+class RecordSpan
 {
 public:
    using Key = ftags::StringTable::Key;
 
-   TranslationUnit(StringTable& symbolTable, StringTable& fileNameTable) :
+   RecordSpan(StringTable& symbolTable, StringTable& fileNameTable) :
       m_symbolTable{symbolTable},
       m_fileNameTable{fileNameTable}
    {
    }
-
-   void copyRecords(const TranslationUnit& other);
 
    Key getFileNameKey() const
    {
@@ -253,34 +260,15 @@ public:
       return m_records.size();
    }
 
-   /*
-    * General queries
-    */
-   std::vector<Record*> getFunctions() const;
+   void addRecord(const ftags::Record& record)
+   {
+      m_records.push_back(record);
+   }
 
-   std::vector<Record*> getClasses() const;
+   void addRecords(const RecordSpan&               other,
+                   const ftags::FlatMap<Key, Key>& symbolKeyMapping,
+                   const ftags::FlatMap<Key, Key>& fileNameKeyMapping);
 
-   std::vector<Record*> getGlobalVariables() const;
-
-   /*
-    * Specific queries
-    */
-   std::vector<Record*> findDeclaration(const std::string& symbolName) const;
-
-   std::vector<Record*> findDeclaration(const std::string& symbolName, SymbolType type) const;
-
-   std::vector<Record*> findDefinition(const std::string& symbolName) const;
-
-   static TranslationUnit parse(const std::string&       fileName,
-                                std::vector<const char*> arguments,
-                                StringTable&             symbolTable,
-                                StringTable&             fileNameTable);
-
-   void addCursor(const Cursor& cursor, const Attributes& attributes);
-
-   /*
-    * Query helper
-    */
    template <typename F>
    void forEachRecord(F func) const
    {
@@ -323,6 +311,8 @@ public:
       }
    }
 
+   void updateIndices();
+
    /*
     * Debugging
     */
@@ -339,11 +329,143 @@ private:
    StringTable& m_symbolTable;
    StringTable& m_fileNameTable;
 
+   // 128 bit hash of the record span
+   std::array<uint64_t,2> m_hash = {};
+
+   // reference counter
+   int m_usageCount = 0;
+
+   std::vector<std::vector<Record>::size_type> m_recordsInSymbolKeyOrder;
+
+   static constexpr std::array<uint64_t, 2> k_hashSeed = {0x0accedd62cf0b9bf, 0xb5aed169e429b7c1};
+};
+
+/** Contains all the symbols in a C++ translation unit.
+ */
+class TranslationUnit
+{
+public:
+   using Key = ftags::StringTable::Key;
+
+   TranslationUnit(StringTable& symbolTable, StringTable& fileNameTable) :
+      m_symbolTable{symbolTable},
+      m_fileNameTable{fileNameTable}
+   {
+   }
+
+   void copyRecords(const TranslationUnit& other);
+
+   Key getFileNameKey() const
+   {
+      return m_fileNameKey;
+   }
+
+   const char* getSymbolName(const Record& record) const
+   {
+      return m_symbolTable.getString(record.symbolNameKey);
+   }
+
+   const char* getFileName(const Record& record) const
+   {
+      return m_fileNameTable.getString(record.fileNameKey);
+   }
+
+   /*
+    * Statistics
+    */
+   std::vector<Record>::size_type getRecordCount() const
+   {
+      return std::accumulate(
+         m_recordSpans.cbegin(),
+         m_recordSpans.cend(),
+         0u,
+         [](std::vector<Record>::size_type acc, const RecordSpan& elem) { return acc + elem.getRecordCount(); });
+   }
+
+   /*
+    * General queries
+    */
+   std::vector<Record*> getFunctions() const;
+
+   std::vector<Record*> getClasses() const;
+
+   std::vector<Record*> getGlobalVariables() const;
+
+   /*
+    * Specific queries
+    */
+   std::vector<Record*> findDeclaration(const std::string& symbolName) const;
+
+   std::vector<Record*> findDeclaration(const std::string& symbolName, SymbolType type) const;
+
+   std::vector<Record*> findDefinition(const std::string& symbolName) const;
+
+   static TranslationUnit parse(const std::string&       fileName,
+                                std::vector<const char*> arguments,
+                                StringTable&             symbolTable,
+                                StringTable&             fileNameTable);
+
+   void addCursor(const Cursor& cursor, const Attributes& attributes);
+
+   /*
+    * Query helper
+    */
+   template <typename F>
+   void forEachRecord(F func) const
+   {
+      std::for_each(
+         m_recordSpans.cbegin(), m_recordSpans.cend(), [func](const RecordSpan& elem) { elem.forEachRecord(func); });
+   }
+
+   struct RecordSymbolComparator
+   {
+      RecordSymbolComparator(const std::vector<Record>& records) : m_records{records}
+      {
+      }
+
+      bool operator()(std::vector<Record>::size_type recordPos, Key symbolNameKey)
+      {
+         return m_records[recordPos].symbolNameKey < symbolNameKey;
+      }
+
+      bool operator()(Key symbolNameKey, std::vector<Record>::size_type recordPos)
+      {
+         return symbolNameKey < m_records[recordPos].symbolNameKey;
+      }
+
+      const std::vector<Record>& m_records;
+   };
+
+   template <typename F>
+   void forEachRecordWithSymbol(Key symbolNameKey, F func) const
+   {
+      std::for_each(m_recordSpans.cbegin(), m_recordSpans.cend(), [symbolNameKey, func](const RecordSpan& elem) {
+         elem.forEachRecordWithSymbol(symbolNameKey, func);
+      });
+   }
+
+   /*
+    * Debugging
+    */
+   void dumpRecords(std::ostream& os) const;
+
+private:
+   // key of the file name of the main translation unit
+   Key m_fileNameKey = 0;
+
+   // persistent data
+   std::vector<RecordSpan> m_recordSpans;
+
+   Key m_currentRecordSpanFileKey = 0;
+
+   // tables managed by the owner of this translation unit
+   StringTable& m_symbolTable;
+   StringTable& m_fileNameTable;
+
    void updateIndices();
 
    // indexes of records based of different traversal order
    std::vector<std::vector<Record>::size_type> m_recordsInSymbolKeyOrder;
-   std::vector<std::vector<Record>::size_type> m_recordsInFileKeyOrder;
 };
 
 class CursorSet
@@ -378,7 +500,6 @@ public:
    static CursorSet deserialize(ftags::BufferExtractor& extractor);
 
 private:
-
    CursorSet() = default;
 
    // persistent data

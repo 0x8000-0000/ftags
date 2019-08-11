@@ -16,6 +16,8 @@
 
 #include <project.h>
 
+#include <SpookyV2.h>
+
 #include <algorithm>
 #include <numeric>
 
@@ -116,31 +118,23 @@ void filterDuplicates(std::vector<const ftags::Record*> records)
 
 } // anonymous namespace
 
-void ftags::TranslationUnit::updateIndices()
+void ftags::RecordSpan::updateIndices()
 {
    m_recordsInSymbolKeyOrder.resize(m_records.size());
    std::iota(m_recordsInSymbolKeyOrder.begin(), m_recordsInSymbolKeyOrder.end(), 0);
    std::sort(m_recordsInSymbolKeyOrder.begin(), m_recordsInSymbolKeyOrder.end(), OrderRecordsBySymbolKey(m_records));
-
-   m_recordsInFileKeyOrder.resize(m_records.size());
-   std::iota(m_recordsInFileKeyOrder.begin(), m_recordsInFileKeyOrder.end(), 0);
-   std::sort(m_recordsInFileKeyOrder.begin(), m_recordsInFileKeyOrder.end(), OrderRecordsByFileKey(m_records));
 }
 
-void ftags::TranslationUnit::copyRecords(const TranslationUnit& original)
+void ftags::TranslationUnit::updateIndices()
 {
-   /*
-    * copy the original records
-    */
-   m_records = original.m_records;
+   std::for_each(m_recordSpans.begin(), m_recordSpans.end(), [](ftags::RecordSpan& rs) { rs.updateIndices(); });
+}
 
-   /*
-    * replace keys from translation unit's table with keys from the project
-    * database
-    */
-
-   ftags::FlatMap<Key, Key> fileNameKeyMapping = m_fileNameTable.mergeStringTable(original.m_fileNameTable);
-   ftags::FlatMap<Key, Key> symbolKeyMapping   = m_symbolTable.mergeStringTable(original.m_symbolTable);
+void ftags::RecordSpan::addRecords(const RecordSpan&               other,
+                                   const ftags::FlatMap<Key, Key>& symbolKeyMapping,
+                                   const ftags::FlatMap<Key, Key>& fileNameKeyMapping)
+{
+   m_records = other.m_records;
 
    for (auto& record : m_records)
    {
@@ -158,6 +152,34 @@ void ftags::TranslationUnit::copyRecords(const TranslationUnit& original)
    }
 
    updateIndices();
+
+   m_hash[0] = k_hashSeed[0];
+   m_hash[1] = k_hashSeed[1];
+
+   SpookyHash::Hash128(m_records.data(), m_records.size() * sizeof(Record), &m_hash[0], &m_hash[1]);
+}
+
+void ftags::TranslationUnit::copyRecords(const TranslationUnit& original)
+{
+   /*
+    * replace keys from translation unit's table with keys from the project
+    * database
+    */
+
+   ftags::FlatMap<Key, Key> symbolKeyMapping   = m_symbolTable.mergeStringTable(original.m_symbolTable);
+   ftags::FlatMap<Key, Key> fileNameKeyMapping = m_fileNameTable.mergeStringTable(original.m_fileNameTable);
+
+   /*
+    * copy the original records
+    */
+   m_recordSpans.reserve(original.m_recordSpans.size());
+
+   std::for_each(original.m_recordSpans.cbegin(),
+                 original.m_recordSpans.cend(),
+                 [symbolKeyMapping, fileNameKeyMapping, this](const RecordSpan& recordSpan) {
+                    m_recordSpans.emplace_back(m_symbolTable, m_fileNameTable);
+                    m_recordSpans.back().addRecords(recordSpan, symbolKeyMapping, fileNameKeyMapping);
+                 });
 }
 
 void ftags::TranslationUnit::addCursor(const ftags::Cursor& cursor, const ftags::Attributes& attributes)
@@ -174,7 +196,16 @@ void ftags::TranslationUnit::addCursor(const ftags::Cursor& cursor, const ftags:
    newRecord.startColumn = static_cast<uint16_t>(cursor.location.column);
    newRecord.endLine     = static_cast<uint16_t>(cursor.endLine);
 
-   m_records.push_back(newRecord);
+   if (newRecord.fileNameKey != m_currentRecordSpanFileKey)
+   {
+      /*
+       * Open a new span because the file name key is different
+       */
+      m_recordSpans.push_back(RecordSpan(m_symbolTable, m_fileNameTable));
+      m_currentRecordSpanFileKey = newRecord.fileNameKey;
+   }
+
+   m_recordSpans.back().addRecord(newRecord);
 }
 
 /*

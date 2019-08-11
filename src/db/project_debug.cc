@@ -246,41 +246,38 @@ std::string getRecordType(ftags::Attributes attributes)
 
 } // anonymous namespace
 
-void ftags::TranslationUnit::dumpRecords(std::ostream& os) const
+void ftags::RecordSpan::dumpRecords(std::ostream& os) const
 {
-   std::vector<unsigned> recordsByLine(/* size = */ m_records.size());
-
-   std::iota(recordsByLine.begin(), recordsByLine.end(), 0);
-
-   std::sort(recordsByLine.begin(), recordsByLine.end(), OrderRecordsByLocation(m_records));
-
-   os << " Found " << m_records.size() << " records." << std::endl;
-   for (auto ii : recordsByLine)
-   {
-      const Record& record     = m_records[ii];
-      const char*   symbolName = getSymbolName(record);
-      const char*   fileName   = getFileName(record);
-      std::string   symbolType{getRecordType(record.attributes)};
+   std::for_each(m_records.cbegin(), m_records.cend(), [&os, this](const Record& record) {
+      const char* symbolName = getSymbolName(record);
+      const char* fileName   = getFileName(record);
+      std::string symbolType{getRecordType(record.attributes)};
       os << "    " << symbolName << "    " << symbolType << "   " << fileName << ':' << record.startLine << ':'
          << record.startColumn << std::endl;
-   }
-   os << " ----- " << std::endl;
+   });
+}
+
+void ftags::TranslationUnit::dumpRecords(std::ostream& os) const
+{
+   os << " Found " << getRecordCount() << " records." << std::endl;
+
+   std::for_each(m_recordSpans.cbegin(), m_recordSpans.cend(), [&os](const RecordSpan& rs) { rs.dumpRecords(os); });
 }
 
 void ftags::ProjectDb::dumpRecords(std::ostream& os) const
 {
-   for (const auto& translationUnit : m_translationUnits)
-   {
-      const auto  fileNameKey = translationUnit.getFileNameKey();
-      const char* fileName    = m_fileNameTable.getString(fileNameKey);
-      if (fileName)
-      {
-         os << "File: " << fileName << std::endl;
-      }
-      else
-      {
-         os << "File: unnamed" << std::endl;
-      }
-      translationUnit.dumpRecords(os);
-   }
+   std::for_each(
+      m_translationUnits.cbegin(), m_translationUnits.cend(), [&os, this](const TranslationUnit& translationUnit) {
+         const auto  fileNameKey = translationUnit.getFileNameKey();
+         const char* fileName    = m_fileNameTable.getString(fileNameKey);
+         if (fileName)
+         {
+            os << "File: " << fileName << std::endl;
+         }
+         else
+         {
+            os << "File: unnamed" << std::endl;
+         }
+         translationUnit.dumpRecords(os);
+      });
 }
