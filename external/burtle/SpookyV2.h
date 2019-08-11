@@ -79,7 +79,7 @@ public:
     {
         uint64 hash1 = seed, hash2 = seed;
         Hash128(message, length, &hash1, &hash2);
-        return (uint32)hash1;
+        return static_cast<uint32>(hash1);
     }
 
     //
