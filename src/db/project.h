@@ -28,6 +28,7 @@
 #include <numeric>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include <cstdint>
@@ -230,6 +231,57 @@ static_assert(sizeof(Record) == 28, "sizeof(Record) exceeds 28 bytes");
 class RecordSpan
 {
 public:
+   class HashingFunctor
+   {
+   public:
+      size_t operator()(const std::weak_ptr<RecordSpan>& weakVal) const
+      {
+         std::shared_ptr<RecordSpan> val = weakVal.lock();
+         if (!val)
+         {
+            return 0;
+         }
+         else
+         {
+            return val->getHash();
+         }
+      }
+   };
+
+   class CompareFunctor
+   {
+   public:
+      bool operator()(const std::weak_ptr<RecordSpan>& weakLeftVal,
+                      const std::weak_ptr<RecordSpan>& weakRightVal) const
+      {
+         std::shared_ptr<RecordSpan> leftVal  = weakLeftVal.lock();
+         std::shared_ptr<RecordSpan> rightVal = weakRightVal.lock();
+
+         if (!leftVal)
+         {
+            if (!rightVal)
+            {
+               return true;
+            }
+            else
+            {
+               return false;
+            }
+         }
+         else
+         {
+            if (!rightVal)
+            {
+               return false;
+            }
+            else
+            {
+               return leftVal->operator==(*rightVal);
+            }
+         }
+      }
+   };
+
    using Key = ftags::StringTable::Key;
 
    RecordSpan(StringTable& symbolTable, StringTable& fileNameTable) :
@@ -269,6 +321,19 @@ public:
    void addRecords(const RecordSpan&               other,
                    const ftags::FlatMap<Key, Key>& symbolKeyMapping,
                    const ftags::FlatMap<Key, Key>& fileNameKeyMapping);
+
+   bool operator==(const RecordSpan& other) const
+   {
+      // return std::equal(m_records.cbegin(), m_records.cend(), other.m_records.cbegin());
+      if (m_records.size() == other.m_records.size())
+      {
+         return 0 == memcmp(m_records.data(), other.m_records.data(), sizeof(Record) * m_records.size());
+      }
+      else
+      {
+         return false;
+      }
+   }
 
    template <typename F>
    void forEachRecord(F func) const
@@ -319,6 +384,11 @@ public:
     */
    void dumpRecords(std::ostream& os) const;
 
+   std::size_t getHash() const
+   {
+      return m_hash;
+   }
+
 private:
    // key of the file name of the main translation unit
    Key m_fileNameKey = 0;
@@ -331,14 +401,31 @@ private:
    StringTable& m_fileNameTable;
 
    // 128 bit hash of the record span
-   std::array<uint64_t,2> m_hash = {};
+   std::size_t m_hash = 0;
 
    // reference counter
    int m_usageCount = 0;
 
    std::vector<std::vector<Record>::size_type> m_recordsInSymbolKeyOrder;
 
-   static constexpr std::array<uint64_t, 2> k_hashSeed = {0x0accedd62cf0b9bf, 0xb5aed169e429b7c1};
+   static constexpr uint64_t k_hashSeed = 0x0accedd62cf0b9bf;
+};
+
+class RecordSpanCache
+{
+private:
+
+   using cache_type = std::unordered_multimap<std::size_t, std::weak_ptr<RecordSpan>>;
+
+   using value_type = cache_type::value_type;
+
+   using iterator_type = cache_type::iterator;
+
+   cache_type m_cache;
+
+public:
+   std::shared_ptr<RecordSpan> add(std::shared_ptr<RecordSpan> newSpan);
+
 };
 
 /** Contains all the symbols in a C++ translation unit.
@@ -354,7 +441,7 @@ public:
    {
    }
 
-   void copyRecords(const TranslationUnit& other);
+   void copyRecords(const TranslationUnit& other, RecordSpanCache& spanCache);
 
    Key getFileNameKey() const
    {
@@ -376,11 +463,12 @@ public:
     */
    std::vector<Record>::size_type getRecordCount() const
    {
-      return std::accumulate(
-         m_recordSpans.cbegin(),
-         m_recordSpans.cend(),
-         0u,
-         [](std::vector<Record>::size_type acc, const std::shared_ptr<RecordSpan>& elem) { return acc + elem->getRecordCount(); });
+      return std::accumulate(m_recordSpans.cbegin(),
+                             m_recordSpans.cend(),
+                             0u,
+                             [](std::vector<Record>::size_type acc, const std::shared_ptr<RecordSpan>& elem) {
+                                return acc + elem->getRecordCount();
+                             });
    }
 
    /*
@@ -414,8 +502,9 @@ public:
    template <typename F>
    void forEachRecord(F func) const
    {
-      std::for_each(
-         m_recordSpans.cbegin(), m_recordSpans.cend(), [func](const std::shared_ptr<RecordSpan>& elem) { elem->forEachRecord(func); });
+      std::for_each(m_recordSpans.cbegin(), m_recordSpans.cend(), [func](const std::shared_ptr<RecordSpan>& elem) {
+         elem->forEachRecord(func);
+      });
    }
 
    struct RecordSymbolComparator
@@ -440,9 +529,11 @@ public:
    template <typename F>
    void forEachRecordWithSymbol(Key symbolNameKey, F func) const
    {
-      std::for_each(m_recordSpans.cbegin(), m_recordSpans.cend(), [symbolNameKey, func](const std::shared_ptr<RecordSpan>& elem) {
-         elem->forEachRecordWithSymbol(symbolNameKey, func);
-      });
+      std::for_each(m_recordSpans.cbegin(),
+                    m_recordSpans.cend(),
+                    [symbolNameKey, func](const std::shared_ptr<RecordSpan>& elem) {
+                       elem->forEachRecordWithSymbol(symbolNameKey, func);
+                    });
    }
 
    /*
@@ -646,10 +737,25 @@ private:
    /** Maps from a file name key to a position in the translation units vector.
     */
    std::map<StringTable::Key, std::vector<TranslationUnit>::size_type> m_fileIndex;
+
+   RecordSpanCache m_recordSpanCache;
 };
 
 void parseProject(const char* parentDirectory, ftags::ProjectDb& projectDb);
 
 } // namespace ftags
+
+namespace std
+{
+template <>
+struct hash<ftags::RecordSpan>
+{
+   size_t operator()(const ftags::RecordSpan& rs) const
+   {
+      return rs.getHash();
+   }
+};
+
+} // namespace std
 
 #endif // DB_PROJECT_H_INCLUDED

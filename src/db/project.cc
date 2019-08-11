@@ -127,7 +127,8 @@ void ftags::RecordSpan::updateIndices()
 
 void ftags::TranslationUnit::updateIndices()
 {
-   std::for_each(m_recordSpans.begin(), m_recordSpans.end(), [](std::shared_ptr<RecordSpan>& rs) { rs->updateIndices(); });
+   std::for_each(
+      m_recordSpans.begin(), m_recordSpans.end(), [](std::shared_ptr<RecordSpan>& rs) { rs->updateIndices(); });
 }
 
 void ftags::RecordSpan::addRecords(const RecordSpan&               other,
@@ -153,13 +154,45 @@ void ftags::RecordSpan::addRecords(const RecordSpan&               other,
 
    updateIndices();
 
-   m_hash[0] = k_hashSeed[0];
-   m_hash[1] = k_hashSeed[1];
-
-   SpookyHash::Hash128(m_records.data(), m_records.size() * sizeof(Record), &m_hash[0], &m_hash[1]);
+   m_hash = SpookyHash::Hash64(m_records.data(), m_records.size() * sizeof(Record), k_hashSeed);
 }
 
-void ftags::TranslationUnit::copyRecords(const TranslationUnit& original)
+std::shared_ptr<ftags::RecordSpan> ftags::RecordSpanCache::add(std::shared_ptr<ftags::RecordSpan> original)
+{
+   auto range = m_cache.equal_range(original->getHash());
+
+   if (range.first == m_cache.end())
+   {
+      m_cache.insert(value_type(original->getHash(), original));
+      return original;
+   }
+   else
+   {
+      for (auto iter = range.first; iter != range.second; ++ iter)
+      {
+         auto elem = iter->second;
+
+         std::shared_ptr<RecordSpan> val = elem.lock();
+
+         if (! val)
+         {
+            continue;
+         }
+         else
+         {
+            if (val->operator ==(*original))
+            {
+               return val;
+            }
+         }
+      }
+
+      m_cache.insert(value_type(original->getHash(), original));
+      return original;
+   }
+}
+
+void ftags::TranslationUnit::copyRecords(const TranslationUnit& original, RecordSpanCache& spanCache)
 {
    /*
     * replace keys from translation unit's table with keys from the project
@@ -174,12 +207,25 @@ void ftags::TranslationUnit::copyRecords(const TranslationUnit& original)
     */
    m_recordSpans.reserve(original.m_recordSpans.size());
 
-   std::for_each(original.m_recordSpans.cbegin(),
-                 original.m_recordSpans.cend(),
-                 [symbolKeyMapping, fileNameKeyMapping, this](const std::shared_ptr<RecordSpan>& recordSpan) {
-                    m_recordSpans.emplace_back(std::make_shared<RecordSpan>(m_symbolTable, m_fileNameTable));
-                    m_recordSpans.back()->addRecords(*recordSpan, symbolKeyMapping, fileNameKeyMapping);
-                 });
+#if 0
+   std::for_each(
+      original.m_recordSpans.cbegin(),
+      original.m_recordSpans.cend(),
+      [symbolKeyMapping, fileNameKeyMapping, spanCache, this](const std::shared_ptr<RecordSpan>& recordSpan) {
+         std::shared_ptr<RecordSpan> newSpan = std::make_shared<RecordSpan>(m_symbolTable, m_fileNameTable);
+         newSpan->addRecords(*recordSpan, symbolKeyMapping, fileNameKeyMapping);
+         std::shared_ptr<RecordSpan> sharedSpan = spanCache.add(newSpan);
+         m_recordSpans.push_back(sharedSpan);
+      });
+#else
+   for (const std::shared_ptr<RecordSpan>& other: original.m_recordSpans)
+   {
+         std::shared_ptr<RecordSpan> newSpan = std::make_shared<RecordSpan>(m_symbolTable, m_fileNameTable);
+         newSpan->addRecords(*other, symbolKeyMapping, fileNameKeyMapping);
+         std::shared_ptr<RecordSpan> sharedSpan = spanCache.add(newSpan);
+         m_recordSpans.push_back(sharedSpan);
+   }
+#endif
 }
 
 void ftags::TranslationUnit::addCursor(const ftags::Cursor& cursor, const ftags::Attributes& attributes)
@@ -235,7 +281,7 @@ void ftags::ProjectDb::addTranslationUnit(const std::string& fullPath, const Tra
     * clone the records using the project's symbol table
     */
    TranslationUnit newTranslationUnit{m_symbolTable, m_fileNameTable};
-   newTranslationUnit.copyRecords(translationUnit);
+   newTranslationUnit.copyRecords(translationUnit, m_recordSpanCache);
 
    /*
     * gather all unique symbols in this translation unit
