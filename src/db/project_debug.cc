@@ -261,7 +261,7 @@ void ftags::TranslationUnit::dumpRecords(std::ostream& os) const
 {
    os << " Found " << getRecordCount() << " records." << std::endl;
 
-   std::for_each(m_recordSpans.cbegin(), m_recordSpans.cend(), [&os](const RecordSpan& rs) { rs.dumpRecords(os); });
+   std::for_each(m_recordSpans.cbegin(), m_recordSpans.cend(), [&os](const std::shared_ptr<RecordSpan>& rs) { rs->dumpRecords(os); });
 }
 
 void ftags::ProjectDb::dumpRecords(std::ostream& os) const

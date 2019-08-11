@@ -127,7 +127,7 @@ void ftags::RecordSpan::updateIndices()
 
 void ftags::TranslationUnit::updateIndices()
 {
-   std::for_each(m_recordSpans.begin(), m_recordSpans.end(), [](ftags::RecordSpan& rs) { rs.updateIndices(); });
+   std::for_each(m_recordSpans.begin(), m_recordSpans.end(), [](std::shared_ptr<RecordSpan>& rs) { rs->updateIndices(); });
 }
 
 void ftags::RecordSpan::addRecords(const RecordSpan&               other,
@@ -176,9 +176,9 @@ void ftags::TranslationUnit::copyRecords(const TranslationUnit& original)
 
    std::for_each(original.m_recordSpans.cbegin(),
                  original.m_recordSpans.cend(),
-                 [symbolKeyMapping, fileNameKeyMapping, this](const RecordSpan& recordSpan) {
-                    m_recordSpans.emplace_back(m_symbolTable, m_fileNameTable);
-                    m_recordSpans.back().addRecords(recordSpan, symbolKeyMapping, fileNameKeyMapping);
+                 [symbolKeyMapping, fileNameKeyMapping, this](const std::shared_ptr<RecordSpan>& recordSpan) {
+                    m_recordSpans.emplace_back(std::make_shared<RecordSpan>(m_symbolTable, m_fileNameTable));
+                    m_recordSpans.back()->addRecords(*recordSpan, symbolKeyMapping, fileNameKeyMapping);
                  });
 }
 
@@ -201,11 +201,11 @@ void ftags::TranslationUnit::addCursor(const ftags::Cursor& cursor, const ftags:
       /*
        * Open a new span because the file name key is different
        */
-      m_recordSpans.push_back(RecordSpan(m_symbolTable, m_fileNameTable));
+      m_recordSpans.push_back(std::make_shared<RecordSpan>(m_symbolTable, m_fileNameTable));
       m_currentRecordSpanFileKey = newRecord.fileNameKey;
    }
 
-   m_recordSpans.back().addRecord(newRecord);
+   m_recordSpans.back()->addRecord(newRecord);
 }
 
 /*

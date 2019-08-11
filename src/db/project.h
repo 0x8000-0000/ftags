@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <iosfwd>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <numeric>
 #include <string>
@@ -379,7 +380,7 @@ public:
          m_recordSpans.cbegin(),
          m_recordSpans.cend(),
          0u,
-         [](std::vector<Record>::size_type acc, const RecordSpan& elem) { return acc + elem.getRecordCount(); });
+         [](std::vector<Record>::size_type acc, const std::shared_ptr<RecordSpan>& elem) { return acc + elem->getRecordCount(); });
    }
 
    /*
@@ -414,7 +415,7 @@ public:
    void forEachRecord(F func) const
    {
       std::for_each(
-         m_recordSpans.cbegin(), m_recordSpans.cend(), [func](const RecordSpan& elem) { elem.forEachRecord(func); });
+         m_recordSpans.cbegin(), m_recordSpans.cend(), [func](const std::shared_ptr<RecordSpan>& elem) { elem->forEachRecord(func); });
    }
 
    struct RecordSymbolComparator
@@ -439,8 +440,8 @@ public:
    template <typename F>
    void forEachRecordWithSymbol(Key symbolNameKey, F func) const
    {
-      std::for_each(m_recordSpans.cbegin(), m_recordSpans.cend(), [symbolNameKey, func](const RecordSpan& elem) {
-         elem.forEachRecordWithSymbol(symbolNameKey, func);
+      std::for_each(m_recordSpans.cbegin(), m_recordSpans.cend(), [symbolNameKey, func](const std::shared_ptr<RecordSpan>& elem) {
+         elem->forEachRecordWithSymbol(symbolNameKey, func);
       });
    }
 
@@ -454,7 +455,7 @@ private:
    Key m_fileNameKey = 0;
 
    // persistent data
-   std::vector<RecordSpan> m_recordSpans;
+   std::vector<std::shared_ptr<RecordSpan>> m_recordSpans;
 
    Key m_currentRecordSpanFileKey = 0;
 
