@@ -161,9 +161,9 @@ void ftags::StringTable::removeKey(const char* inputString)
    }
 }
 
-std::map<ftags::StringTable::Key, ftags::StringTable::Key> ftags::StringTable::mergeStringTable(const StringTable& other)
+ftags::FlatMap<ftags::StringTable::Key, ftags::StringTable::Key> ftags::StringTable::mergeStringTable(const StringTable& other)
 {
-   std::map<ftags::StringTable::Key, ftags::StringTable::Key> newKeys;
+   ftags::FlatMapAccumulator<ftags::StringTable::Key, ftags::StringTable::Key> accumulator(other.m_index.size());
 
    if (m_useSafeConcurrentAccess)
    {
@@ -175,11 +175,11 @@ std::map<ftags::StringTable::Key, ftags::StringTable::Key> ftags::StringTable::m
       auto iter = m_index.find(pair.first);
       if (iter == m_index.end())
       {
-         newKeys[pair.second] = insertString(pair.first);
+         accumulator.add(pair.second, insertString(pair.first));
       }
       else
       {
-         newKeys[pair.second] = iter->second;
+         accumulator.add(pair.second, iter->second);
       }
    }
 
@@ -188,5 +188,5 @@ std::map<ftags::StringTable::Key, ftags::StringTable::Key> ftags::StringTable::m
       m_mutex.unlock();
    }
 
-   return newKeys;
+   return accumulator.getMap();
 }

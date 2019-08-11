@@ -195,21 +195,21 @@ TEST(StringTableTest, MergeStringTables)
    const uint32_t oldKeyForFoo = left.getKey(fooString);
    const uint32_t oldKeyForBar = left.getKey(barString);
 
-   std::map<Key, Key> mapping = left.mergeStringTable(right);
+   ftags::FlatMap<Key, Key> mapping = left.mergeStringTable(right);
 
    ASSERT_NE(0, left.getKey(bazString));
    ASSERT_EQ(oldKeyForFoo, left.getKey(fooString));
    ASSERT_EQ(oldKeyForBar, left.getKey(barString));
 
    Key barKeyInRight = right.getKey(barString);
-   auto barKeyInMergedIter = mapping.find(barKeyInRight);
-   ASSERT_NE(mapping.end(), barKeyInMergedIter);
+   auto barKeyInMergedIter = mapping.lookup(barKeyInRight);
+   ASSERT_NE(mapping.none(), barKeyInMergedIter);
    Key barKeyInMerged = barKeyInMergedIter->second;
    ASSERT_STREQ(barString, left.getString(barKeyInMerged));
 
    Key bazKeyInRight = right.getKey(bazString);
-   auto bazKeyInMergedIter = mapping.find(bazKeyInRight);
-   ASSERT_NE(mapping.end(), bazKeyInMergedIter);
+   auto bazKeyInMergedIter = mapping.lookup(bazKeyInRight);
+   ASSERT_NE(mapping.none(), bazKeyInMergedIter);
    Key bazKeyInMerged = bazKeyInMergedIter->second;
    ASSERT_STREQ(bazString, left.getString(bazKeyInMerged));
 }

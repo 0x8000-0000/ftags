@@ -17,6 +17,7 @@
 #ifndef STRING_TABLE_H_INCLUDED
 #define STRING_TABLE_H_INCLUDED
 
+#include <flat_map.h>
 #include <store.h>
 
 #include <functional>
@@ -116,7 +117,7 @@ public:
     *
     * @return a mapping between the keys in the old table and the keys in the updated table
     */
-   std::map<Key, Key> mergeStringTable(const StringTable& other);
+   ftags::FlatMap<ftags::StringTable::Key, ftags::StringTable::Key> mergeStringTable(const StringTable& other);
 
    /*
     * Serialization interface
@@ -128,7 +129,6 @@ public:
    static StringTable deserialize(ftags::BufferExtractor& extractor);
 
 private:
-
    // not-thread safe method
    Key insertString(const char* aString);
 
