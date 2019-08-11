@@ -23,6 +23,13 @@ target_link_libraries (string_table_test PRIVATE ${GTEST_BOTH_LIBRARIES}
 
 gtest_discover_tests (string_table_test)
 
+add_executable (flat_map_test flat_map_test.cc)
+target_link_libraries (flat_map_test PRIVATE project_options project_warnings)
+target_link_libraries (flat_map_test PRIVATE ${GTEST_BOTH_LIBRARIES}
+   pthread db)
+
+gtest_discover_tests (flat_map_test)
+
 add_executable (project_serialization_test project_serialization_test.cc)
 target_link_libraries (project_serialization_test PRIVATE project_options project_warnings)
 target_link_libraries (project_serialization_test PRIVATE ${GTEST_BOTH_LIBRARIES}
