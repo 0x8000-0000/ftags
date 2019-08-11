@@ -414,29 +414,41 @@ private:
 class RecordSpanCache
 {
 private:
-
    using cache_type = std::unordered_multimap<std::size_t, std::weak_ptr<RecordSpan>>;
 
    using value_type = cache_type::value_type;
 
    using iterator_type = cache_type::iterator;
 
+   using index_type = std::multimap<StringTable::Key, std::weak_ptr<RecordSpan>>;
+
    cache_type m_cache;
 
    std::size_t m_spansObserved = 0;
 
-public:
-
    /** Maps from a symbol key to a bag of translation units containing the symbol.
     */
-   std::multimap<StringTable::Key, std::weak_ptr<RecordSpan>> m_symbolIndex;
+   index_type m_symbolIndex;
+
+public:
+   std::pair<std::multimap<StringTable::Key, std::weak_ptr<RecordSpan>>::const_iterator,
+             std::multimap<StringTable::Key, std::weak_ptr<RecordSpan>>::const_iterator>
+   getSpansForSymbol(StringTable::Key key) const
+   {
+      return m_symbolIndex.equal_range(key);
+   }
 
    std::shared_ptr<RecordSpan> add(std::shared_ptr<RecordSpan> newSpan);
 
-   std::size_t getActiveSpanCount() const { return m_cache.size(); }
+   std::size_t getActiveSpanCount() const
+   {
+      return m_cache.size();
+   }
 
-   std::size_t getTotalSpanCount() const { return m_spansObserved; }
-
+   std::size_t getTotalSpanCount() const
+   {
+      return m_spansObserved;
+   }
 };
 
 /** Contains all the symbols in a C++ translation unit.
@@ -716,7 +728,7 @@ private:
       const auto key = m_symbolTable.getKey(symbolName.data());
       if (key)
       {
-         const auto range = m_recordSpanCache.m_symbolIndex.equal_range(key);
+         const auto range = m_recordSpanCache.getSpansForSymbol(key);
          for (auto iter = range.first; iter != range.second; ++iter)
          {
             std::shared_ptr<RecordSpan> recordSpan = iter->second.lock();
