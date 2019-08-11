@@ -281,3 +281,10 @@ void ftags::ProjectDb::dumpRecords(std::ostream& os) const
          translationUnit.dumpRecords(os);
       });
 }
+
+void ftags::ProjectDb::dumpStats(std::ostream& os) const
+{
+   os << "ProjectDb stats: ";
+   os << "Cache utilization: " << m_recordSpanCache.getActiveSpanCount() << " live spans out of " << m_recordSpanCache.getTotalSpanCount();
+   os << std::endl;
+}

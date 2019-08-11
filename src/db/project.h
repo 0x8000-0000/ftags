@@ -423,8 +423,19 @@ private:
 
    cache_type m_cache;
 
+   std::size_t m_spansObserved = 0;
+
 public:
+
+   /** Maps from a symbol key to a bag of translation units containing the symbol.
+    */
+   std::multimap<StringTable::Key, std::weak_ptr<RecordSpan>> m_symbolIndex;
+
    std::shared_ptr<RecordSpan> add(std::shared_ptr<RecordSpan> newSpan);
+
+   std::size_t getActiveSpanCount() const { return m_cache.size(); }
+
+   std::size_t getTotalSpanCount() const { return m_spansObserved; }
 
 };
 
@@ -686,6 +697,8 @@ public:
     */
    void dumpRecords(std::ostream& os) const;
 
+   void dumpStats(std::ostream& os) const;
+
 private:
    enum State
    {
@@ -703,17 +716,20 @@ private:
       const auto key = m_symbolTable.getKey(symbolName.data());
       if (key)
       {
-         const auto range = m_symbolIndex.equal_range(key);
-         for (auto translationUnitPos = range.first; translationUnitPos != range.second; ++translationUnitPos)
+         const auto range = m_recordSpanCache.m_symbolIndex.equal_range(key);
+         for (auto iter = range.first; iter != range.second; ++iter)
          {
-            const auto& translationUnit = m_translationUnits.at(translationUnitPos->second);
+            std::shared_ptr<RecordSpan> recordSpan = iter->second.lock();
 
-            translationUnit.forEachRecordWithSymbol(key, [&results, selectRecord](const Record* record) {
-               if (selectRecord(record))
-               {
-                  results.push_back(record);
-               }
-            });
+            if (recordSpan)
+            {
+               recordSpan->forEachRecordWithSymbol(key, [&results, selectRecord](const Record* record) {
+                  if (selectRecord(record))
+                  {
+                     results.push_back(record);
+                  }
+               });
+            }
          }
       }
 
@@ -729,10 +745,6 @@ private:
    StringTable m_symbolTable{true}; // enable concurrent access on all symbol tables
    StringTable m_namespaceTable{true};
    StringTable m_fileNameTable{true};
-
-   /** Maps from a symbol key to a bag of translation units containing the symbol.
-    */
-   std::multimap<StringTable::Key, TranslationUnitStore::size_type> m_symbolIndex;
 
    /** Maps from a file name key to a position in the translation units vector.
     */

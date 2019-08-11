@@ -18,6 +18,8 @@
 
 #include <spdlog/spdlog.h>
 
+#include <sstream>
+
 int main(int argc, char* argv[])
 {
    if (argc < 2)
@@ -29,6 +31,12 @@ int main(int argc, char* argv[])
    ftags::ProjectDb projectDb;
 
    ftags::parseProject(argv[1], projectDb);
+
+   {
+      std::ostringstream writer;
+      projectDb.dumpStats(writer);
+      spdlog::info(writer.str());
+   }
 
    return 0;
 }

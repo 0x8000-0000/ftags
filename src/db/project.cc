@@ -159,37 +159,47 @@ void ftags::RecordSpan::addRecords(const RecordSpan&               other,
 
 std::shared_ptr<ftags::RecordSpan> ftags::RecordSpanCache::add(std::shared_ptr<ftags::RecordSpan> original)
 {
+   m_spansObserved++;
+
    auto range = m_cache.equal_range(original->getHash());
 
-   if (range.first == m_cache.end())
+   for (auto iter = range.first; iter != range.second; ++iter)
    {
-      m_cache.insert(value_type(original->getHash(), original));
-      return original;
-   }
-   else
-   {
-      for (auto iter = range.first; iter != range.second; ++ iter)
+      auto elem = iter->second;
+
+      std::shared_ptr<RecordSpan> val = elem.lock();
+
+      if (!val)
       {
-         auto elem = iter->second;
-
-         std::shared_ptr<RecordSpan> val = elem.lock();
-
-         if (! val)
+         continue;
+      }
+      else
+      {
+         if (val->operator==(*original))
          {
-            continue;
-         }
-         else
-         {
-            if (val->operator ==(*original))
-            {
-               return val;
-            }
+            return val;
          }
       }
-
-      m_cache.insert(value_type(original->getHash(), original));
-      return original;
    }
+
+   m_cache.emplace(original->getHash(), original);
+
+   /*
+    * gather all unique symbols in this record span
+    */
+   std::set<ftags::StringTable::Key> symbolKeys;
+   original->forEachRecord(
+      [&symbolKeys](const Record* record) { symbolKeys.insert(record->symbolNameKey); });
+
+   /*
+    * add a mapping from this symbol to this record span
+    */
+   std::for_each(
+      symbolKeys.cbegin(), symbolKeys.cend(), [this, original](ftags::StringTable::Key symbolKey) {
+         m_symbolIndex.emplace(symbolKey, original);
+      });
+
+   return original;
 }
 
 void ftags::TranslationUnit::copyRecords(const TranslationUnit& original, RecordSpanCache& spanCache)
@@ -218,12 +228,12 @@ void ftags::TranslationUnit::copyRecords(const TranslationUnit& original, Record
          m_recordSpans.push_back(sharedSpan);
       });
 #else
-   for (const std::shared_ptr<RecordSpan>& other: original.m_recordSpans)
+   for (const std::shared_ptr<RecordSpan>& other : original.m_recordSpans)
    {
-         std::shared_ptr<RecordSpan> newSpan = std::make_shared<RecordSpan>(m_symbolTable, m_fileNameTable);
-         newSpan->addRecords(*other, symbolKeyMapping, fileNameKeyMapping);
-         std::shared_ptr<RecordSpan> sharedSpan = spanCache.add(newSpan);
-         m_recordSpans.push_back(sharedSpan);
+      std::shared_ptr<RecordSpan> newSpan = std::make_shared<RecordSpan>(m_symbolTable, m_fileNameTable);
+      newSpan->addRecords(*other, symbolKeyMapping, fileNameKeyMapping);
+      std::shared_ptr<RecordSpan> sharedSpan = spanCache.add(newSpan);
+      m_recordSpans.push_back(sharedSpan);
    }
 #endif
 }
@@ -278,22 +288,15 @@ ftags::Cursor ftags::ProjectDb::inflateRecord(const ftags::Record* record) const
 void ftags::ProjectDb::addTranslationUnit(const std::string& fullPath, const TranslationUnit& translationUnit)
 {
    /*
+    * protect access
+    */
+   std::lock_guard<std::mutex> lock(m_updateTranslationUnits);
+
+   /*
     * clone the records using the project's symbol table
     */
    TranslationUnit newTranslationUnit{m_symbolTable, m_fileNameTable};
    newTranslationUnit.copyRecords(translationUnit, m_recordSpanCache);
-
-   /*
-    * gather all unique symbols in this translation unit
-    */
-   std::set<ftags::StringTable::Key> symbolKeys;
-   newTranslationUnit.forEachRecord(
-      [&symbolKeys](const Record* record) { symbolKeys.insert(record->symbolNameKey); });
-
-   /*
-    * protect access
-    */
-   std::lock_guard<std::mutex> lock(m_updateTranslationUnits);
 
    /*
     * add the new translation unit to database
@@ -306,14 +309,6 @@ void ftags::ProjectDb::addTranslationUnit(const std::string& fullPath, const Tra
     */
    const auto fileKey   = m_fileNameTable.addKey(fullPath.data());
    m_fileIndex[fileKey] = translationUnitPos;
-
-   /*
-    * add a mapping from this symbol to this translation unit
-    */
-   std::for_each(
-      symbolKeys.cbegin(), symbolKeys.cend(), [this, translationUnitPos](ftags::StringTable::Key symbolKey) {
-         m_symbolIndex.emplace(symbolKey, translationUnitPos);
-      });
 
    // TODO: save the Record's source file into the file name table
 }
