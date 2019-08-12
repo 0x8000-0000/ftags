@@ -83,9 +83,10 @@ void parseTranslationUnit(ftags::ProjectDb&                        projectDb,
 
       try
       {
-         std::lock_guard<std::mutex> lock(clangMutex);
+         clangMutex.lock();
          ftags::TranslationUnit      translationUnit =
             ftags::TranslationUnit::parse(request.fileName, arguments, symbolTable, fileNameTable);
+         clangMutex.unlock();
 
          spdlog::info("Loaded {} records from {}", translationUnit.getRecordCount(), request.fileName);
 
