@@ -14,6 +14,8 @@
    limitations under the License.
 */
 
+#include <project.h>
+
 #include <ftags.pb.h>
 
 #include <clara.hpp>
@@ -91,6 +93,23 @@ int main(int argc, char* argv[])
       socket.recv(&reply);
 
       status.ParseFromArray(reply.data(), static_cast<int>(reply.size()));
+
+      if (status.type() == ftags::Status_Type::Status_Type_QUERY_RESULTS)
+      {
+         zmq::message_t resultsMessage;
+         socket.recv(&resultsMessage);
+
+         ftags::BufferExtractor extractor(static_cast<std::byte*>(resultsMessage.data()), resultsMessage.size());
+         const ftags::CursorSet output = ftags::CursorSet::deserialize(extractor);
+         spdlog::info("Received {} results", output.size());
+
+         for (auto iter = output.begin(); iter != output.end(); ++ iter)
+         {
+            const ftags::Cursor cursor = output.inflateRecord(*iter);
+
+            std::cout << cursor.location.fileName << ':' << cursor.location.line << ':' << cursor.location.column << "  " << cursor.symbolName << std::endl;
+         }
+      }
    }
 
    if (doQuit)

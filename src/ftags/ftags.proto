@@ -19,7 +19,18 @@ message Command
 
    string source = 2;
 
-   string symbol = 3;
+   enum QueryType
+   {
+      FUNCTION = 0;
+      CLASS = 1;
+      VARIABLE = 2;
+      PARAMETER = 3;
+   }
+
+   QueryType queryType = 3;
+
+   string symbol = 4;
+   string namespace = 5;
 }
 
 message Status
@@ -29,12 +40,16 @@ message Status
       UNKNOWN = 0;
       STARTING = 1;
       IDLE = 2;
-      SHUTTING_DOWN = 5;
+      QUERY_RESULTS = 3;
+      QUERY_NO_RESULTS = 4;
+      SHUTTING_DOWN = 127;
    }
 
    Type type = 1;
 
    string timestamp = 2;
+
+   bytes cursorSet = 99;
 }
 
 message IndexRequest

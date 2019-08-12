@@ -73,13 +73,37 @@ int main(int argc, char* argv[])
       ftags::Status status{};
       status.set_timestamp(getTimeStamp());
 
-
       if (command.type() == ftags::Command_Type::Command_Type_QUERY)
       {
          spdlog::info("Received query for {}", command.symbol());
-         const std::vector<const ftags::Record*> funcDefinition = projectDb.findDefinition(command.symbol());
+         const std::vector<const ftags::Record*> queryResultsVector = projectDb.findDefinition(command.symbol());
+         spdlog::info("Found {} occurrences for {}", queryResultsVector.size(), command.symbol());
 
-         spdlog::info("Found {} occurences for {}", funcDefinition.size(), command.symbol());
+         std::string serializedStatus;
+
+         if (queryResultsVector.empty())
+         {
+            status.set_type(ftags::Status_Type::Status_Type_QUERY_NO_RESULTS);
+         }
+         else
+         {
+            status.set_type(ftags::Status_Type::Status_Type_QUERY_RESULTS);
+         }
+
+         const std::size_t headerSize = status.ByteSizeLong();
+         zmq::message_t    reply(headerSize);
+         status.SerializeToArray(reply.data(), static_cast<int>(headerSize));
+         socket.send(reply, ZMQ_SNDMORE);
+
+         const ftags::CursorSet queryResultsCursor = projectDb.inflateRecords(queryResultsVector);
+
+         const std::size_t     payloadSize = queryResultsCursor.computeSerializedSize();
+         zmq::message_t        resultsMessage(payloadSize);
+         ftags::BufferInsertor insertor(static_cast<std::byte*>(resultsMessage.data()), payloadSize);
+         queryResultsCursor.serialize(insertor);
+         socket.send(resultsMessage);
+
+         continue;
       }
 
       //  Send reply back to client
@@ -91,11 +115,12 @@ int main(int argc, char* argv[])
       {
          status.set_type(ftags::Status_Type::Status_Type_IDLE);
       }
+
       std::string serializedStatus;
       status.SerializeToString(&serializedStatus);
       zmq::message_t reply(serializedStatus.size());
       memcpy(reply.data(), serializedStatus.data(), serializedStatus.size());
-      socket.send(reply);
+      socket.send(reply, ZMQ_SNDMORE);
 
       if (command.type() == ftags::Command_Type::Command_Type_SHUT_DOWN)
       {

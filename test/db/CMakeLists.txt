@@ -33,14 +33,14 @@ gtest_discover_tests (flat_map_test)
 add_executable (project_serialization_test project_serialization_test.cc)
 target_link_libraries (project_serialization_test PRIVATE project_options project_warnings)
 target_link_libraries (project_serialization_test PRIVATE ${GTEST_BOTH_LIBRARIES}
-   pthread db stdc++fs)
+   pthread db-parse stdc++fs)
 
 gtest_discover_tests (project_serialization_test)
 
 add_executable (tags_index_test tags_index_test.cc)
 target_link_libraries (tags_index_test PRIVATE project_options project_warnings)
 target_link_libraries (tags_index_test PRIVATE ${GTEST_BOTH_LIBRARIES}
-   pthread db stdc++fs)
+   pthread db-parse stdc++fs)
 
 gtest_discover_tests (tags_index_test
    WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
@@ -59,9 +59,9 @@ configure_file (data/multi-module/test.cc data/multi-module/test.cc)
 add_executable (project_index_test project_index_test.cc)
 
 target_link_libraries (project_index_test PRIVATE project_options project_warnings)
-target_link_libraries (project_index_test PRIVATE ftags db)
+target_link_libraries (project_index_test PRIVATE ftags db-parse)
 
 add_executable (dump_records dump_records.cc)
 
 target_link_libraries (dump_records PRIVATE project_options project_warnings)
-target_link_libraries (dump_records PRIVATE ftags db)
+target_link_libraries (dump_records PRIVATE ftags db-parse)

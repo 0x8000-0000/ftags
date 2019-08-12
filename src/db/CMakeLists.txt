@@ -1,12 +1,14 @@
 add_library (db STATIC string_table.cc string_table_io.cc
-   serialization.cc
-   project.cc project_debug.cc project_io.cc
-   tags_builder.cc project_index.cc)
+   serialization.cc project.cc project_debug.cc project_io.cc)
 target_link_libraries (db PRIVATE project_options project_warnings)
 target_include_directories (db PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_include_directories (db PUBLIC ${LIBCLANG_INCLUDEDIR})
-target_link_directories (db PUBLIC ${LIBCLANG_LIBDIR})
 target_link_libraries (db PUBLIC -lstdc++fs)
-target_link_libraries (db PUBLIC clang)
-target_link_libraries (db PUBLIC ftags)
+target_link_libraries (db PUBLIC ftags zmq)
 target_link_libraries (db PUBLIC spookyhash)
+
+add_library (db-parse STATIC tags_builder.cc project_index.cc)
+target_link_libraries (db-parse PRIVATE project_options project_warnings)
+target_link_directories (db-parse PUBLIC ${LIBCLANG_LIBDIR})
+target_include_directories (db-parse PUBLIC ${LIBCLANG_INCLUDEDIR})
+target_link_libraries (db-parse PUBLIC db)
+target_link_libraries (db-parse PUBLIC clang)
