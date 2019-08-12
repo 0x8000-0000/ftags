@@ -16,48 +16,84 @@
 
 #include <ftags.pb.h>
 
+#include <clara.hpp>
+
 #include <zmq.hpp>
 
 #include <spdlog/spdlog.h>
 
 #include <string>
 
-int main()
+bool        findFunction = false;
+bool        doQuit       = false;
+bool        doPing       = false;
+std::string symbolName;
+
+auto cli = clara::Opt(doQuit)["-q"]["--quit"]("Shutdown server") | clara::Opt(doPing)["-i"]["--ping"]("Ping server") |
+           clara::Opt(findFunction)["-f"]["--function"]("Find function") |
+           clara::Opt(symbolName, "symbol")["-s"]["--symbol"]("Symbol name");
+
+int main(int argc, char* argv[])
 {
    GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+   auto result = cli.parse(clara::Args(argc, argv));
+   if (!result)
+   {
+      spdlog::error("Failed to parse command line options: {}", result.errorMessage());
+      exit(-1);
+   }
 
    //  Prepare our context and socket
    zmq::context_t context(1);
    zmq::socket_t  socket(context, ZMQ_REQ);
 
-   std::cout << "Connecting to hello world server…" << std::endl;
+   spdlog::info("Connecting to ftags server...");
    socket.connect("tcp://localhost:5555");
 
    ftags::Command command{};
    command.set_source("client");
-   command.set_type(ftags::Command::Type::Command_Type_PING);
    std::string serializedCommand;
-   command.SerializeToString(&serializedCommand);
-
    ftags::Status status;
 
-   // Send 3 requests, waiting each time for a response
-   for (int request_nbr = 0; request_nbr != 3; request_nbr++)
+   if (doPing)
    {
+      command.set_type(ftags::Command::Type::Command_Type_PING);
+      command.SerializeToString(&serializedCommand);
+
       zmq::message_t request(serializedCommand.size());
       memcpy(request.data(), serializedCommand.data(), serializedCommand.size());
-      std::cout << "Sending Ping #" << request_nbr << "" << std::endl;
       socket.send(request);
 
       //  Get the reply.
       zmq::message_t reply;
       socket.recv(&reply);
-      
+
       status.ParseFromArray(reply.data(), static_cast<int>(reply.size()));
-      
-      std::cout << "Received timestamp " << status.timestamp() << " with status " << status.type() << std::endl;
+
+      spdlog::info("Received timestamp {} with status {}.", status.timestamp(), status.type());
    }
 
+   if (findFunction)
+   {
+      spdlog::info("Searching for function {}", symbolName);
+
+      command.set_type(ftags::Command::Type::Command_Type_QUERY);
+      command.set_symbol(symbolName);
+      command.SerializeToString(&serializedCommand);
+
+      zmq::message_t request(serializedCommand.size());
+      memcpy(request.data(), serializedCommand.data(), serializedCommand.size());
+      socket.send(request);
+
+      //  Get the reply.
+      zmq::message_t reply;
+      socket.recv(&reply);
+
+      status.ParseFromArray(reply.data(), static_cast<int>(reply.size()));
+   }
+
+   if (doQuit)
    {
       command.set_type(ftags::Command::Type::Command_Type_SHUT_DOWN);
       std::string quitCommand;
@@ -65,7 +101,7 @@ int main()
 
       zmq::message_t request(quitCommand.size());
       memcpy(request.data(), quitCommand.data(), quitCommand.size());
-      std::cout << "Sending Quit" << std::endl;
+      spdlog::info("Sending Quit");
       socket.send(request);
    }
 

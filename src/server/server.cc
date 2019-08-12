@@ -70,14 +70,19 @@ int main(int argc, char* argv[])
       command.ParseFromArray(request.data(), static_cast<int>(request.size()));
       spdlog::info("Received request from {}: {}", command.source(), command.Type_Name(command.type()));
 
+      ftags::Status status{};
+      status.set_timestamp(getTimeStamp());
+
+
       if (command.type() == ftags::Command_Type::Command_Type_QUERY)
       {
-         const std::vector<const ftags::Record*> mainDefinition = projectDb.findDefinition(command.symbol());
+         spdlog::info("Received query for {}", command.symbol());
+         const std::vector<const ftags::Record*> funcDefinition = projectDb.findDefinition(command.symbol());
+
+         spdlog::info("Found {} occurences for {}", funcDefinition.size(), command.symbol());
       }
 
       //  Send reply back to client
-      ftags::Status status{};
-      status.set_timestamp(getTimeStamp());
       if (command.type() == ftags::Command_Type::Command_Type_SHUT_DOWN)
       {
          status.set_type(ftags::Status_Type::Status_Type_SHUTTING_DOWN);
