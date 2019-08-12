@@ -82,11 +82,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif ()
 endif ()
 
-enable_testing ()
-find_package (GTest REQUIRED)
-include (GoogleTest)
 
-find_package (benchmark)
 find_package (Protobuf REQUIRED)
 find_package (spdlog)
 
@@ -94,6 +90,12 @@ find_package (spdlog)
 #find_package (ZeroMQ REQUIRED)
 
 add_subdirectory (external)
+
+# This is used when importing GoogleTest from the environment
+#find_package (GTest REQUIRED)
+include (GoogleTest)
+enable_testing ()
+
 add_subdirectory (src)
 add_subdirectory (test)
 
