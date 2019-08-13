@@ -92,7 +92,6 @@ find_package (spdlog)
 add_subdirectory (external)
 
 # This is used when importing GoogleTest from the environment
-#find_package (GTest REQUIRED)
 include (GoogleTest)
 enable_testing ()
 
