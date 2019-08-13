@@ -293,24 +293,21 @@ void ftags::ProjectDb::addTranslationUnit(const std::string& fullPath, const Tra
    std::lock_guard<std::mutex> lock(m_updateTranslationUnits);
 
    /*
-    * clone the records using the project's symbol table
-    */
-   TranslationUnit newTranslationUnit{m_symbolTable, m_fileNameTable};
-   newTranslationUnit.copyRecords(translationUnit, m_recordSpanCache);
-
-   /*
     * add the new translation unit to database
     */
    const TranslationUnitStore::size_type translationUnitPos = m_translationUnits.size();
-   m_translationUnits.emplace_back(std::move(newTranslationUnit));
+
+   /*
+    * clone the records using the project's symbol table
+    */
+   m_translationUnits.emplace_back(m_symbolTable, m_fileNameTable);
+   m_translationUnits.back().copyRecords(translationUnit, m_recordSpanCache);
 
    /*
     * register the name of the translation unit
     */
    const auto fileKey   = m_fileNameTable.addKey(fullPath.data());
    m_fileIndex[fileKey] = translationUnitPos;
-
-   // TODO: save the Record's source file into the file name table
 }
 
 bool ftags::ProjectDb::isFileIndexed(const std::string& fileName) const
@@ -373,7 +370,12 @@ std::vector<const ftags::Record*> ftags::ProjectDb::dumpTranslationUnit(const st
 
    std::vector<const ftags::Record*> records;
 
-   translationUnit.forEachRecord([&records](const ftags::Record* record) { records.push_back(record); });
+   translationUnit.forEachRecord([fileKey, &records](const ftags::Record* record) {
+      if (record->fileNameKey == fileKey)
+      {
+         records.push_back(record);
+      }
+   });
 
    return records;
 }
