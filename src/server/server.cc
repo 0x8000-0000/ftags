@@ -76,7 +76,7 @@ int main(int argc, char* argv[])
       if (command.type() == ftags::Command_Type::Command_Type_QUERY)
       {
          spdlog::info("Received query for {}", command.symbol());
-         const std::vector<const ftags::Record*> queryResultsVector = projectDb.findDefinition(command.symbol());
+         const std::vector<const ftags::Record*> queryResultsVector = projectDb.findSymbol(command.symbol());
          spdlog::info("Found {} occurrences for {}", queryResultsVector.size(), command.symbol());
 
          std::string serializedStatus;

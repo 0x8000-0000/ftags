@@ -188,16 +188,14 @@ std::shared_ptr<ftags::RecordSpan> ftags::RecordSpanCache::add(std::shared_ptr<f
     * gather all unique symbols in this record span
     */
    std::set<ftags::StringTable::Key> symbolKeys;
-   original->forEachRecord(
-      [&symbolKeys](const Record* record) { symbolKeys.insert(record->symbolNameKey); });
+   original->forEachRecord([&symbolKeys](const Record* record) { symbolKeys.insert(record->symbolNameKey); });
 
    /*
     * add a mapping from this symbol to this record span
     */
-   std::for_each(
-      symbolKeys.cbegin(), symbolKeys.cend(), [this, original](ftags::StringTable::Key symbolKey) {
-         m_symbolIndex.emplace(symbolKey, original);
-      });
+   std::for_each(symbolKeys.cbegin(), symbolKeys.cend(), [this, original](ftags::StringTable::Key symbolKey) {
+      m_symbolIndex.emplace(symbolKey, original);
+   });
 
    return original;
 }
@@ -238,15 +236,14 @@ void ftags::TranslationUnit::copyRecords(const TranslationUnit& original, Record
 #endif
 }
 
-void ftags::TranslationUnit::addCursor(const ftags::Cursor& cursor, const ftags::Attributes& attributes)
+void ftags::TranslationUnit::addCursor(const ftags::Cursor& cursor)
 {
    ftags::Record newRecord = {};
 
    newRecord.symbolNameKey = m_symbolTable.addKey(cursor.symbolName);
    newRecord.fileNameKey   = m_fileNameTable.addKey(cursor.location.fileName);
 
-   newRecord.attributes      = attributes;
-   newRecord.attributes.type = cursor.symbolType;
+   newRecord.attributes = cursor.attributes;
 
    newRecord.startLine   = static_cast<uint32_t>(cursor.location.line);
    newRecord.startColumn = static_cast<uint16_t>(cursor.location.column);
@@ -281,6 +278,8 @@ ftags::Cursor ftags::ProjectDb::inflateRecord(const ftags::Record* record) const
    cursor.location.fileName = m_fileNameTable.getString(record->fileNameKey);
    cursor.location.line     = static_cast<int>(record->startLine);
    cursor.location.column   = record->startColumn;
+
+   cursor.attributes = record->attributes;
 
    return cursor;
 }
@@ -403,6 +402,8 @@ ftags::Cursor ftags::CursorSet::inflateRecord(const ftags::Record& record) const
    cursor.location.fileName = m_fileNameTable.getString(record.fileNameKey);
    cursor.location.line     = static_cast<int>(record.startLine);
    cursor.location.column   = record.startColumn;
+
+   cursor.attributes = record.attributes;
 
    return cursor;
 }

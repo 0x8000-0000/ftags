@@ -174,7 +174,7 @@ struct Attributes
    uint32_t freeBits : 15;
 };
 
-static_assert(sizeof(Attributes) == 8, "sizeof(Attributes) exceeds 4 bytes");
+static_assert(sizeof(Attributes) == 8, "sizeof(Attributes) exceeds 8 bytes");
 
 struct Location
 {
@@ -189,7 +189,7 @@ struct Cursor
    const char* symbolName;
    const char* unifiedSymbol;
 
-   SymbolType symbolType;
+   Attributes attributes;
 
    Location location;
    int      endLine;
@@ -517,7 +517,7 @@ public:
                                 StringTable&             symbolTable,
                                 StringTable&             fileNameTable);
 
-   void addCursor(const Cursor& cursor, const Attributes& attributes);
+   void addCursor(const Cursor& cursor);
 
    /*
     * Query helper

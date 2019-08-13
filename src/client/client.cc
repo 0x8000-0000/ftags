@@ -26,12 +26,14 @@
 
 #include <string>
 
+bool        findAll = false;
 bool        findFunction = false;
 bool        doQuit       = false;
 bool        doPing       = false;
 std::string symbolName;
 
 auto cli = clara::Opt(doQuit)["-q"]["--quit"]("Shutdown server") | clara::Opt(doPing)["-i"]["--ping"]("Ping server") |
+           clara::Opt(findAll)["-a"]["--all"]("Find all occurrences of symbol") |
            clara::Opt(findFunction)["-f"]["--function"]("Find function") |
            clara::Opt(symbolName, "symbol")["-s"]["--symbol"]("Symbol name");
 
@@ -76,7 +78,7 @@ int main(int argc, char* argv[])
       spdlog::info("Received timestamp {} with status {}.", status.timestamp(), status.type());
    }
 
-   if (findFunction)
+   if (findAll)
    {
       spdlog::info("Searching for function {}", symbolName);
 
@@ -107,7 +109,24 @@ int main(int argc, char* argv[])
          {
             const ftags::Cursor cursor = output.inflateRecord(*iter);
 
-            std::cout << cursor.location.fileName << ':' << cursor.location.line << ':' << cursor.location.column << "  " << cursor.symbolName << std::endl;
+            std::string category;
+
+            if (cursor.attributes.isReference)
+            {
+               category = "ref";
+            }
+
+            if (cursor.attributes.isDefinition)
+            {
+               category += " def";
+            }
+
+            if (cursor.attributes.isDeclaration)
+            {
+               category += " decl";
+            }
+
+            std::cout << cursor.location.fileName << ':' << cursor.location.line << ':' << cursor.location.column << "  " << category << ' ' << cursor.symbolName << std::endl;
          }
       }
    }

@@ -72,7 +72,7 @@ private:
    CXString m_string;
 };
 
-static ftags::SymbolType getSymbolType(CXCursor clangCursor, ftags::Attributes& attributes)
+static void getSymbolType(CXCursor clangCursor, ftags::Attributes& attributes)
 {
    enum CXCursorKind cursorKind = clang_getCursorKind(clangCursor);
 
@@ -286,7 +286,7 @@ static ftags::SymbolType getSymbolType(CXCursor clangCursor, ftags::Attributes& 
       break;
    }
 
-   return symbolType;
+   attributes.type = symbolType;
 }
 
 void processCursor(ftags::TranslationUnit* translationUnit, CXCursor clangCursor)
@@ -296,10 +296,9 @@ void processCursor(ftags::TranslationUnit* translationUnit, CXCursor clangCursor
    CXStringWrapper name{clang_getCursorSpelling(clangCursor)};
    cursor.symbolName = name.c_str();
 
-   ftags::Attributes attributes = {};
-   cursor.symbolType            = getSymbolType(clangCursor, attributes);
+   getSymbolType(clangCursor, cursor.attributes);
 
-   if (cursor.symbolType == ftags::SymbolType::Undefined)
+   if (cursor.attributes.type == ftags::SymbolType::Undefined)
    {
 #if 0
       enum CXCursorKind cursorKind = clang_getCursorKind(clangCursor);
@@ -322,12 +321,12 @@ void processCursor(ftags::TranslationUnit* translationUnit, CXCursor clangCursor
 
    if (clang_Location_isFromMainFile(location))
    {
-      attributes.isFromMainFile = 1;
+      cursor.attributes.isFromMainFile = 1;
    }
 
    if (clang_isCursorDefinition(clangCursor))
    {
-      attributes.isDefinition = 1;
+      cursor.attributes.isDefinition = 1;
    }
 
 #ifdef USE_CANONICAL_PATHS
@@ -360,7 +359,7 @@ void processCursor(ftags::TranslationUnit* translationUnit, CXCursor clangCursor
 
    cursor.unifiedSymbol = unifiedSymbol.c_str();
 
-   translationUnit->addCursor(cursor, attributes);
+   translationUnit->addCursor(cursor);
 }
 
 CXChildVisitResult visitTranslationUnit(CXCursor cursor, CXCursor /* parent */, CXClientData clientData)
