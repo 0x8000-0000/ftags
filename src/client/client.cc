@@ -109,24 +109,7 @@ int main(int argc, char* argv[])
          {
             const ftags::Cursor cursor = output.inflateRecord(*iter);
 
-            std::string category;
-
-            if (cursor.attributes.isReference)
-            {
-               category = "ref";
-            }
-
-            if (cursor.attributes.isDefinition)
-            {
-               category += " def";
-            }
-
-            if (cursor.attributes.isDeclaration)
-            {
-               category += " decl";
-            }
-
-            std::cout << cursor.location.fileName << ':' << cursor.location.line << ':' << cursor.location.column << "  " << category << ' ' << cursor.symbolName << std::endl;
+            std::cout << cursor.location.fileName << ':' << cursor.location.line << ':' << cursor.location.column << "  " << cursor.attributes.getRecordFlavor() << ' ' << cursor.attributes.getRecordType() << " >> " << cursor.symbolName << std::endl;
          }
       }
    }

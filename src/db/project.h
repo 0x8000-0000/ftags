@@ -172,6 +172,10 @@ struct Attributes
    uint32_t isNamespaceRef : 1;
 
    uint32_t freeBits : 15;
+
+   std::string getRecordType() const;
+
+   std::string getRecordFlavor() const;
 };
 
 static_assert(sizeof(Attributes) == 8, "sizeof(Attributes) exceeds 8 bytes");
