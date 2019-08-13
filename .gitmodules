@@ -1,7 +1,6 @@
 [submodule "external/Clara"]
 	path = external/Clara
-	#url = https://github.com/catchorg/Clara
-	url = git@github.com:0x8000-0000/Clara.git
+	url = https://github.com/0x8000-0000/Clara
 	branch = fix-warnings
 [submodule "external/googletest"]
 	path = external/googletest
