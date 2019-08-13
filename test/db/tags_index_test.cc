@@ -401,3 +401,57 @@ TEST(TagsIndexTest, SerializeDeserializeResults)
    ++ iter;
    ASSERT_EQ(iter, restoredCursorSet.end());
 }
+
+TEST(TagsIndexTest, FindVariables)
+{
+   ftags::ProjectDb tagsDb;
+
+   const auto path = std::filesystem::current_path();
+
+   const std::vector<const char*> arguments = {
+      "-Wall",
+      "-Wextra",
+      "-isystem",
+      "/usr/include",
+   };
+
+   {
+      const auto libPath = path / "test" / "db" / "data" / "multi-module" / "lib.cc";
+      ASSERT_TRUE(std::filesystem::exists(libPath));
+
+      ftags::StringTable           symbolTable;
+      ftags::StringTable           fileNameTable;
+      const ftags::TranslationUnit libCpp =
+         ftags::TranslationUnit::parse(libPath, arguments, symbolTable, fileNameTable);
+
+      tagsDb.addTranslationUnit(libPath, libCpp);
+   }
+
+   {
+      const auto testPath = path / "test" / "db" / "data" / "multi-module" / "test.cc";
+      ASSERT_TRUE(std::filesystem::exists(testPath));
+
+      ftags::StringTable           symbolTable;
+      ftags::StringTable           fileNameTable;
+      const ftags::TranslationUnit testCpp =
+         ftags::TranslationUnit::parse(testPath, arguments, symbolTable, fileNameTable);
+
+      tagsDb.addTranslationUnit(testPath, testCpp);
+   }
+
+   const std::vector<const ftags::Record*> countDefinition = tagsDb.findDefinition("count");
+   ASSERT_EQ(1, countDefinition.size());
+
+   const std::vector<const ftags::Record*> countReference = tagsDb.findReference("count");
+   ASSERT_EQ(1, countReference.size());
+
+   const std::vector<const ftags::Record*> allCount = tagsDb.findSymbol("count");
+   ASSERT_EQ(2, allCount.size());
+
+   const std::vector<const ftags::Record*> argReference = tagsDb.findReference("arg");
+   ASSERT_EQ(3, argReference.size());
+
+   const std::vector<const ftags::Record*> allArg = tagsDb.findSymbol("arg");
+   ASSERT_EQ(6, allArg.size());
+}
+
