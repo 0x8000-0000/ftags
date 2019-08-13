@@ -365,6 +365,19 @@ std::vector<const ftags::Record*> ftags::ProjectDb::findSymbol(const std::string
       symbolName, [symbolType](const Record* record) { return record->attributes.type == symbolType; });
 }
 
+std::vector<const ftags::Record*> ftags::ProjectDb::dumpTranslationUnit(const std::string& fileName) const
+{
+   const StringTable::Key        fileKey            = m_fileNameTable.getKey(fileName.data());
+   const auto                    translationUnitPos = m_fileIndex.at(fileKey);
+   const ftags::TranslationUnit& translationUnit    = m_translationUnits.at(translationUnitPos);
+
+   std::vector<const ftags::Record*> records;
+
+   translationUnit.forEachRecord([&records](const ftags::Record* record) { records.push_back(record); });
+
+   return records;
+}
+
 ftags::CursorSet ftags::ProjectDb::inflateRecords(const std::vector<const Record*>& records) const
 {
    ftags::CursorSet retval(records, m_symbolTable, m_fileNameTable);

@@ -31,6 +31,8 @@
 
 #include <ctime>
 
+namespace
+{
 std::string getTimeStamp()
 {
    auto now       = std::chrono::system_clock::now();
@@ -40,6 +42,74 @@ std::string getTimeStamp()
    ss << std::put_time(std::localtime(&in_time_t), "%Y-%m-%d %X");
    return ss.str();
 }
+
+void dispatchFindAll(zmq::socket_t& socket, const ftags::ProjectDb& projectDb, const std::string& symbolName)
+{
+   ftags::Status status{};
+   status.set_timestamp(getTimeStamp());
+
+   spdlog::info("Received query for {}", symbolName);
+   const std::vector<const ftags::Record*> queryResultsVector = projectDb.findSymbol(symbolName);
+   spdlog::info("Found {} occurrences for {}", queryResultsVector.size(), symbolName);
+
+   std::string serializedStatus;
+
+   if (queryResultsVector.empty())
+   {
+      status.set_type(ftags::Status_Type::Status_Type_QUERY_NO_RESULTS);
+   }
+   else
+   {
+      status.set_type(ftags::Status_Type::Status_Type_QUERY_RESULTS);
+   }
+
+   const std::size_t headerSize = status.ByteSizeLong();
+   zmq::message_t    reply(headerSize);
+   status.SerializeToArray(reply.data(), static_cast<int>(headerSize));
+   socket.send(reply, ZMQ_SNDMORE);
+
+   const ftags::CursorSet queryResultsCursor = projectDb.inflateRecords(queryResultsVector);
+
+   const std::size_t     payloadSize = queryResultsCursor.computeSerializedSize();
+   zmq::message_t        resultsMessage(payloadSize);
+   ftags::BufferInsertor insertor(static_cast<std::byte*>(resultsMessage.data()), payloadSize);
+   queryResultsCursor.serialize(insertor);
+   socket.send(resultsMessage);
+}
+
+void dispatchDumpTranslationUnit(zmq::socket_t& socket, const ftags::ProjectDb& projectDb, const std::string& fileName)
+{
+   ftags::Status status{};
+   status.set_timestamp(getTimeStamp());
+
+   spdlog::info("Received dump request for {}", fileName);
+   const std::vector<const ftags::Record*> queryResultsVector = projectDb.dumpTranslationUnit(fileName);
+
+   std::string serializedStatus;
+
+   if (queryResultsVector.empty())
+   {
+      status.set_type(ftags::Status_Type::Status_Type_QUERY_NO_RESULTS);
+   }
+   else
+   {
+      status.set_type(ftags::Status_Type::Status_Type_QUERY_RESULTS);
+   }
+
+   const std::size_t headerSize = status.ByteSizeLong();
+   zmq::message_t    reply(headerSize);
+   status.SerializeToArray(reply.data(), static_cast<int>(headerSize));
+   socket.send(reply, ZMQ_SNDMORE);
+
+   const ftags::CursorSet queryResultsCursor = projectDb.inflateRecords(queryResultsVector);
+
+   const std::size_t     payloadSize = queryResultsCursor.computeSerializedSize();
+   zmq::message_t        resultsMessage(payloadSize);
+   ftags::BufferInsertor insertor(static_cast<std::byte*>(resultsMessage.data()), payloadSize);
+   queryResultsCursor.serialize(insertor);
+   socket.send(resultsMessage);
+}
+} // namespace
 
 int main(int argc, char* argv[])
 {
@@ -70,41 +140,22 @@ int main(int argc, char* argv[])
       command.ParseFromArray(request.data(), static_cast<int>(request.size()));
       spdlog::info("Received request from {}: {}", command.source(), command.Type_Name(command.type()));
 
-      ftags::Status status{};
-      status.set_timestamp(getTimeStamp());
-
       if (command.type() == ftags::Command_Type::Command_Type_QUERY)
       {
-         spdlog::info("Received query for {}", command.symbol());
-         const std::vector<const ftags::Record*> queryResultsVector = projectDb.findSymbol(command.symbol());
-         spdlog::info("Found {} occurrences for {}", queryResultsVector.size(), command.symbol());
-
-         std::string serializedStatus;
-
-         if (queryResultsVector.empty())
-         {
-            status.set_type(ftags::Status_Type::Status_Type_QUERY_NO_RESULTS);
-         }
-         else
-         {
-            status.set_type(ftags::Status_Type::Status_Type_QUERY_RESULTS);
-         }
-
-         const std::size_t headerSize = status.ByteSizeLong();
-         zmq::message_t    reply(headerSize);
-         status.SerializeToArray(reply.data(), static_cast<int>(headerSize));
-         socket.send(reply, ZMQ_SNDMORE);
-
-         const ftags::CursorSet queryResultsCursor = projectDb.inflateRecords(queryResultsVector);
-
-         const std::size_t     payloadSize = queryResultsCursor.computeSerializedSize();
-         zmq::message_t        resultsMessage(payloadSize);
-         ftags::BufferInsertor insertor(static_cast<std::byte*>(resultsMessage.data()), payloadSize);
-         queryResultsCursor.serialize(insertor);
-         socket.send(resultsMessage);
+         dispatchFindAll(socket, projectDb, command.symbolname());
 
          continue;
       }
+
+      if (command.type() == ftags::Command_Type::Command_Type_DUMP_TRANSLATION_UNIT)
+      {
+         dispatchDumpTranslationUnit(socket, projectDb, command.filename());
+
+         continue;
+      }
+
+      ftags::Status status{};
+      status.set_timestamp(getTimeStamp());
 
       //  Send reply back to client
       if (command.type() == ftags::Command_Type::Command_Type_SHUT_DOWN)

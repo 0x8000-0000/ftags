@@ -24,18 +24,130 @@
 
 #include <spdlog/spdlog.h>
 
+#include <filesystem>
 #include <string>
 
-bool        findAll = false;
-bool        findFunction = false;
-bool        doQuit       = false;
-bool        doPing       = false;
+namespace
+{
+void dispatchFindAll(zmq::socket_t& socket, const std::string& symbolName)
+{
+   spdlog::info("Searching for symbol {}", symbolName);
+
+   ftags::Command command{};
+   command.set_source("client");
+   std::string   serializedCommand;
+   ftags::Status status;
+
+   command.set_type(ftags::Command::Type::Command_Type_QUERY);
+   command.set_symbolname(symbolName);
+   command.SerializeToString(&serializedCommand);
+
+   zmq::message_t request(serializedCommand.size());
+   memcpy(request.data(), serializedCommand.data(), serializedCommand.size());
+   socket.send(request);
+
+   //  Get the reply.
+   zmq::message_t reply;
+   socket.recv(&reply);
+
+   status.ParseFromArray(reply.data(), static_cast<int>(reply.size()));
+
+   if (status.type() == ftags::Status_Type::Status_Type_QUERY_RESULTS)
+   {
+      zmq::message_t resultsMessage;
+      socket.recv(&resultsMessage);
+
+      ftags::BufferExtractor extractor(static_cast<std::byte*>(resultsMessage.data()), resultsMessage.size());
+      const ftags::CursorSet output = ftags::CursorSet::deserialize(extractor);
+      spdlog::info("Received {} results", output.size());
+
+      for (auto iter = output.begin(); iter != output.end(); ++iter)
+      {
+         const ftags::Cursor cursor = output.inflateRecord(*iter);
+
+         std::cout << cursor.location.fileName << ':' << cursor.location.line << ':' << cursor.location.column << "  "
+                   << cursor.attributes.getRecordFlavor() << ' ' << cursor.attributes.getRecordType() << " >> "
+                   << cursor.symbolName << std::endl;
+      }
+   }
+}
+
+void dispatchDumpTranslationUnit(zmq::socket_t& socket, const std::string& fileName)
+{
+   std::filesystem::path filePath{fileName};
+   std::string           canonicalFilePathAsString{fileName};
+   if (std::filesystem::exists(filePath))
+   {
+      std::filesystem::path canonicalFilePath = std::filesystem::canonical(filePath);
+      canonicalFilePathAsString               = canonicalFilePath.string();
+   }
+   else
+   {
+      std::filesystem::path otherPath = std::filesystem::current_path() / filePath;
+      if (std::filesystem::exists(otherPath))
+      {
+         std::filesystem::path canonicalFilePath = std::filesystem::canonical(otherPath);
+         canonicalFilePathAsString               = canonicalFilePath.string();
+      }
+   }
+
+   spdlog::info("Dumping translation unit {}", canonicalFilePathAsString);
+
+   ftags::Command command{};
+   command.set_source("client");
+   std::string   serializedCommand;
+   ftags::Status status;
+
+   command.set_type(ftags::Command::Type::Command_Type_DUMP_TRANSLATION_UNIT);
+   command.set_filename(canonicalFilePathAsString);
+   command.SerializeToString(&serializedCommand);
+
+   zmq::message_t request(serializedCommand.size());
+   memcpy(request.data(), serializedCommand.data(), serializedCommand.size());
+   socket.send(request);
+
+   //  Get the reply.
+   zmq::message_t reply;
+   socket.recv(&reply);
+
+   status.ParseFromArray(reply.data(), static_cast<int>(reply.size()));
+
+   if (status.type() == ftags::Status_Type::Status_Type_QUERY_RESULTS)
+   {
+      zmq::message_t resultsMessage;
+      socket.recv(&resultsMessage);
+
+      ftags::BufferExtractor extractor(static_cast<std::byte*>(resultsMessage.data()), resultsMessage.size());
+      const ftags::CursorSet output = ftags::CursorSet::deserialize(extractor);
+      spdlog::info("Received {} results", output.size());
+
+      for (auto iter = output.begin(); iter != output.end(); ++iter)
+      {
+         const ftags::Cursor cursor = output.inflateRecord(*iter);
+
+         std::cout << cursor.location.line << ':' << cursor.location.column << "  "
+                   << cursor.attributes.getRecordFlavor() << ' ' << cursor.attributes.getRecordType() << " >> "
+                   << cursor.symbolName << std::endl;
+      }
+   }
+}
+
+bool        findAll             = false;
+bool        findFunction        = false;
+bool        dumpTranslationUnit = false;
+bool        doQuit              = false;
+bool        doPing              = false;
 std::string symbolName;
+std::string fileName;
 
 auto cli = clara::Opt(doQuit)["-q"]["--quit"]("Shutdown server") | clara::Opt(doPing)["-i"]["--ping"]("Ping server") |
            clara::Opt(findAll)["-a"]["--all"]("Find all occurrences of symbol") |
            clara::Opt(findFunction)["-f"]["--function"]("Find function") |
-           clara::Opt(symbolName, "symbol")["-s"]["--symbol"]("Symbol name");
+           clara::Opt(dumpTranslationUnit)["--dump"]("Dump symbols for translation unit") |
+           clara::Opt(symbolName, "symbol")["-s"]["--symbol"]("Symbol name") |
+           clara::Opt(fileName, "file")["--file"]("File name");
+
+} // namespace
 
 int main(int argc, char* argv[])
 {
@@ -57,7 +169,7 @@ int main(int argc, char* argv[])
 
    ftags::Command command{};
    command.set_source("client");
-   std::string serializedCommand;
+   std::string   serializedCommand;
    ftags::Status status;
 
    if (doPing)
@@ -80,38 +192,11 @@ int main(int argc, char* argv[])
 
    if (findAll)
    {
-      spdlog::info("Searching for function {}", symbolName);
-
-      command.set_type(ftags::Command::Type::Command_Type_QUERY);
-      command.set_symbol(symbolName);
-      command.SerializeToString(&serializedCommand);
-
-      zmq::message_t request(serializedCommand.size());
-      memcpy(request.data(), serializedCommand.data(), serializedCommand.size());
-      socket.send(request);
-
-      //  Get the reply.
-      zmq::message_t reply;
-      socket.recv(&reply);
-
-      status.ParseFromArray(reply.data(), static_cast<int>(reply.size()));
-
-      if (status.type() == ftags::Status_Type::Status_Type_QUERY_RESULTS)
-      {
-         zmq::message_t resultsMessage;
-         socket.recv(&resultsMessage);
-
-         ftags::BufferExtractor extractor(static_cast<std::byte*>(resultsMessage.data()), resultsMessage.size());
-         const ftags::CursorSet output = ftags::CursorSet::deserialize(extractor);
-         spdlog::info("Received {} results", output.size());
-
-         for (auto iter = output.begin(); iter != output.end(); ++ iter)
-         {
-            const ftags::Cursor cursor = output.inflateRecord(*iter);
-
-            std::cout << cursor.location.fileName << ':' << cursor.location.line << ':' << cursor.location.column << "  " << cursor.attributes.getRecordFlavor() << ' ' << cursor.attributes.getRecordType() << " >> " << cursor.symbolName << std::endl;
-         }
-      }
+      dispatchFindAll(socket, symbolName);
+   }
+   else if (dumpTranslationUnit)
+   {
+      dispatchDumpTranslationUnit(socket, fileName);
    }
 
    if (doQuit)

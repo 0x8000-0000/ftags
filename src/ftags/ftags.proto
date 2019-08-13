@@ -13,6 +13,7 @@ message Command
       FLUSH = 4;
       SAVE_DATABASE = 5;
       QUERY = 6;
+      DUMP_TRANSLATION_UNIT = 7;
    }
 
    Type type = 1;
@@ -29,8 +30,9 @@ message Command
 
    QueryType queryType = 3;
 
-   string symbol = 4;
-   string namespace = 5;
+   string symbolName = 4;
+   string namespaceName = 5;
+   string fileName = 6;
 }
 
 message Status

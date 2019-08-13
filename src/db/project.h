@@ -684,6 +684,8 @@ public:
    Record* followLocation(const Location& location) const;
    Record* followLocation(const Location& location, int endLine, int endColumn) const;
 
+   std::vector<const Record*> dumpTranslationUnit(const std::string& fileName) const;
+
    std::vector<Record*> getBaseClasses(Record* record) const;
    std::vector<Record*> getDerivedClasses(Record* record) const;
 
