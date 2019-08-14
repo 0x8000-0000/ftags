@@ -285,7 +285,8 @@ ftags::Cursor ftags::ProjectDb::inflateRecord(const ftags::Record* record) const
    return cursor;
 }
 
-const ftags::TranslationUnit& ftags::ProjectDb::addTranslationUnit(const std::string& fullPath, const TranslationUnit& translationUnit)
+const ftags::TranslationUnit& ftags::ProjectDb::addTranslationUnit(const std::string&     fullPath,
+                                                                   const TranslationUnit& translationUnit)
 {
    /*
     * protect access
@@ -382,6 +383,28 @@ ftags::CursorSet ftags::ProjectDb::inflateRecords(const std::vector<const Record
    ftags::CursorSet retval(records, m_symbolTable, m_fileNameTable);
 
    return retval;
+}
+
+std::size_t ftags::ProjectDb::computeSerializedSize() const
+{
+   return sizeof(ftags::SerializedObjectHeader) + m_fileNameTable.computeSerializedSize() +
+          m_symbolTable.computeSerializedSize() + m_namespaceTable.computeSerializedSize() +
+          m_recordSpanCache.computeSerializedSize();
+}
+
+std::size_t ftags::RecordSpanCache::computeSerializedSize() const
+{
+   std::size_t recordCount = 0;
+   for (auto iter = m_cache.begin(); iter != m_cache.end(); ++iter)
+   {
+      std::shared_ptr<RecordSpan> val = iter->second.lock();
+      if (val)
+      {
+         recordCount += val->getRecordCount();
+      }
+   }
+
+   return recordCount * sizeof(ftags::Record);
 }
 
 /*

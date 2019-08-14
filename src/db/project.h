@@ -453,6 +453,15 @@ public:
    {
       return m_spansObserved;
    }
+
+   /*
+    * Serialization interface
+    */
+   std::size_t computeSerializedSize() const;
+
+   void serialize(ftags::BufferInsertor& insertor) const;
+
+   static RecordSpanCache deserialize(ftags::BufferExtractor& extractor);
 };
 
 /** Contains all the symbols in a C++ translation unit.
@@ -731,6 +740,15 @@ public:
    void dumpRecords(std::ostream& os) const;
 
    void dumpStats(std::ostream& os) const;
+
+   /*
+    * Serialization interface
+    */
+   std::size_t computeSerializedSize() const;
+
+   void serialize(ftags::BufferInsertor& insertor) const;
+
+   static ProjectDb deserialize(ftags::BufferExtractor& extractor);
 
 private:
    enum State

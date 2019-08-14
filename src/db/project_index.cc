@@ -229,6 +229,8 @@ void ftags::parseProject(const char* parentDirectory, ftags::ProjectDb& projectD
       parserThreads[ii].join();
    }
 
+   spdlog::info("Using {} bytes for the database.", projectDb.computeSerializedSize());
+
    spdlog::info("All threads completed");
 
    clang_CompilationDatabase_dispose(compilationDatabase);
