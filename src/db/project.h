@@ -454,6 +454,8 @@ public:
       return m_spansObserved;
    }
 
+   std::size_t getRecordCount() const;
+
    /*
     * Serialization interface
     */
@@ -740,6 +742,11 @@ public:
    void dumpRecords(std::ostream& os) const;
 
    void dumpStats(std::ostream& os) const;
+
+   std::size_t getRecordCount() const
+   {
+      return m_recordSpanCache.getRecordCount();
+   }
 
    /*
     * Serialization interface

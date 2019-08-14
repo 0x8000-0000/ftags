@@ -392,7 +392,7 @@ std::size_t ftags::ProjectDb::computeSerializedSize() const
           m_recordSpanCache.computeSerializedSize();
 }
 
-std::size_t ftags::RecordSpanCache::computeSerializedSize() const
+std::size_t ftags::RecordSpanCache::getRecordCount() const
 {
    std::size_t recordCount = 0;
    for (auto iter = m_cache.begin(); iter != m_cache.end(); ++iter)
@@ -403,8 +403,12 @@ std::size_t ftags::RecordSpanCache::computeSerializedSize() const
          recordCount += val->getRecordCount();
       }
    }
+   return recordCount;
+}
 
-   return recordCount * sizeof(ftags::Record);
+std::size_t ftags::RecordSpanCache::computeSerializedSize() const
+{
+   return getRecordCount() * sizeof(ftags::Record);
 }
 
 /*

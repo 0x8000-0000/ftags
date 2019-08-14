@@ -230,6 +230,7 @@ void ftags::parseProject(const char* parentDirectory, ftags::ProjectDb& projectD
    }
 
    spdlog::info("Using {} bytes for the database.", projectDb.computeSerializedSize());
+   spdlog::info("Database contains {} records.", projectDb.getRecordCount());
 
    spdlog::info("All threads completed");
 
