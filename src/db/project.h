@@ -384,6 +384,15 @@ public:
    void updateIndices();
 
    /*
+    * Serialization interface
+    */
+   std::size_t computeSerializedSize() const;
+
+   void serialize(ftags::BufferInsertor& insertor) const;
+
+   static RecordSpan deserialize(ftags::BufferExtractor& extractor);
+
+   /*
     * Debugging
     */
    void dumpRecords(std::ostream& os) const;
@@ -592,6 +601,15 @@ public:
     * Debugging
     */
    void dumpRecords(std::ostream& os) const;
+
+   /*
+    * Serialization interface
+    */
+   std::size_t computeSerializedSize() const;
+
+   void serialize(ftags::BufferInsertor& insertor) const;
+
+   static TranslationUnit deserialize(ftags::BufferExtractor& extractor);
 
 private:
    // key of the file name of the main translation unit

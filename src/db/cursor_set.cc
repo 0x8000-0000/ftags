@@ -16,6 +16,43 @@
 
 #include <project.h>
 
+/*
+ * CursorSet
+ */
+ftags::CursorSet::CursorSet(std::vector<const Record*> records,
+                            const StringTable&         symbolTable,
+                            const StringTable&         fileNameTable)
+{
+   m_records.reserve(records.size());
+
+   for (auto record : records)
+   {
+      m_records.push_back(*record);
+      auto& newRecord = m_records.back();
+
+      const char* symbolName = symbolTable.getString(record->symbolNameKey);
+      const char* fileName   = fileNameTable.getString(record->fileNameKey);
+
+      newRecord.symbolNameKey = m_symbolTable.addKey(symbolName);
+      newRecord.fileNameKey   = m_fileNameTable.addKey(fileName);
+   }
+}
+
+ftags::Cursor ftags::CursorSet::inflateRecord(const ftags::Record& record) const
+{
+   ftags::Cursor cursor{};
+
+   cursor.symbolName = m_symbolTable.getString(record.symbolNameKey);
+
+   cursor.location.fileName = m_fileNameTable.getString(record.fileNameKey);
+   cursor.location.line     = static_cast<int>(record.startLine);
+   cursor.location.column   = record.startColumn;
+
+   cursor.attributes = record.attributes;
+
+   return cursor;
+}
+
 std::size_t ftags::CursorSet::computeSerializedSize() const
 {
    return sizeof(ftags::SerializedObjectHeader) +
