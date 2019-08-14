@@ -375,7 +375,7 @@ CXChildVisitResult visitTranslationUnit(CXCursor cursor, CXCursor /* parent */, 
 } // namespace
 
 ftags::TranslationUnit ftags::TranslationUnit::parse(const std::string&       fileName,
-                                                     std::vector<const char*> arguments,
+                                                     const std::vector<const char*>& arguments,
                                                      StringTable&             symbolTable,
                                                      StringTable&             fileNameTable)
 {

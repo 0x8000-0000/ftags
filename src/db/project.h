@@ -501,6 +501,20 @@ public:
    /*
     * General queries
     */
+   std::vector<const Record*> getRecords(bool isFromMainFile) const
+   {
+      std::vector<const ftags::Record*> records;
+
+      forEachRecord([&records, isFromMainFile](const ftags::Record* record) {
+         if (record->attributes.isFromMainFile == isFromMainFile)
+         {
+            records.push_back(record);
+         }
+      });
+
+      return records;
+   }
+
    std::vector<Record*> getFunctions() const;
 
    std::vector<Record*> getClasses() const;
@@ -516,10 +530,10 @@ public:
 
    std::vector<Record*> findDefinition(const std::string& symbolName) const;
 
-   static TranslationUnit parse(const std::string&       fileName,
-                                std::vector<const char*> arguments,
-                                StringTable&             symbolTable,
-                                StringTable&             fileNameTable);
+   static TranslationUnit parse(const std::string&              fileName,
+                                const std::vector<const char*>& arguments,
+                                StringTable&                    symbolTable,
+                                StringTable&                    fileNameTable);
 
    void addCursor(const Cursor& cursor);
 
@@ -635,7 +649,8 @@ public:
     */
    ProjectDb();
 
-   void addTranslationUnit(const std::string& fileName, const TranslationUnit& translationUnit);
+   const ftags::TranslationUnit& addTranslationUnit(const std::string&     fileName,
+                                                    const TranslationUnit& translationUnit);
 
    void removeTranslationUnit(const std::string& fileName);
 

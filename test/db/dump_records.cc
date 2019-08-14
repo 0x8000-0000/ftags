@@ -1,8 +1,23 @@
 #include <project.h>
 
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <vector>
+
+void dumpTranslationUnit(const ftags::TranslationUnit& translationUnit, const std::string& fileName)
+{
+#if 0
+   std::ofstream out(fileName);
+
+   std::vector<const ftags::Record*> records = translationUnit.getRecords(true);
+   for (const ftags::Record* record : records)
+   {
+      out << record->startLine << ':' << record->startColumn << "  " << record->attributes.getRecordFlavor() << ' '
+          << record->attributes.getRecordType() << " >> " << record->symbolNameKey << std::endl;
+   }
+#endif
+}
 
 int main(int argc, char* argv[])
 {
@@ -26,7 +41,10 @@ int main(int argc, char* argv[])
    ftags::TranslationUnit translationUnit = ftags::TranslationUnit::parse(argv[1], arguments, symbolTable, fileNameTable);
 
    ftags::ProjectDb tagsDb;
-   tagsDb.addTranslationUnit(argv[1], translationUnit);
+   const ftags::TranslationUnit& mergedTranslationUnit = tagsDb.addTranslationUnit(argv[1], translationUnit);
+
+   dumpTranslationUnit(translationUnit, std::string(argv[1]) + ".dump.orig");
+   dumpTranslationUnit(mergedTranslationUnit, std::string(argv[1]) + ".dump.merged");
 
    tagsDb.dumpRecords(std::cout);
 

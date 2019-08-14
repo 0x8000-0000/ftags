@@ -285,7 +285,7 @@ ftags::Cursor ftags::ProjectDb::inflateRecord(const ftags::Record* record) const
    return cursor;
 }
 
-void ftags::ProjectDb::addTranslationUnit(const std::string& fullPath, const TranslationUnit& translationUnit)
+const ftags::TranslationUnit& ftags::ProjectDb::addTranslationUnit(const std::string& fullPath, const TranslationUnit& translationUnit)
 {
    /*
     * protect access
@@ -308,6 +308,12 @@ void ftags::ProjectDb::addTranslationUnit(const std::string& fullPath, const Tra
     */
    const auto fileKey   = m_fileNameTable.addKey(fullPath.data());
    m_fileIndex[fileKey] = translationUnitPos;
+
+   assert(translationUnit.getRecordCount() == m_translationUnits.back().getRecordCount());
+
+   assert(translationUnit.getRecords(true).size() == m_translationUnits.back().getRecords(true).size());
+
+   return m_translationUnits.back();
 }
 
 bool ftags::ProjectDb::isFileIndexed(const std::string& fileName) const
@@ -368,16 +374,7 @@ std::vector<const ftags::Record*> ftags::ProjectDb::dumpTranslationUnit(const st
    const auto                    translationUnitPos = m_fileIndex.at(fileKey);
    const ftags::TranslationUnit& translationUnit    = m_translationUnits.at(translationUnitPos);
 
-   std::vector<const ftags::Record*> records;
-
-   translationUnit.forEachRecord([fileKey, &records](const ftags::Record* record) {
-      if (record->fileNameKey == fileKey)
-      {
-         records.push_back(record);
-      }
-   });
-
-   return records;
+   return translationUnit.getRecords(true);
 }
 
 ftags::CursorSet ftags::ProjectDb::inflateRecords(const std::vector<const Record*>& records) const

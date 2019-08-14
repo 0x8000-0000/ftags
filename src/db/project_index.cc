@@ -23,6 +23,9 @@
 
 #include <shared_queue.h>
 
+#ifndef NDEBUG
+#include <fstream>
+#endif
 #include <string>
 #include <thread>
 #include <vector>
@@ -51,6 +54,23 @@ const char* g_defaultArguments[] = {
    "/usr/lib/gcc/x86_64-linux-gnu/8/include",
 };
 
+void dumpTranslationUnit(const ftags::TranslationUnit& translationUnit, const std::string& fileName)
+{
+#if 0
+   std::ofstream out(fileName);
+
+   std::vector<const ftags::Record*> records = translationUnit.getRecords(true);
+   for (const ftags::Record* record : records)
+   {
+      out << record->startLine << ':' << record->startColumn << "  " << record->attributes.getRecordFlavor() << ' '
+          << record->attributes.getRecordType() << " >> " << record->symbolNameKey << std::endl;
+   }
+#else
+   (void) translationUnit;
+   (void) fileName;
+#endif
+}
+
 void parseTranslationUnit(ftags::ProjectDb&                        projectDb,
                           ftags::shared_queue<CompilationRequest>& compilationRequests,
                           std::mutex&                              clangMutex)
@@ -69,10 +89,15 @@ void parseTranslationUnit(ftags::ProjectDb&                        projectDb,
       std::vector<const char*> arguments;
       arguments.reserve(request.arguments.size() + std::size(g_defaultArguments));
 
+#if 0
+      /*
+       * these were needed at some point
+       */
       for (size_t ii = 0; ii < std::size(g_defaultArguments); ii++)
       {
          arguments.push_back(g_defaultArguments[ii]);
       }
+#endif
 
       for (const auto& arg : request.arguments)
       {
@@ -84,13 +109,19 @@ void parseTranslationUnit(ftags::ProjectDb&                        projectDb,
       try
       {
          clangMutex.lock();
-         ftags::TranslationUnit      translationUnit =
+
+         ftags::TranslationUnit translationUnit =
             ftags::TranslationUnit::parse(request.fileName, arguments, symbolTable, fileNameTable);
-         clangMutex.unlock();
 
          spdlog::info("Loaded {} records from {}", translationUnit.getRecordCount(), request.fileName);
 
-         projectDb.addTranslationUnit(request.fileName, translationUnit);
+         const ftags::TranslationUnit& mergedTranslationUnit =
+            projectDb.addTranslationUnit(request.fileName, translationUnit);
+
+         dumpTranslationUnit(translationUnit, request.fileName + ".orig");
+         dumpTranslationUnit(mergedTranslationUnit, request.fileName + ".merged");
+
+         clangMutex.unlock();
       }
       catch (const std::runtime_error& re)
       {
