@@ -205,11 +205,6 @@ std::size_t ftags::RecordSpanCache::getRecordCount() const
    return recordCount;
 }
 
-std::size_t ftags::RecordSpanCache::computeSerializedSize() const
-{
-   return getRecordCount() * sizeof(ftags::Record);
-}
-
 /*
  * Record serialization
  */
@@ -249,3 +244,54 @@ ftags::Serializer<std::vector<ftags::Record>>::deserialize(ftags::BufferExtracto
    return retval;
 }
 
+std::size_t ftags::RecordSpan::computeSerializedSize() const
+{
+   return sizeof(ftags::SerializedObjectHeader) +
+          ftags::Serializer<std::vector<Record>>::computeSerializedSize(m_records);
+}
+
+void ftags::RecordSpan::serialize(ftags::BufferInsertor& insertor) const
+{
+}
+
+void ftags::RecordSpan::deserialize(ftags::BufferExtractor& extractor, ftags::RecordSpan& recordSpan)
+{
+}
+
+std::size_t ftags::RecordSpanCache::computeSerializedSize() const
+{
+   std::size_t recordSpanSizes = 0;
+   for (auto iter = m_cache.begin(); iter != m_cache.end(); ++iter)
+   {
+      std::shared_ptr<RecordSpan> val = iter->second.lock();
+      if (val)
+      {
+         recordSpanSizes += val->computeSerializedSize();
+      }
+   }
+   return sizeof(ftags::SerializedObjectHeader) + sizeof(uint64_t) + recordSpanSizes;
+}
+
+void ftags::RecordSpanCache::serialize(ftags::BufferInsertor& insertor) const
+{
+   ftags::SerializedObjectHeader header{"ftags::RecordSpanCache"};
+   insertor << header;
+
+   const uint64_t vecSize = m_cache.size();
+   insertor << vecSize;
+
+   std::for_each(m_cache.cbegin(), m_cache.cend(), [&insertor](const cache_type::value_type& iter) {
+      std::shared_ptr<RecordSpan> val = iter.second.lock();
+      if (val)
+      {
+         val->serialize(insertor);
+      }
+   });
+}
+
+ftags::RecordSpanCache ftags::RecordSpanCache::deserialize(ftags::BufferExtractor& extractor)
+{
+   ftags::RecordSpanCache retval;
+
+   return retval;
+}

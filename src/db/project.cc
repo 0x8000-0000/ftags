@@ -20,7 +20,6 @@
 #include <numeric>
 #include <sstream>
 
-
 /*
  * ProjectDb
  */
@@ -146,9 +145,58 @@ ftags::CursorSet ftags::ProjectDb::inflateRecords(const std::vector<const Record
 
 std::size_t ftags::ProjectDb::computeSerializedSize() const
 {
+   const std::size_t translationUnitSize =
+
+      std::accumulate(
+         m_translationUnits.cbegin(),
+         m_translationUnits.cend(),
+         0u,
+         [](std::size_t acc, const TranslationUnit& elem) { return acc + elem.computeSerializedSize(); });
+
    return sizeof(ftags::SerializedObjectHeader) + m_fileNameTable.computeSerializedSize() +
           m_symbolTable.computeSerializedSize() + m_namespaceTable.computeSerializedSize() +
-          m_recordSpanCache.computeSerializedSize();
+          m_recordSpanCache.computeSerializedSize() + sizeof(uint64_t) + translationUnitSize;
+}
+
+void ftags::ProjectDb::serialize(ftags::BufferInsertor& insertor) const
+{
+   ftags::SerializedObjectHeader header{"ftags::ProjectDb"};
+   insertor << header;
+
+   m_fileNameTable.serialize(insertor);
+   m_symbolTable.serialize(insertor);
+   m_namespaceTable.serialize(insertor);
+
+   m_recordSpanCache.serialize(insertor);
+
+   const uint64_t translationUnitCount = m_translationUnits.size();
+   insertor << translationUnitCount;
+
+   std::for_each(m_translationUnits.cbegin(),
+                 m_translationUnits.cend(),
+                 [&insertor](const TranslationUnit& translationUnit) { translationUnit.serialize(insertor); });
+}
+
+void ftags::ProjectDb::deserialize(ftags::BufferExtractor& extractor, ftags::ProjectDb& projectDb)
+{
+   ftags::SerializedObjectHeader header;
+   extractor >> header;
+
+   projectDb.m_fileNameTable  = StringTable::deserialize(extractor);
+   projectDb.m_symbolTable    = StringTable::deserialize(extractor);
+   projectDb.m_namespaceTable = StringTable::deserialize(extractor);
+
+   projectDb.m_recordSpanCache = RecordSpanCache::deserialize(extractor);
+
+   uint64_t translationUnitCount = 0;
+   extractor >> translationUnitCount;
+   projectDb.m_translationUnits.reserve(translationUnitCount);
+
+   for (size_t ii = 0; ii < translationUnitCount; ii++)
+   {
+      projectDb.m_translationUnits.emplace_back(projectDb.m_fileNameTable, projectDb.m_symbolTable);
+      TranslationUnit::deserialize(extractor, projectDb.m_translationUnits.back(), projectDb.m_recordSpanCache);
+   }
 }
 
 std::string ftags::Attributes::getRecordType() const

@@ -82,3 +82,44 @@ void ftags::TranslationUnit::addCursor(const ftags::Cursor& cursor)
 
    m_recordSpans.back()->addRecord(newRecord);
 }
+
+std::size_t ftags::TranslationUnit::computeSerializedSize() const
+{
+   std::vector<uint64_t> recordSpanHashes(/* size = */ m_recordSpans.size());
+
+   return sizeof(ftags::SerializedObjectHeader) +
+          ftags::Serializer<std::vector<uint64_t>>::computeSerializedSize(recordSpanHashes);
+}
+
+void ftags::TranslationUnit::serialize(ftags::BufferInsertor& insertor) const
+{
+   ftags::SerializedObjectHeader header{"ftags::TranslationUnit"};
+   insertor << header;
+
+   std::vector<uint64_t> recordSpanHashes;
+   recordSpanHashes.reserve(m_recordSpans.size());
+
+   std::for_each(
+      m_recordSpans.cbegin(), m_recordSpans.cend(), [&recordSpanHashes](const std::shared_ptr<RecordSpan>& elem) {
+         recordSpanHashes.push_back(elem->getHash());
+      });
+
+   ftags::Serializer<std::vector<uint64_t>>::serialize(recordSpanHashes, insertor);
+}
+
+void ftags::TranslationUnit::deserialize(ftags::BufferExtractor& extractor,
+                                         ftags::TranslationUnit& translationUnit,
+                                         const RecordSpanCache&  spanCache)
+{
+   ftags::SerializedObjectHeader header;
+   extractor >> header;
+
+   std::vector<uint64_t> recordSpanHashes = ftags::Serializer<std::vector<uint64_t>>::deserialize(extractor);
+
+   translationUnit.m_recordSpans.reserve(recordSpanHashes.size());
+
+   for (const uint64_t spanHash : recordSpanHashes)
+   {
+      translationUnit.m_recordSpans.emplace_back(spanCache.get(spanHash));
+   }
+}

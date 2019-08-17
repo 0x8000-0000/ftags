@@ -390,7 +390,7 @@ public:
 
    void serialize(ftags::BufferInsertor& insertor) const;
 
-   static RecordSpan deserialize(ftags::BufferExtractor& extractor);
+   static void deserialize(ftags::BufferExtractor& extractor, RecordSpan& recordSpan);
 
    /*
     * Debugging
@@ -427,7 +427,7 @@ private:
 class RecordSpanCache
 {
 private:
-   using cache_type = std::unordered_multimap<std::size_t, std::weak_ptr<RecordSpan>>;
+   using cache_type = std::unordered_multimap<uint64_t, std::weak_ptr<RecordSpan>>;
 
    using value_type = cache_type::value_type;
 
@@ -452,6 +452,20 @@ public:
    }
 
    std::shared_ptr<RecordSpan> add(std::shared_ptr<RecordSpan> newSpan);
+
+   std::shared_ptr<RecordSpan> get(uint64_t spanHash) const
+   {
+      const auto iter = m_cache.find(spanHash);
+      if (iter != m_cache.end())
+      {
+         return iter->second.lock();
+      }
+      else
+      {
+         assert(false);
+         return std::shared_ptr<RecordSpan>(nullptr);
+      }
+   }
 
    std::size_t getActiveSpanCount() const
    {
@@ -609,7 +623,8 @@ public:
 
    void serialize(ftags::BufferInsertor& insertor) const;
 
-   static TranslationUnit deserialize(ftags::BufferExtractor& extractor);
+   static void
+   deserialize(ftags::BufferExtractor& extractor, TranslationUnit& translationUnit, const RecordSpanCache& spanCache);
 
 private:
    // key of the file name of the main translation unit
@@ -625,9 +640,6 @@ private:
    StringTable& m_fileNameTable;
 
    void updateIndices();
-
-   // indexes of records based of different traversal order
-   std::vector<std::vector<Record>::size_type> m_recordsInSymbolKeyOrder;
 };
 
 class CursorSet
@@ -747,14 +759,6 @@ public:
    void mergeFrom(const ProjectDb& other);
 
    /*
-    * Serialization
-    */
-
-   std::vector<uint8_t> serialize() const;
-
-   static ProjectDb deserialize(const uint8_t* buffer, size_t size);
-
-   /*
     * Debugging
     */
    void dumpRecords(std::ostream& os) const;
@@ -773,7 +777,7 @@ public:
 
    void serialize(ftags::BufferInsertor& insertor) const;
 
-   static ProjectDb deserialize(ftags::BufferExtractor& extractor);
+   static void deserialize(ftags::BufferExtractor& extractor, ftags::ProjectDb& projectDb);
 
 private:
    enum State
