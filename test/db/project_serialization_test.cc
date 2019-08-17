@@ -14,21 +14,23 @@
    limitations under the License.
 */
 
-#include <serialization.h>
 #include <project.h>
+#include <serialization.h>
 
 #include <gtest/gtest.h>
+
+#include <filesystem>
 
 TEST(ProjectSerializationTest, RecordVector)
 {
    std::vector<ftags::Record> input;
 
-   ftags::Record one = {};
-   ftags::Record two = {};
+   ftags::Record one   = {};
+   ftags::Record two   = {};
    ftags::Record three = {};
 
-   one.symbolNameKey = 1;
-   two.symbolNameKey = 2;
+   one.symbolNameKey   = 1;
+   two.symbolNameKey   = 2;
    three.symbolNameKey = 3;
 
    input.push_back(one);
@@ -37,7 +39,7 @@ TEST(ProjectSerializationTest, RecordVector)
 
    using Serializer = ftags::Serializer<std::vector<ftags::Record>>;
 
-   const size_t inputSerializedSize = Serializer::computeSerializedSize(input);
+   const size_t           inputSerializedSize = Serializer::computeSerializedSize(input);
    std::vector<std::byte> buffer(/* size = */ inputSerializedSize);
 
    ftags::BufferInsertor insertor{buffer};
@@ -45,7 +47,7 @@ TEST(ProjectSerializationTest, RecordVector)
    Serializer::serialize(input, insertor);
    insertor.assertEmpty();
 
-   ftags::BufferExtractor extractor{buffer};
+   ftags::BufferExtractor           extractor{buffer};
    const std::vector<ftags::Record> output = Serializer::deserialize(extractor);
    extractor.assertEmpty();
 
@@ -58,21 +60,21 @@ TEST(ProjectSerializationTest, CursorSet)
 {
    std::vector<const ftags::Record*> input;
 
-   ftags::Record one = {};
-   ftags::Record two = {};
+   ftags::Record one   = {};
+   ftags::Record two   = {};
    ftags::Record three = {};
 
    ftags::StringTable symbolTable;
    ftags::StringTable fileNameTable;
 
-   one.symbolNameKey = symbolTable.addKey("alpha");
-   two.symbolNameKey = symbolTable.addKey("beta");
+   one.symbolNameKey   = symbolTable.addKey("alpha");
+   two.symbolNameKey   = symbolTable.addKey("beta");
    three.symbolNameKey = symbolTable.addKey("gamma");
 
    const auto fileKey = fileNameTable.addKey("hello.cc");
-   one.fileNameKey = fileKey;
-   two.fileNameKey = fileKey;
-   three.fileNameKey = fileKey;
+   one.fileNameKey    = fileKey;
+   two.fileNameKey    = fileKey;
+   three.fileNameKey  = fileKey;
 
    input.push_back(&one);
    input.push_back(&two);
@@ -80,7 +82,7 @@ TEST(ProjectSerializationTest, CursorSet)
 
    ftags::CursorSet inputSet(input, symbolTable, fileNameTable);
 
-   const size_t inputSerializedSize = inputSet.computeSerializedSize();
+   const size_t           inputSerializedSize = inputSet.computeSerializedSize();
    std::vector<std::byte> buffer(/* size = */ inputSerializedSize);
 
    ftags::BufferInsertor insertor{buffer};
@@ -98,4 +100,71 @@ TEST(ProjectSerializationTest, CursorSet)
    const ftags::Cursor outputOne = output.inflateRecord(*iter);
 
    ASSERT_STREQ("alpha", outputOne.symbolName);
+}
+
+TEST(ProjectSerializationTest, FindVariablesInDeserializedProjectDb)
+{
+   std::vector<std::byte> buffer;
+
+   {
+      ftags::ProjectDb tagsDb;
+
+      const auto path = std::filesystem::current_path();
+
+      const std::vector<const char*> arguments = {
+         "-Wall",
+         "-Wextra",
+         "-isystem",
+         "/usr/include",
+      };
+
+      {
+         const auto libPath = path / "test" / "db" / "data" / "multi-module" / "lib.cc";
+         ASSERT_TRUE(std::filesystem::exists(libPath));
+
+         ftags::StringTable           symbolTable;
+         ftags::StringTable           fileNameTable;
+         const ftags::TranslationUnit libCpp =
+            ftags::TranslationUnit::parse(libPath, arguments, symbolTable, fileNameTable);
+
+         tagsDb.addTranslationUnit(libPath, libCpp, symbolTable, fileNameTable);
+      }
+
+      {
+         const auto testPath = path / "test" / "db" / "data" / "multi-module" / "test.cc";
+         ASSERT_TRUE(std::filesystem::exists(testPath));
+
+         ftags::StringTable           symbolTable;
+         ftags::StringTable           fileNameTable;
+         const ftags::TranslationUnit testCpp =
+            ftags::TranslationUnit::parse(testPath, arguments, symbolTable, fileNameTable);
+
+         tagsDb.addTranslationUnit(testPath, testCpp, symbolTable, fileNameTable);
+      }
+
+      buffer.resize(tagsDb.computeSerializedSize());
+
+      ftags::BufferInsertor insertor{buffer};
+
+      tagsDb.serialize(insertor);
+   }
+
+   ftags::BufferExtractor extractor{buffer};
+   ftags::ProjectDb       restoredTagsDb;
+   ftags::ProjectDb::deserialize(extractor, restoredTagsDb);
+
+   const std::vector<const ftags::Record*> countDefinition = restoredTagsDb.findDefinition("count");
+   ASSERT_EQ(1, countDefinition.size());
+
+   const std::vector<const ftags::Record*> countReference = restoredTagsDb.findReference("count");
+   ASSERT_EQ(1, countReference.size());
+
+   const std::vector<const ftags::Record*> allCount = restoredTagsDb.findSymbol("count");
+   ASSERT_EQ(2, allCount.size());
+
+   const std::vector<const ftags::Record*> argReference = restoredTagsDb.findReference("arg");
+   ASSERT_EQ(3, argReference.size());
+
+   const std::vector<const ftags::Record*> allArg = restoredTagsDb.findSymbol("arg");
+   ASSERT_EQ(6, allArg.size());
 }
