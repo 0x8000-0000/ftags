@@ -22,16 +22,11 @@ void ftags::TranslationUnit::updateIndices()
       m_recordSpans.begin(), m_recordSpans.end(), [](std::shared_ptr<RecordSpan>& rs) { rs->updateIndices(); });
 }
 
-void ftags::TranslationUnit::copyRecords(const TranslationUnit& original, RecordSpanCache& spanCache)
+void ftags::TranslationUnit::copyRecords(const TranslationUnit& original,
+                                         RecordSpanCache&       spanCache,
+                                         const KeyMap&          symbolKeyMapping,
+                                         const KeyMap&          fileNameKeyMapping)
 {
-   /*
-    * replace keys from translation unit's table with keys from the project
-    * database
-    */
-
-   ftags::FlatMap<Key, Key> symbolKeyMapping   = m_symbolTable.mergeStringTable(original.m_symbolTable);
-   ftags::FlatMap<Key, Key> fileNameKeyMapping = m_fileNameTable.mergeStringTable(original.m_fileNameTable);
-
    /*
     * copy the original records
     */
@@ -58,12 +53,14 @@ void ftags::TranslationUnit::copyRecords(const TranslationUnit& original, Record
 #endif
 }
 
-void ftags::TranslationUnit::addCursor(const ftags::Cursor& cursor)
+void ftags::TranslationUnit::addCursor(const ftags::Cursor&    cursor,
+                                       ftags::StringTable::Key symbolNameKey,
+                                       ftags::StringTable::Key fileNameKey)
 {
    ftags::Record newRecord = {};
 
-   newRecord.symbolNameKey = m_symbolTable.addKey(cursor.symbolName);
-   newRecord.fileNameKey   = m_fileNameTable.addKey(cursor.location.fileName);
+   newRecord.symbolNameKey = symbolNameKey;
+   newRecord.fileNameKey   = fileNameKey;
 
    newRecord.attributes = cursor.attributes;
 

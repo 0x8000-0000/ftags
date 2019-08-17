@@ -41,7 +41,8 @@ int main(int argc, char* argv[])
    ftags::TranslationUnit translationUnit = ftags::TranslationUnit::parse(argv[1], arguments, symbolTable, fileNameTable);
 
    ftags::ProjectDb tagsDb;
-   const ftags::TranslationUnit& mergedTranslationUnit = tagsDb.addTranslationUnit(argv[1], translationUnit);
+   const ftags::TranslationUnit& mergedTranslationUnit =
+      tagsDb.addTranslationUnit(argv[1], translationUnit, symbolTable, fileNameTable);
 
    dumpTranslationUnit(translationUnit, std::string(argv[1]) + ".dump.orig");
    dumpTranslationUnit(mergedTranslationUnit, std::string(argv[1]) + ".dump.merged");

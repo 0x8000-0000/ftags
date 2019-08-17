@@ -289,7 +289,16 @@ static void getSymbolType(CXCursor clangCursor, ftags::Attributes& attributes)
    attributes.type = symbolType;
 }
 
-void processCursor(ftags::TranslationUnit* translationUnit, CXCursor clangCursor)
+struct TranslationUnitAccumulator
+{
+   ftags::TranslationUnit& translationUnit;
+   ftags::StringTable&     symbolTable;
+   ftags::StringTable&     fileNameTable;
+
+   void processCursor(CXCursor clangCursor);
+};
+
+void TranslationUnitAccumulator::processCursor(CXCursor clangCursor)
 {
    ftags::Cursor cursor = {};
    // get it early to aid debugging
@@ -359,14 +368,17 @@ void processCursor(ftags::TranslationUnit* translationUnit, CXCursor clangCursor
 
    cursor.unifiedSymbol = unifiedSymbol.c_str();
 
-   translationUnit->addCursor(cursor);
+   const ftags::StringTable::Key symbolNameKey = symbolTable.addKey(cursor.symbolName);
+   const ftags::StringTable::Key fileNameKey   = fileNameTable.addKey(cursor.location.fileName);
+
+   translationUnit.addCursor(cursor, symbolNameKey, fileNameKey);
 }
 
 CXChildVisitResult visitTranslationUnit(CXCursor cursor, CXCursor /* parent */, CXClientData clientData)
 {
-   ftags::TranslationUnit* translationUnit = reinterpret_cast<ftags::TranslationUnit*>(clientData);
+   TranslationUnitAccumulator* accumulator = reinterpret_cast<TranslationUnitAccumulator*>(clientData);
 
-   processCursor(translationUnit, cursor);
+   accumulator->processCursor(cursor);
 
    clang_visitChildren(cursor, visitTranslationUnit, clientData);
    return CXChildVisit_Continue;
@@ -374,12 +386,14 @@ CXChildVisitResult visitTranslationUnit(CXCursor cursor, CXCursor /* parent */, 
 
 } // namespace
 
-ftags::TranslationUnit ftags::TranslationUnit::parse(const std::string&       fileName,
+ftags::TranslationUnit ftags::TranslationUnit::parse(const std::string&              fileName,
                                                      const std::vector<const char*>& arguments,
-                                                     StringTable&             symbolTable,
-                                                     StringTable&             fileNameTable)
+                                                     StringTable&                    symbolTable,
+                                                     StringTable&                    fileNameTable)
 {
-   ftags::TranslationUnit translationUnit(symbolTable, fileNameTable);
+   ftags::TranslationUnit translationUnit;
+
+   TranslationUnitAccumulator accumulator{translationUnit, symbolTable, fileNameTable};
 
    auto clangIndex = std::unique_ptr<void, CXIndexDestroyer>(clang_createIndex(/* excludeDeclarationsFromPCH = */ 0,
                                                                                /* displayDiagnostics         = */ 0));
@@ -428,7 +442,7 @@ ftags::TranslationUnit ftags::TranslationUnit::parse(const std::string&       fi
          std::unique_ptr<CXTranslationUnitImpl, CXTranslationUnitDestroyer>(translationUnitPtr);
 
       CXCursor cursor = clang_getTranslationUnitCursor(clangTranslationUnit.get());
-      clang_visitChildren(cursor, visitTranslationUnit, &translationUnit);
+      clang_visitChildren(cursor, visitTranslationUnit, &accumulator);
    }
    else
    {

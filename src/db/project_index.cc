@@ -118,7 +118,7 @@ void parseTranslationUnit(ftags::ProjectDb&                        projectDb,
          spdlog::info("Loaded {} records from {}, {} from main file", translationUnit.getRecordCount(), request.fileName, translationUnit.getRecords(true).size());
 
          const ftags::TranslationUnit& mergedTranslationUnit =
-            projectDb.addTranslationUnit(request.fileName, translationUnit);
+            projectDb.addTranslationUnit(request.fileName, translationUnit, symbolTable, fileNameTable);
 
          dumpTranslationUnit(translationUnit, request.fileName + ".orig");
          dumpTranslationUnit(mergedTranslationUnit, request.fileName + ".merged");

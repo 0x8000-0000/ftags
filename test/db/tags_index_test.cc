@@ -45,7 +45,7 @@ TEST(TagsIndexTest, IndexOneFile)
       ftags::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
 
    ftags::ProjectDb tagsDb;
-   tagsDb.addTranslationUnit(helloPath, helloCpp);
+   tagsDb.addTranslationUnit(helloPath, helloCpp, symbolTable, fileNameTable);
 
    ASSERT_TRUE(tagsDb.isFileIndexed(helloPath));
 }
@@ -73,7 +73,7 @@ TEST(TagsIndexTest, IndexOneFileHasFunctions)
       ftags::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
 
    ftags::ProjectDb tagsDb;
-   tagsDb.addTranslationUnit(helloPath, helloCpp);
+   tagsDb.addTranslationUnit(helloPath, helloCpp, symbolTable, fileNameTable);
 
    ASSERT_TRUE(tagsDb.isFileIndexed(helloPath));
 
@@ -99,7 +99,7 @@ TEST(TagsIndexTest, HelloWorldHasMainFunction)
       ftags::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
 
    ftags::ProjectDb tagsDb;
-   tagsDb.addTranslationUnit(helloPath, helloCpp);
+   tagsDb.addTranslationUnit(helloPath, helloCpp, symbolTable, fileNameTable);
 
    const std::vector<const ftags::Record*> results = tagsDb.findDefinition("main");
    ASSERT_EQ(1, results.size());
@@ -125,7 +125,7 @@ TEST(TagsIndexTest, HelloWorldCallsPrintfFunction)
       ftags::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
 
    ftags::ProjectDb tagsDb;
-   tagsDb.addTranslationUnit(helloPath, helloCpp);
+   tagsDb.addTranslationUnit(helloPath, helloCpp, symbolTable, fileNameTable);
 
    std::stringstream output;
 
@@ -164,7 +164,7 @@ TEST(TagsIndexTest, DistinguishDeclarationFromDefinition)
       ftags::TranslationUnit::parse(translationUnitPath, arguments, symbolTable, fileNameTable);
 
    ftags::ProjectDb tagsDb;
-   tagsDb.addTranslationUnit(translationUnitPath, translationUnit);
+   tagsDb.addTranslationUnit(translationUnitPath, translationUnit, symbolTable, fileNameTable);
 
    const std::vector<const ftags::Record*> alphaDefinition = tagsDb.findDefinition("alpha");
    ASSERT_EQ(1, alphaDefinition.size());
@@ -209,7 +209,7 @@ TEST(TagsIndexTest, ManageTwoTranslationUnits)
       const ftags::TranslationUnit helloCpp =
          ftags::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
 
-      tagsDb.addTranslationUnit(helloPath, helloCpp);
+      tagsDb.addTranslationUnit(helloPath, helloCpp, symbolTable, fileNameTable);
    }
 
    {
@@ -230,7 +230,7 @@ TEST(TagsIndexTest, ManageTwoTranslationUnits)
       const ftags::TranslationUnit translationUnit =
          ftags::TranslationUnit::parse(translationUnitPath, arguments, symbolTable, fileNameTable);
 
-      tagsDb.addTranslationUnit(translationUnitPath, translationUnit);
+      tagsDb.addTranslationUnit(translationUnitPath, translationUnit, symbolTable, fileNameTable);
    }
 
    const std::vector<const ftags::Record*> mainDefinition = tagsDb.findDefinition("main");
@@ -265,7 +265,7 @@ TEST(TagsIndexTest, MultiModuleEliminateDuplicates)
       const ftags::TranslationUnit libCpp =
          ftags::TranslationUnit::parse(libPath, arguments, symbolTable, fileNameTable);
 
-      tagsDb.addTranslationUnit(libPath, libCpp);
+      tagsDb.addTranslationUnit(libPath, libCpp, symbolTable, fileNameTable);
    }
 
    {
@@ -277,7 +277,7 @@ TEST(TagsIndexTest, MultiModuleEliminateDuplicates)
       const ftags::TranslationUnit testCpp =
          ftags::TranslationUnit::parse(testPath, arguments, symbolTable, fileNameTable);
 
-      tagsDb.addTranslationUnit(testPath, testCpp);
+      tagsDb.addTranslationUnit(testPath, testCpp, symbolTable, fileNameTable);
    }
 
    const std::vector<const ftags::Record*> mainDefinition = tagsDb.findDefinition("main");
@@ -312,7 +312,7 @@ TEST(TagsIndexTest, InflateResults)
       const ftags::TranslationUnit libCpp =
          ftags::TranslationUnit::parse(libPath, arguments, symbolTable, fileNameTable);
 
-      tagsDb.addTranslationUnit(libPath, libCpp);
+      tagsDb.addTranslationUnit(libPath, libCpp, symbolTable, fileNameTable);
    }
 
    {
@@ -324,7 +324,7 @@ TEST(TagsIndexTest, InflateResults)
       const ftags::TranslationUnit testCpp =
          ftags::TranslationUnit::parse(testPath, arguments, symbolTable, fileNameTable);
 
-      tagsDb.addTranslationUnit(testPath, testCpp);
+      tagsDb.addTranslationUnit(testPath, testCpp, symbolTable, fileNameTable);
    }
 
    const std::vector<const ftags::Record*> functionDeclaration = tagsDb.findDeclaration("function");
@@ -364,7 +364,7 @@ TEST(TagsIndexTest, SerializeDeserializeResults)
       const ftags::TranslationUnit libCpp =
          ftags::TranslationUnit::parse(libPath, arguments, symbolTable, fileNameTable);
 
-      tagsDb.addTranslationUnit(libPath, libCpp);
+      tagsDb.addTranslationUnit(libPath, libCpp, symbolTable, fileNameTable);
    }
 
    {
@@ -376,7 +376,7 @@ TEST(TagsIndexTest, SerializeDeserializeResults)
       const ftags::TranslationUnit testCpp =
          ftags::TranslationUnit::parse(testPath, arguments, symbolTable, fileNameTable);
 
-      tagsDb.addTranslationUnit(testPath, testCpp);
+      tagsDb.addTranslationUnit(testPath, testCpp, symbolTable, fileNameTable);
    }
 
    const std::vector<const ftags::Record*> functionDeclaration = tagsDb.findDeclaration("function");
@@ -424,7 +424,7 @@ TEST(TagsIndexTest, FindVariables)
       const ftags::TranslationUnit libCpp =
          ftags::TranslationUnit::parse(libPath, arguments, symbolTable, fileNameTable);
 
-      tagsDb.addTranslationUnit(libPath, libCpp);
+      tagsDb.addTranslationUnit(libPath, libCpp, symbolTable, fileNameTable);
    }
 
    {
@@ -436,7 +436,7 @@ TEST(TagsIndexTest, FindVariables)
       const ftags::TranslationUnit testCpp =
          ftags::TranslationUnit::parse(testPath, arguments, symbolTable, fileNameTable);
 
-      tagsDb.addTranslationUnit(testPath, testCpp);
+      tagsDb.addTranslationUnit(testPath, testCpp, symbolTable, fileNameTable);
    }
 
    const std::vector<const ftags::Record*> countDefinition = tagsDb.findDefinition("count");

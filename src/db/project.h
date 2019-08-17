@@ -471,6 +471,8 @@ public:
    static RecordSpanCache deserialize(ftags::BufferExtractor& extractor);
 };
 
+using KeyMap = ftags::FlatMap<ftags::StringTable::Key, ftags::StringTable::Key>;
+
 /** Contains all the symbols in a C++ translation unit.
  */
 class TranslationUnit
@@ -478,27 +480,14 @@ class TranslationUnit
 public:
    using Key = ftags::StringTable::Key;
 
-   TranslationUnit(StringTable& symbolTable, StringTable& fileNameTable) :
-      m_symbolTable{symbolTable},
-      m_fileNameTable{fileNameTable}
-   {
-   }
-
-   void copyRecords(const TranslationUnit& other, RecordSpanCache& spanCache);
+   void copyRecords(const TranslationUnit& other,
+                    RecordSpanCache&       spanCache,
+                    const KeyMap&          symbolKeyMapping,
+                    const KeyMap&          fileNameKeyMapping);
 
    Key getFileNameKey() const
    {
       return m_fileNameKey;
-   }
-
-   const char* getSymbolName(const Record& record) const
-   {
-      return m_symbolTable.getString(record.symbolNameKey);
-   }
-
-   const char* getFileName(const Record& record) const
-   {
-      return m_fileNameTable.getString(record.fileNameKey);
    }
 
    /*
@@ -551,7 +540,7 @@ public:
                                 StringTable&                    symbolTable,
                                 StringTable&                    fileNameTable);
 
-   void addCursor(const Cursor& cursor);
+   void addCursor(const Cursor& cursor, StringTable::Key symbolNameKey, StringTable::Key fileNameKey);
 
    /*
     * Query helper
@@ -619,10 +608,6 @@ private:
 
    Key m_currentRecordSpanFileKey = 0;
 
-   // tables managed by the owner of this translation unit
-   StringTable& m_symbolTable;
-   StringTable& m_fileNameTable;
-
    void updateIndices();
 };
 
@@ -675,7 +660,9 @@ public:
    ProjectDb();
 
    const ftags::TranslationUnit& addTranslationUnit(const std::string&     fileName,
-                                                    const TranslationUnit& translationUnit);
+                                                    const TranslationUnit& translationUnit,
+                                                    const StringTable&     symbolTable,
+                                                    const StringTable&     fileNameTable);
 
    void removeTranslationUnit(const std::string& fileName);
 

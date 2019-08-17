@@ -44,7 +44,9 @@ ftags::Cursor ftags::ProjectDb::inflateRecord(const ftags::Record* record) const
 }
 
 const ftags::TranslationUnit& ftags::ProjectDb::addTranslationUnit(const std::string&     fullPath,
-                                                                   const TranslationUnit& translationUnit)
+                                                                   const TranslationUnit& translationUnit,
+                                                                   const StringTable&     symbolTable,
+                                                                   const StringTable&     fileNameTable)
 {
    /*
     * protect access
@@ -59,8 +61,15 @@ const ftags::TranslationUnit& ftags::ProjectDb::addTranslationUnit(const std::st
    /*
     * clone the records using the project's symbol table
     */
-   m_translationUnits.emplace_back(m_symbolTable, m_fileNameTable);
-   m_translationUnits.back().copyRecords(translationUnit, m_recordSpanCache);
+   m_translationUnits.emplace_back(/* m_symbolTable, m_fileNameTable */);
+
+   /*
+    * merge the other symbols into this database
+    */
+   KeyMap symbolKeyMapping   = m_symbolTable.mergeStringTable(symbolTable);
+   KeyMap fileNameKeyMapping = m_fileNameTable.mergeStringTable(fileNameTable);
+
+   m_translationUnits.back().copyRecords(translationUnit, m_recordSpanCache, symbolKeyMapping, fileNameKeyMapping);
 
    /*
     * register the name of the translation unit
@@ -194,7 +203,7 @@ void ftags::ProjectDb::deserialize(ftags::BufferExtractor& extractor, ftags::Pro
 
    for (size_t ii = 0; ii < translationUnitCount; ii++)
    {
-      projectDb.m_translationUnits.emplace_back(projectDb.m_fileNameTable, projectDb.m_symbolTable);
+      projectDb.m_translationUnits.emplace_back(/* projectDb.m_fileNameTable, projectDb.m_symbolTable */);
       TranslationUnit::deserialize(extractor, projectDb.m_translationUnits.back(), projectDb.m_recordSpanCache);
    }
 }
