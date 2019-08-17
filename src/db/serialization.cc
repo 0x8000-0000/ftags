@@ -43,7 +43,7 @@ ftags::Serializer<std::map<uint32_t, uint32_t>>::computeSerializedSize(const std
 
 template <>
 void ftags::Serializer<std::map<uint32_t, uint32_t>>::serialize(const std::map<uint32_t, uint32_t>& val,
-                                                                       ftags::BufferInsertor& insertor)
+                                                                ftags::BufferInsertor&              insertor)
 {
    ftags::SerializedObjectHeader header = {};
    insertor << header;
@@ -58,7 +58,8 @@ void ftags::Serializer<std::map<uint32_t, uint32_t>>::serialize(const std::map<u
 }
 
 template <>
-std::map<uint32_t, uint32_t> ftags::Serializer<std::map<uint32_t, uint32_t>>::deserialize(ftags::BufferExtractor& extractor)
+std::map<uint32_t, uint32_t>
+ftags::Serializer<std::map<uint32_t, uint32_t>>::deserialize(ftags::BufferExtractor& extractor)
 {
    std::map<uint32_t, uint32_t> retval;
 
@@ -110,9 +111,47 @@ std::vector<char> ftags::Serializer<std::vector<char>>::deserialize(ftags::Buffe
    extractor >> header;
 
    uint64_t vecSize = 0;
-   extractor >> vecSize; 
+   extractor >> vecSize;
 
    std::vector<char> retval(/* size = */ vecSize);
+   extractor >> retval;
+
+   return retval;
+}
+
+/*
+ * std::vector<uint64_t>
+ */
+
+template <>
+std::size_t ftags::Serializer<std::vector<uint64_t>>::computeSerializedSize(const std::vector<uint64_t>& val)
+{
+   return sizeof(ftags::SerializedObjectHeader) + sizeof(uint64_t) + val.size();
+}
+
+template <>
+void ftags::Serializer<std::vector<uint64_t>>::serialize(const std::vector<uint64_t>& val,
+                                                         ftags::BufferInsertor&       insertor)
+{
+   ftags::SerializedObjectHeader header{"std::vector<uint64_t>"};
+   insertor << header;
+
+   const uint64_t vecSize = val.size();
+   insertor << vecSize;
+
+   insertor << val;
+}
+
+template <>
+std::vector<uint64_t> ftags::Serializer<std::vector<uint64_t>>::deserialize(ftags::BufferExtractor& extractor)
+{
+   ftags::SerializedObjectHeader header = {};
+   extractor >> header;
+
+   uint64_t vecSize = 0;
+   extractor >> vecSize;
+
+   std::vector<uint64_t> retval(/* size = */ vecSize);
    extractor >> retval;
 
    return retval;
