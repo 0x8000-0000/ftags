@@ -50,7 +50,7 @@ void ftags::TranslationUnit::copyRecords(const TranslationUnit& original, Record
 #else
    for (const std::shared_ptr<RecordSpan>& other : original.m_recordSpans)
    {
-      std::shared_ptr<RecordSpan> newSpan = std::make_shared<RecordSpan>(m_symbolTable, m_fileNameTable);
+      std::shared_ptr<RecordSpan> newSpan = std::make_shared<RecordSpan>();
       newSpan->addRecords(*other, symbolKeyMapping, fileNameKeyMapping);
       std::shared_ptr<RecordSpan> sharedSpan = spanCache.add(newSpan);
       m_recordSpans.push_back(sharedSpan);
@@ -76,7 +76,7 @@ void ftags::TranslationUnit::addCursor(const ftags::Cursor& cursor)
       /*
        * Open a new span because the file name key is different
        */
-      m_recordSpans.push_back(std::make_shared<RecordSpan>(m_symbolTable, m_fileNameTable));
+      m_recordSpans.push_back(std::make_shared<RecordSpan>());
       m_currentRecordSpanFileKey = newRecord.fileNameKey;
    }
 

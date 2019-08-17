@@ -69,22 +69,30 @@ private:
 
 } // anonymous namespace
 
-void ftags::RecordSpan::dumpRecords(std::ostream& os) const
+void ftags::RecordSpan::dumpRecords(std::ostream&             os,
+                                    const ftags::StringTable& symbolTable,
+                                    const ftags::StringTable& fileNameTable) const
 {
-   std::for_each(m_records.cbegin(), m_records.cend(), [&os, this](const Record& record) {
-      const char* symbolName = getSymbolName(record);
-      const char* fileName   = getFileName(record);
+   std::for_each(m_records.cbegin(), m_records.cend(), [&os, symbolTable, fileNameTable](const Record& record) {
+      const char* symbolName = symbolTable.getString(record.symbolNameKey);
+      const char* fileName   = fileNameTable.getString(record.fileNameKey);
       std::string symbolType = record.attributes.getRecordType();
       os << "    " << symbolName << "    " << symbolType << "   " << fileName << ':' << record.startLine << ':'
          << record.startColumn << std::endl;
    });
 }
 
-void ftags::TranslationUnit::dumpRecords(std::ostream& os) const
+void ftags::TranslationUnit::dumpRecords(std::ostream&             os,
+                                         const ftags::StringTable& symbolTable,
+                                         const ftags::StringTable& fileNameTable) const
 {
    os << " Found " << getRecordCount() << " records." << std::endl;
 
-   std::for_each(m_recordSpans.cbegin(), m_recordSpans.cend(), [&os](const std::shared_ptr<RecordSpan>& rs) { rs->dumpRecords(os); });
+   std::for_each(m_recordSpans.cbegin(),
+                 m_recordSpans.cend(),
+                 [&os, symbolTable, fileNameTable](const std::shared_ptr<RecordSpan>& rs) {
+                    rs->dumpRecords(os, symbolTable, fileNameTable);
+                 });
 }
 
 void ftags::ProjectDb::dumpRecords(std::ostream& os) const
@@ -101,7 +109,7 @@ void ftags::ProjectDb::dumpRecords(std::ostream& os) const
          {
             os << "File: unnamed" << std::endl;
          }
-         translationUnit.dumpRecords(os);
+         translationUnit.dumpRecords(os, m_symbolTable, m_fileNameTable);
       });
 }
 

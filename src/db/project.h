@@ -288,25 +288,9 @@ public:
 
    using Key = ftags::StringTable::Key;
 
-   RecordSpan(StringTable& symbolTable, StringTable& fileNameTable) :
-      m_symbolTable{symbolTable},
-      m_fileNameTable{fileNameTable}
-   {
-   }
-
    Key getFileNameKey() const
    {
       return m_fileNameKey;
-   }
-
-   const char* getSymbolName(const Record& record) const
-   {
-      return m_symbolTable.getString(record.symbolNameKey);
-   }
-
-   const char* getFileName(const Record& record) const
-   {
-      return m_fileNameTable.getString(record.fileNameKey);
    }
 
    /*
@@ -395,7 +379,9 @@ public:
    /*
     * Debugging
     */
-   void dumpRecords(std::ostream& os) const;
+   void dumpRecords(std::ostream&             os,
+                    const ftags::StringTable& symbolTable,
+                    const ftags::StringTable& fileNameTable) const;
 
    std::size_t getHash() const
    {
@@ -408,10 +394,6 @@ private:
 
    // persistent data
    std::vector<Record> m_records;
-
-   // tables managed by the owner of this translation unit
-   StringTable& m_symbolTable;
-   StringTable& m_fileNameTable;
 
    // 128 bit hash of the record span
    std::size_t m_hash = 0;
@@ -614,7 +596,9 @@ public:
    /*
     * Debugging
     */
-   void dumpRecords(std::ostream& os) const;
+   void dumpRecords(std::ostream&             os,
+                    const ftags::StringTable& symbolTable,
+                    const ftags::StringTable& fileNameTable) const;
 
    /*
     * Serialization interface
