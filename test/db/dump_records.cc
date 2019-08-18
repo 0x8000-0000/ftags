@@ -16,6 +16,9 @@ void dumpTranslationUnit(const ftags::TranslationUnit& translationUnit, const st
       out << record->startLine << ':' << record->startColumn << "  " << record->attributes.getRecordFlavor() << ' '
           << record->attributes.getRecordType() << " >> " << record->symbolNameKey << std::endl;
    }
+#else
+   (void)translationUnit;
+   (void)fileName;
 #endif
 }
 

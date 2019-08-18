@@ -37,6 +37,8 @@ message Command
    string symbolName = 4;
    string namespaceName = 5;
    string fileName = 6;
+
+   repeated string translationUnit = 10;
 }
 
 message Status
@@ -62,12 +64,16 @@ message Status
    bytes cursorSet = 99;
 }
 
+message TranslationUnitArguments
+{
+   string fileName = 3;
+   repeated string argument = 4;
+}
+
 message IndexRequest
 {
    string projectName = 1;
    string directoryName = 2;
-   string fileName = 3;
-   repeated string argument = 4;
+   repeated TranslationUnitArguments translationUnit = 3;
    bool shutdownAfter = 5;
 }
-

@@ -22,6 +22,8 @@
 #include <clang-c/CXCompilationDatabase.h>
 #include <clang-c/Index.h>
 
+#include <clara.hpp>
+
 #include <zmq.hpp>
 
 #include <spdlog/spdlog.h>
@@ -29,15 +31,42 @@
 #include <string>
 #include <vector>
 
+namespace
+{
+bool        showHelp = false;
+std::string projectName;
+std::string dirName;
+int         groupSize = 5;
+
+auto cli = clara::Help(showHelp) |
+           clara::Opt(groupSize, "group")["--group"]("How many translation units to parse at once") |
+           clara::Opt(projectName, "project")["-p"]["--project"]("Project name") |
+           clara::Arg(dirName, "dir")("Path to directory containing compile_commands.json");
+
+} // anonymous namespace
+
 int main(int argc, char* argv[])
 {
    GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+   auto result = cli.parse(clara::Args(argc, argv));
+   if (!result)
+   {
+      spdlog::error("Failed to parse command line options: {}", result.errorMessage());
+      exit(-1);
+   }
+
+   if (showHelp)
+   {
+      std::cout << cli << std::endl;
+      exit(0);
+   }
 
    zmq::context_t context(1);
 
    ftags::ZmqCentralLogger centralLogger{context, std::string{"scanner"}};
 
-   spdlog::info("Indexer started");
+   spdlog::info("Started");
 
    if (argc < 2)
    {
@@ -51,10 +80,8 @@ int main(int argc, char* argv[])
 
    socket.bind(connectionString);
 
-   spdlog::info("Connection established");
-
    CXCompilationDatabase_Error ccderror            = CXCompilationDatabase_NoError;
-   CXCompilationDatabase       compilationDatabase = clang_CompilationDatabase_fromDirectory(argv[1], &ccderror);
+   CXCompilationDatabase compilationDatabase = clang_CompilationDatabase_fromDirectory(dirName.c_str(), &ccderror);
 
    if (CXCompilationDatabase_NoError == ccderror)
    {
@@ -64,6 +91,10 @@ int main(int argc, char* argv[])
       CXCompileCommands compileCommands = clang_CompilationDatabase_getAllCompileCommands(compilationDatabase);
 
       const unsigned compilationCount = clang_CompileCommands_getSize(compileCommands);
+
+      ftags::IndexRequest indexRequest{};
+      indexRequest.set_projectname(projectName);
+      indexRequest.set_directoryname(dirName);
 
       for (unsigned ii = 0; ii < compilationCount; ii++)
       {
@@ -76,10 +107,9 @@ int main(int argc, char* argv[])
          std::vector<CXString> argumentsAsCXString;
          argumentsAsCXString.reserve(argCount);
 
-         ftags::IndexRequest indexRequest{};
-         indexRequest.set_projectname("main");
-         indexRequest.set_directoryname(clang_getCString(dirNameString));
-         indexRequest.set_filename(clang_getCString(fileNameString));
+         ftags::TranslationUnitArguments* translationUnit = indexRequest.add_translationunit();
+
+         translationUnit->set_filename(clang_getCString(fileNameString));
 
          bool skipFileNames = false;
 
@@ -98,12 +128,35 @@ int main(int argc, char* argv[])
             if ((argumentText[0] == '-') && ((argumentText[1] == 'c') || (argumentText[1] == 'o')))
             {
                skipFileNames = true;
-               continue;
+            }
+            else
+            {
+               translationUnit->add_argument(argumentText);
             }
 
-            indexRequest.add_argument(argumentText);
+            clang_disposeString(cxString);
          }
 
+         if (indexRequest.translationunit_size() == groupSize)
+         {
+            std::string serializedRequest;
+            indexRequest.SerializeToString(&serializedRequest);
+
+            zmq::message_t request(serializedRequest.size());
+            memcpy(request.data(), serializedRequest.data(), serializedRequest.size());
+            socket.send(request);
+
+            spdlog::info("Enqueued {} of {}: {}", ii, compilationCount, clang_getCString(fileNameString));
+
+            indexRequest.clear_translationunit();
+         }
+
+         clang_disposeString(fileNameString);
+         clang_disposeString(dirNameString);
+      }
+
+      if (indexRequest.translationunit_size())
+      {
          std::string serializedRequest;
          indexRequest.SerializeToString(&serializedRequest);
 
@@ -111,15 +164,9 @@ int main(int argc, char* argv[])
          memcpy(request.data(), serializedRequest.data(), serializedRequest.size());
          socket.send(request);
 
-         spdlog::info("Enqueued {} of {}: {}", ii, compilationCount, clang_getCString(fileNameString));
+         spdlog::info("Enqueued last batch of {} translation units", indexRequest.translationunit_size());
 
-         for (CXString cxString : argumentsAsCXString)
-         {
-            clang_disposeString(cxString);
-         }
-
-         clang_disposeString(fileNameString);
-         clang_disposeString(dirNameString);
+         indexRequest.clear_translationunit();
       }
 
       spdlog::info("Done with enqueueing");
@@ -130,7 +177,7 @@ int main(int argc, char* argv[])
 
    clang_CompilationDatabase_dispose(compilationDatabase);
 
-   spdlog::info("Indexer shutting down");
+   spdlog::info("Shutting down");
 
    socket.close();
 

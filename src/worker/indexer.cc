@@ -138,26 +138,37 @@ int main()
          indexRequest.ParseFromArray(message.data(), static_cast<int>(message.size()));
          shutdownRequested = indexRequest.shutdownafter();
 
-         spdlog::info("Received message");
-
-         spdlog::info("Processing {}", indexRequest.filename());
-
-         std::vector<const char*> arguments;
-         const int                argCount = indexRequest.argument_size();
-         arguments.reserve(static_cast<size_t>(argCount));
-         for (int ii{0}; ii < argCount; ++ii)
-         {
-            arguments.push_back(indexRequest.argument(ii).c_str());
-         }
+         spdlog::info("Received index request with {} translation units", indexRequest.translationunit_size());
 
          ftags::ProjectDb projectDb;
 
-         ftags::parseOneFile(indexRequest.filename(), arguments, projectDb);
+         for (int tt = 0; tt < indexRequest.translationunit_size(); tt++)
+         {
+            ftags::TranslationUnitArguments translationUnitArguments = indexRequest.translationunit(tt);
+
+            spdlog::info("Processing {}", translationUnitArguments.filename());
+
+            std::vector<const char*> arguments;
+            const int                argCount = translationUnitArguments.argument_size();
+            arguments.reserve(static_cast<size_t>(argCount));
+            for (int ii{0}; ii < argCount; ++ii)
+            {
+               arguments.push_back(translationUnitArguments.argument(ii).c_str());
+            }
+
+            ftags::ProjectDb translationUnitDb;
+            ftags::parseOneFile(translationUnitArguments.filename(), arguments, translationUnitDb);
+            projectDb.mergeFrom(translationUnitDb);
+         }
 
          ftags::Command command{};
          command.set_source("indexer");
          command.set_type(ftags::Command::Type::Command_Type_UPDATE_TRANSLATION_UNIT);
-         command.set_filename(indexRequest.filename());
+
+         for (int tt = 0; tt < indexRequest.translationunit_size(); tt++)
+         {
+            command.add_translationunit(indexRequest.translationunit(tt).filename());
+         }
 
          const std::size_t headerSize = command.ByteSizeLong();
          zmq::message_t    header(headerSize);

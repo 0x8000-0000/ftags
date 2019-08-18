@@ -21,6 +21,8 @@
 
 #include <zmq.hpp>
 
+#include <clara.hpp>
+
 #include <spdlog/spdlog.h>
 
 #include <chrono>
@@ -178,11 +180,30 @@ void dispatchShutdown(zmq::socket_t& socket)
 
    socket.send(reply);
 }
+
+bool        showHelp = false;
+std::string projectName;
+
+auto cli = clara::Help(showHelp) | clara::Opt(projectName, "project")["-p"]["--project"]("Project name");
+
 } // namespace
 
 int main(int argc, char* argv[])
 {
    GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+   auto result = cli.parse(clara::Args(argc, argv));
+   if (!result)
+   {
+      spdlog::error("Failed to parse command line options: {}", result.errorMessage());
+      exit(-1);
+   }
+
+   if (showHelp)
+   {
+      std::cout << cli << std::endl;
+      exit(0);
+   }
 
    ftags::ProjectDb projectDb;
 

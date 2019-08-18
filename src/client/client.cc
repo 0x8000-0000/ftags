@@ -25,6 +25,7 @@
 #include <spdlog/spdlog.h>
 
 #include <filesystem>
+#include <iostream>
 #include <string>
 
 namespace
@@ -132,6 +133,8 @@ void dispatchDumpTranslationUnit(zmq::socket_t& socket, const std::string& fileN
    }
 }
 
+bool showHelp = false;
+
 bool        findAll             = false;
 bool        findFunction        = false;
 bool        dumpTranslationUnit = false;
@@ -140,7 +143,8 @@ bool        doPing              = false;
 std::string symbolName;
 std::string fileName;
 
-auto cli = clara::Opt(doQuit)["-q"]["--quit"]("Shutdown server") | clara::Opt(doPing)["-i"]["--ping"]("Ping server") |
+auto cli = clara::Help(showHelp) | clara::Opt(doQuit)["-q"]["--quit"]("Shutdown server") |
+           clara::Opt(doPing)["-i"]["--ping"]("Ping server") |
            clara::Opt(findAll)["-a"]["--all"]("Find all occurrences of symbol") |
            clara::Opt(findFunction)["-f"]["--function"]("Find function") |
            clara::Opt(dumpTranslationUnit)["--dump"]("Dump symbols for translation unit") |
@@ -158,6 +162,12 @@ int main(int argc, char* argv[])
    {
       spdlog::error("Failed to parse command line options: {}", result.errorMessage());
       exit(-1);
+   }
+
+   if (showHelp)
+   {
+      std::cout << cli << std::endl;
+      exit(0);
    }
 
    const char*       xdgRuntimeDir  = std::getenv("XDG_RUNTIME_DIR");
