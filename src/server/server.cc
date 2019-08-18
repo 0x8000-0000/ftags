@@ -29,6 +29,7 @@
 #include <string>
 #include <thread>
 
+#include <cstdlib>
 #include <ctime>
 
 namespace
@@ -77,7 +78,9 @@ void dispatchFindAll(zmq::socket_t& socket, const ftags::ProjectDb& projectDb, c
    socket.send(resultsMessage);
 }
 
-void dispatchDumpTranslationUnit(zmq::socket_t& socket, const ftags::ProjectDb& projectDb, const std::string& fileName)
+void dispatchDumpTranslationUnit(zmq::socket_t&          socket,
+                                 const ftags::ProjectDb& projectDb,
+                                 const std::string&      fileName)
 {
    ftags::Status status{};
    status.set_timestamp(getTimeStamp());
@@ -121,6 +124,10 @@ int main(int argc, char* argv[])
       return -1;
    }
 
+   const char* xdgRuntimeDir = std::getenv("XDG_RUNTIME_DIR");
+
+   const std::string socketLocation = fmt::format("ipc://{}/ftags_server", xdgRuntimeDir);
+
    ftags::ProjectDb projectDb;
 
    ftags::parseProject(argv[1], projectDb);
@@ -128,7 +135,7 @@ int main(int argc, char* argv[])
    //  Prepare our context and socket
    zmq::context_t context(1);
    zmq::socket_t  socket(context, ZMQ_REP);
-   socket.bind("tcp://*:5555");
+   socket.bind(socketLocation);
 
    while (true)
    {

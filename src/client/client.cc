@@ -160,12 +160,16 @@ int main(int argc, char* argv[])
       exit(-1);
    }
 
+   const char* xdgRuntimeDir = std::getenv("XDG_RUNTIME_DIR");
+
+   const std::string socketLocation = fmt::format("ipc://{}/ftags_server", xdgRuntimeDir);
+
    //  Prepare our context and socket
    zmq::context_t context(1);
    zmq::socket_t  socket(context, ZMQ_REQ);
 
    spdlog::info("Connecting to ftags server...");
-   socket.connect("tcp://localhost:5555");
+   socket.connect(socketLocation);
 
    ftags::Command command{};
    command.set_source("client");
