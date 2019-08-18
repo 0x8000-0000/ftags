@@ -108,7 +108,7 @@ void ftags::TranslationUnit::deserialize(ftags::BufferExtractor& extractor,
                                          ftags::TranslationUnit& translationUnit,
                                          const RecordSpanCache&  spanCache)
 {
-   ftags::SerializedObjectHeader header;
+   ftags::SerializedObjectHeader header = {};
    extractor >> header;
 
    std::vector<uint64_t> recordSpanHashes = ftags::Serializer<std::vector<uint64_t>>::deserialize(extractor);
@@ -117,6 +117,14 @@ void ftags::TranslationUnit::deserialize(ftags::BufferExtractor& extractor,
 
    for (const uint64_t spanHash : recordSpanHashes)
    {
-      translationUnit.m_recordSpans.emplace_back(spanCache.get(spanHash));
+      std::vector<std::shared_ptr<RecordSpan>> spans = spanCache.get(spanHash);
+      if (spans.size() == 1)
+      {
+         translationUnit.m_recordSpans.push_back(spans[0]);
+      }
+      else
+      {
+         assert(false);
+      }
    }
 }

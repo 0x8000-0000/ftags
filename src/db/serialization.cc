@@ -126,7 +126,7 @@ std::vector<char> ftags::Serializer<std::vector<char>>::deserialize(ftags::Buffe
 template <>
 std::size_t ftags::Serializer<std::vector<uint64_t>>::computeSerializedSize(const std::vector<uint64_t>& val)
 {
-   return sizeof(ftags::SerializedObjectHeader) + sizeof(uint64_t) + val.size();
+   return sizeof(ftags::SerializedObjectHeader) + sizeof(uint64_t) + val.size() * sizeof(uint64_t);
 }
 
 template <>

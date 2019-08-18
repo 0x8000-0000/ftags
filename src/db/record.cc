@@ -175,6 +175,13 @@ std::shared_ptr<ftags::RecordSpan> ftags::RecordSpanCache::add(std::shared_ptr<f
 
    m_cache.emplace(original->getHash(), original);
 
+   indexRecordSpan(original);
+
+   return original;
+}
+
+void ftags::RecordSpanCache::indexRecordSpan(std::shared_ptr<ftags::RecordSpan> original)
+{
    /*
     * gather all unique symbols in this record span
     */
@@ -187,8 +194,6 @@ std::shared_ptr<ftags::RecordSpan> ftags::RecordSpanCache::add(std::shared_ptr<f
    std::for_each(symbolKeys.cbegin(), symbolKeys.cend(), [this, original](ftags::StringTable::Key symbolKey) {
       m_symbolIndex.emplace(symbolKey, original);
    });
-
-   return original;
 }
 
 std::size_t ftags::RecordSpanCache::getRecordCount() const
@@ -246,16 +251,36 @@ ftags::Serializer<std::vector<ftags::Record>>::deserialize(ftags::BufferExtracto
 
 std::size_t ftags::RecordSpan::computeSerializedSize() const
 {
-   return sizeof(ftags::SerializedObjectHeader) +
+   return sizeof(ftags::SerializedObjectHeader) + sizeof(uint64_t) +
           ftags::Serializer<std::vector<Record>>::computeSerializedSize(m_records);
 }
 
 void ftags::RecordSpan::serialize(ftags::BufferInsertor& insertor) const
 {
+   ftags::SerializedObjectHeader header{"ftags::RecordSpan"};
+   insertor << header;
+
+   insertor << m_fileNameKey;
+
+   ftags::Serializer<std::vector<Record>>::serialize(m_records, insertor);
 }
 
-void ftags::RecordSpan::deserialize(ftags::BufferExtractor& extractor, ftags::RecordSpan& recordSpan)
+ftags::RecordSpan ftags::RecordSpan::deserialize(ftags::BufferExtractor& extractor)
 {
+   ftags::RecordSpan retval;
+
+   ftags::SerializedObjectHeader header;
+   extractor >> header;
+
+   extractor >> retval.m_fileNameKey;
+
+   retval.m_records = ftags::Serializer<std::vector<Record>>::deserialize(extractor);
+
+   retval.m_hash = SpookyHash::Hash64(retval.m_records.data(), retval.m_records.size() * sizeof(Record), k_hashSeed);
+
+   retval.updateIndices();
+
+   return retval;
 }
 
 std::size_t ftags::RecordSpanCache::computeSerializedSize() const
@@ -289,9 +314,30 @@ void ftags::RecordSpanCache::serialize(ftags::BufferInsertor& insertor) const
    });
 }
 
-ftags::RecordSpanCache ftags::RecordSpanCache::deserialize(ftags::BufferExtractor& extractor)
+ftags::RecordSpanCache ftags::RecordSpanCache::deserialize(ftags::BufferExtractor&                   extractor,
+                                                           std::vector<std::shared_ptr<RecordSpan>>& hardReferences)
 {
    ftags::RecordSpanCache retval;
+
+   ftags::SerializedObjectHeader header = {};
+   extractor >> header;
+
+   uint64_t cacheSize = 0;
+   extractor >> cacheSize;
+
+   retval.m_cache.reserve(cacheSize);
+   hardReferences.reserve(cacheSize);
+
+   for (size_t ii = 0; ii < cacheSize; ii++)
+   {
+      std::shared_ptr<RecordSpan> newSpan = std::make_shared<RecordSpan>();
+      *newSpan                            = RecordSpan::deserialize(extractor);
+      hardReferences.push_back(newSpan);
+
+      retval.m_cache.emplace(newSpan->getHash(), newSpan);
+
+      retval.indexRecordSpan(newSpan);
+   }
 
    return retval;
 }

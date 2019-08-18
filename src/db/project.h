@@ -374,7 +374,7 @@ public:
 
    void serialize(ftags::BufferInsertor& insertor) const;
 
-   static void deserialize(ftags::BufferExtractor& extractor, RecordSpan& recordSpan);
+   static RecordSpan deserialize(ftags::BufferExtractor& extractor);
 
    /*
     * Debugging
@@ -383,7 +383,9 @@ public:
                     const ftags::StringTable& symbolTable,
                     const ftags::StringTable& fileNameTable) const;
 
-   std::size_t getHash() const
+   using hash_type = std::size_t;
+
+   hash_type getHash() const
    {
       return m_hash;
    }
@@ -409,7 +411,7 @@ private:
 class RecordSpanCache
 {
 private:
-   using cache_type = std::unordered_multimap<uint64_t, std::weak_ptr<RecordSpan>>;
+   using cache_type = std::unordered_multimap<RecordSpan::hash_type, std::weak_ptr<RecordSpan>>;
 
    using value_type = cache_type::value_type;
 
@@ -425,28 +427,28 @@ private:
     */
    index_type m_symbolIndex;
 
+   void indexRecordSpan(std::shared_ptr<ftags::RecordSpan> original);
+
 public:
-   std::pair<std::multimap<StringTable::Key, std::weak_ptr<RecordSpan>>::const_iterator,
-             std::multimap<StringTable::Key, std::weak_ptr<RecordSpan>>::const_iterator>
-   getSpansForSymbol(StringTable::Key key) const
+   std::pair<index_type::const_iterator, index_type::const_iterator> getSpansForSymbol(StringTable::Key key) const
    {
       return m_symbolIndex.equal_range(key);
    }
 
    std::shared_ptr<RecordSpan> add(std::shared_ptr<RecordSpan> newSpan);
 
-   std::shared_ptr<RecordSpan> get(uint64_t spanHash) const
+   std::vector<std::shared_ptr<RecordSpan>> get(RecordSpan::hash_type spanHash) const
    {
-      const auto iter = m_cache.find(spanHash);
-      if (iter != m_cache.end())
+      std::vector<std::shared_ptr<RecordSpan>> retval;
+
+      std::pair<cache_type::const_iterator, cache_type::const_iterator> range = m_cache.equal_range(spanHash);
+
+      for (auto iter = range.first; iter != range.second; ++iter)
       {
-         return iter->second.lock();
+         retval.push_back(iter->second.lock());
       }
-      else
-      {
-         assert(false);
-         return std::shared_ptr<RecordSpan>(nullptr);
-      }
+
+      return retval;
    }
 
    std::size_t getActiveSpanCount() const
@@ -468,7 +470,8 @@ public:
 
    void serialize(ftags::BufferInsertor& insertor) const;
 
-   static RecordSpanCache deserialize(ftags::BufferExtractor& extractor);
+   static RecordSpanCache deserialize(ftags::BufferExtractor&                   extractor,
+                                      std::vector<std::shared_ptr<RecordSpan>>& hardReferences);
 };
 
 using KeyMap = ftags::FlatMap<ftags::StringTable::Key, ftags::StringTable::Key>;
@@ -642,6 +645,8 @@ public:
 
    static CursorSet deserialize(ftags::BufferExtractor& extractor);
 
+   std::size_t computeHash() const;
+
 private:
    CursorSet() = default;
 
@@ -649,6 +654,8 @@ private:
    std::vector<Record> m_records;
    StringTable         m_symbolTable;
    StringTable         m_fileNameTable;
+
+   static constexpr uint64_t k_hashSeed[] = {0x6905e06277e77c15, 0x27e6864cb5ff7d26};
 };
 
 class ProjectDb
@@ -658,6 +665,8 @@ public:
     * Construction and maintenance
     */
    ProjectDb();
+
+   bool operator==(const ProjectDb& other) const;
 
    const ftags::TranslationUnit& addTranslationUnit(const std::string&     fileName,
                                                     const TranslationUnit& translationUnit,

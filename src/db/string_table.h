@@ -105,6 +105,32 @@ public:
       return *this;
    }
 
+   bool operator==(const StringTable& other) const
+   {
+      if (this == &other)
+      {
+         return true;
+      }
+
+      for (const auto& [key, val]: m_index)
+      {
+         if (other.m_index.find(key) == other.m_index.end())
+         {
+            return false;
+         }
+      }
+
+      for (const auto& [key, val]: other.m_index)
+      {
+         if (m_index.find(key) == m_index.end())
+         {
+            return false;
+         }
+      }
+
+      return true;
+   }
+
    using Key = uint32_t;
 
    const char* getString(Key stringKey) const noexcept;

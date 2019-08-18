@@ -30,7 +30,8 @@ add_executable (project_serialization_test project_serialization_test.cc)
 target_link_libraries (project_serialization_test PRIVATE project_options project_warnings)
 target_link_libraries (project_serialization_test PRIVATE gtest_main pthread db-parse stdc++fs)
 
-gtest_discover_tests (project_serialization_test)
+gtest_discover_tests (project_serialization_test
+   WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
 add_executable (tags_index_test tags_index_test.cc)
 target_link_libraries (tags_index_test PRIVATE project_options project_warnings)

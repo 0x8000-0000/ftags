@@ -28,6 +28,66 @@ ftags::ProjectDb::ProjectDb() : m_operatingState{OptimizedForParse}
 {
 }
 
+bool ftags::ProjectDb::operator==(const ftags::ProjectDb& other) const
+{
+   if (this == &other)
+   {
+      return true;
+   }
+
+   if ((m_symbolTable == other.m_symbolTable) && (m_fileNameTable == other.m_fileNameTable))
+   {
+      if (m_translationUnits.size() == other.m_translationUnits.size())
+      {
+         std::multiset<std::size_t> myTranslationHashes;
+         std::multiset<std::size_t> otherTranslationHashes;
+
+         for (const auto& translationUnit : m_translationUnits)
+         {
+            const std::vector<const Record*> records = translationUnit.getRecords(false);
+
+            const CursorSet cursor(records, m_symbolTable, m_fileNameTable);
+
+            const std::size_t cursorHash = cursor.computeHash();
+
+            myTranslationHashes.insert(cursorHash);
+         }
+
+         for (const auto& translationUnit : other.m_translationUnits)
+         {
+            const std::vector<const Record*> records = translationUnit.getRecords(false);
+
+            const CursorSet cursor(records, other.m_symbolTable, other.m_fileNameTable);
+
+            const std::size_t cursorHash = cursor.computeHash();
+
+            otherTranslationHashes.insert(cursorHash);
+         }
+
+         if (myTranslationHashes.size() == otherTranslationHashes.size())
+         {
+            auto myIter    = myTranslationHashes.cbegin();
+            auto otherIter = otherTranslationHashes.cbegin();
+
+            while ((myIter != myTranslationHashes.cend()) && (otherIter != otherTranslationHashes.cend()))
+            {
+               if (*myIter == *otherIter)
+               {
+                  ++myIter;
+                  ++otherIter;
+               }
+               else
+               {
+                  return false;
+               }
+            }
+         }
+      }
+   }
+
+   return true;
+}
+
 ftags::Cursor ftags::ProjectDb::inflateRecord(const ftags::Record* record) const
 {
    ftags::Cursor cursor{};
@@ -195,7 +255,9 @@ void ftags::ProjectDb::deserialize(ftags::BufferExtractor& extractor, ftags::Pro
    projectDb.m_symbolTable    = StringTable::deserialize(extractor);
    projectDb.m_namespaceTable = StringTable::deserialize(extractor);
 
-   projectDb.m_recordSpanCache = RecordSpanCache::deserialize(extractor);
+   std::vector<std::shared_ptr<RecordSpan>> hardReferences;
+
+   projectDb.m_recordSpanCache = RecordSpanCache::deserialize(extractor, hardReferences);
 
    uint64_t translationUnitCount = 0;
    extractor >> translationUnitCount;

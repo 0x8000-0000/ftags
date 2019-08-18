@@ -16,6 +16,8 @@
 
 #include <project.h>
 
+#include <SpookyV2.h>
+
 /*
  * CursorSet
  */
@@ -86,4 +88,30 @@ ftags::CursorSet ftags::CursorSet::deserialize(ftags::BufferExtractor& extractor
    retval.m_fileNameTable = StringTable::deserialize(extractor);
 
    return retval;
+}
+
+std::size_t ftags::CursorSet::computeHash() const
+{
+   SpookyHash hash;
+
+   hash.Init(k_hashSeed[0], k_hashSeed[1]);
+
+   for (auto& record : m_records)
+   {
+      Cursor cursor = inflateRecord(record);
+
+      hash.Update(cursor.symbolName, strlen(cursor.symbolName));
+      hash.Update(cursor.location.fileName, strlen(cursor.location.fileName));
+
+      cursor.symbolName        = nullptr;
+      cursor.location.fileName = nullptr;
+
+      hash.Update(&cursor, sizeof(cursor));
+   }
+
+   uint64_t hashValue[2] = {};
+
+   hash.Final(&hashValue[0], &hashValue[1]);
+
+   return hashValue[0];
 }
