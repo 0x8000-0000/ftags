@@ -298,5 +298,9 @@ std::vector<std::string> ftags::ProjectDb::getStatisticsRemarks() const
 
    remarks.emplace_back(fmt::format("Serialized size is {:n} bytes", computeSerializedSize()));
 
+   remarks.emplace_back(fmt::format("Indexed {:n} symbols", m_symbolTable.getSize()));
+
+   remarks.emplace_back(fmt::format("Indexed {:n} distinct files", m_fileNameTable.getSize()));
+
    return remarks;
 }

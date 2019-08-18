@@ -112,7 +112,7 @@ public:
          return true;
       }
 
-      for (const auto& [key, val]: m_index)
+      for (const auto& [key, val] : m_index)
       {
          if (other.m_index.find(key) == other.m_index.end())
          {
@@ -120,7 +120,7 @@ public:
          }
       }
 
-      for (const auto& [key, val]: other.m_index)
+      for (const auto& [key, val] : other.m_index)
       {
          if (m_index.find(key) == m_index.end())
          {
@@ -134,6 +134,11 @@ public:
    using Key = uint32_t;
 
    const char* getString(Key stringKey) const noexcept;
+
+   std::size_t getSize() const
+   {
+      return m_index.size();
+   }
 
    Key  getKey(const char* string) const noexcept;
    Key  addKey(const char* string);
