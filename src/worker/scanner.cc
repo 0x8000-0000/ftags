@@ -28,7 +28,9 @@
 
 #include <spdlog/spdlog.h>
 
+#include <chrono>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace
@@ -79,6 +81,14 @@ int main(int argc, char* argv[])
    const std::string connectionString = fmt::format("ipc://{}/ftags_worker", xdgRuntimeDir);
 
    socket.bind(connectionString);
+
+   /*
+    * Allow all clients time to bind.
+    *
+    * See https://github.com/zeromq/pyzmq/issues/96
+    */
+   using namespace std::chrono_literals;
+   std::this_thread::sleep_for(1s);
 
    CXCompilationDatabase_Error ccderror      = CXCompilationDatabase_NoError;
    CXCompilationDatabase compilationDatabase = clang_CompilationDatabase_fromDirectory(dirName.c_str(), &ccderror);
