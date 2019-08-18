@@ -80,7 +80,7 @@ int main(int argc, char* argv[])
 
    socket.bind(connectionString);
 
-   CXCompilationDatabase_Error ccderror            = CXCompilationDatabase_NoError;
+   CXCompilationDatabase_Error ccderror      = CXCompilationDatabase_NoError;
    CXCompilationDatabase compilationDatabase = clang_CompilationDatabase_fromDirectory(dirName.c_str(), &ccderror);
 
    if (CXCompilationDatabase_NoError == ccderror)
@@ -139,11 +139,9 @@ int main(int argc, char* argv[])
 
          if (indexRequest.translationunit_size() == groupSize)
          {
-            std::string serializedRequest;
-            indexRequest.SerializeToString(&serializedRequest);
-
-            zmq::message_t request(serializedRequest.size());
-            memcpy(request.data(), serializedRequest.data(), serializedRequest.size());
+            const std::size_t requestSize = indexRequest.ByteSizeLong();
+            zmq::message_t    request(requestSize);
+            indexRequest.SerializeToArray(request.data(), static_cast<int>(requestSize));
             socket.send(request);
 
             spdlog::info("Enqueued {} of {}: {}", ii, compilationCount, clang_getCString(fileNameString));

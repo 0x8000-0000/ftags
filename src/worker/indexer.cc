@@ -129,9 +129,10 @@ int main()
 
    while (!shutdownRequested)
    {
-      zmq::message_t message;
       try
       {
+         zmq::message_t message;
+         spdlog::info("Waiting");
          receiver.recv(&message);
 
          ftags::IndexRequest indexRequest{};
