@@ -261,9 +261,12 @@ void ftags::ProjectDb::deserialize(ftags::BufferExtractor& extractor, ftags::Pro
 
    for (size_t ii = 0; ii < translationUnitCount; ii++)
    {
-      projectDb.m_translationUnits.emplace_back(/* projectDb.m_fileNameTable, projectDb.m_symbolTable */);
-      TranslationUnit::deserialize(extractor, projectDb.m_translationUnits.back(), projectDb.m_recordSpanCache);
+      projectDb.m_translationUnits.push_back(TranslationUnit::deserialize(extractor, projectDb.m_recordSpanCache));
    }
+}
+
+void ftags::ProjectDb::mergeFrom(const ProjectDb& /* other */)
+{
 }
 
 std::string ftags::Attributes::getRecordType() const

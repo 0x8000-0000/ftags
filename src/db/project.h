@@ -599,8 +599,7 @@ public:
 
    void serialize(ftags::BufferInsertor& insertor) const;
 
-   static void
-   deserialize(ftags::BufferExtractor& extractor, TranslationUnit& translationUnit, const RecordSpanCache& spanCache);
+   static TranslationUnit deserialize(ftags::BufferExtractor& extractor, const RecordSpanCache& spanCache);
 
 private:
    // key of the file name of the main translation unit
@@ -759,7 +758,6 @@ public:
    static void deserialize(ftags::BufferExtractor& extractor, ftags::ProjectDb& projectDb);
 
 private:
-
    void updateIndices();
 
    template <typename F>
