@@ -66,8 +66,8 @@ void dumpTranslationUnit(const ftags::TranslationUnit& translationUnit, const st
           << record->attributes.getRecordType() << " >> " << record->symbolNameKey << std::endl;
    }
 #else
-   (void) translationUnit;
-   (void) fileName;
+   (void)translationUnit;
+   (void)fileName;
 #endif
 }
 
@@ -115,7 +115,10 @@ void parseTranslationUnit(ftags::ProjectDb&                        projectDb,
 
          clangMutex.unlock();
 
-         spdlog::info("Loaded {} records from {}, {} from main file", translationUnit.getRecordCount(), request.fileName, translationUnit.getRecords(true).size());
+         spdlog::info("Loaded {} records from {}, {} from main file",
+                      translationUnit.getRecordCount(),
+                      request.fileName,
+                      translationUnit.getRecords(true).size());
 
          const ftags::TranslationUnit& mergedTranslationUnit =
             projectDb.addTranslationUnit(request.fileName, translationUnit, symbolTable, fileNameTable);
@@ -235,4 +238,29 @@ void ftags::parseProject(const char* parentDirectory, ftags::ProjectDb& projectD
    spdlog::info("All threads completed");
 
    clang_CompilationDatabase_dispose(compilationDatabase);
+}
+
+void ftags::parseOneFile(const std::string& fileName, std::vector<const char*> arguments, ftags::ProjectDb& projectDb)
+{
+   ftags::StringTable symbolTable;
+   ftags::StringTable fileNameTable;
+
+   spdlog::debug("Parsing {}", fileName);
+
+   try
+   {
+      ftags::TranslationUnit translationUnit =
+         ftags::TranslationUnit::parse(fileName, arguments, symbolTable, fileNameTable);
+
+      spdlog::info("Loaded {} records from {}, {} from main file",
+                   translationUnit.getRecordCount(),
+                   fileName,
+                   translationUnit.getRecords(true).size());
+
+      projectDb.addTranslationUnit(fileName, translationUnit, symbolTable, fileNameTable);
+   }
+   catch (const std::runtime_error& re)
+   {
+      spdlog::error("Failed to parse {}: {}", re.what());
+   }
 }

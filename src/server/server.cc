@@ -17,6 +17,7 @@
 #include <ftags.pb.h>
 
 #include <project.h>
+#include <zmq_logger_sink.h>
 
 #include <zmq.hpp>
 
@@ -112,32 +113,104 @@ void dispatchDumpTranslationUnit(zmq::socket_t&          socket,
    queryResultsCursor.serialize(insertor);
    socket.send(resultsMessage);
 }
+
+void dispatchUpdateTranslationUnit(zmq::socket_t& socket, ftags::ProjectDb& projectDb, const std::string& fileName)
+{
+   zmq::message_t payload;
+   socket.recv(&payload);
+
+   spdlog::info("Received {} bytes of serialized data for translation unit {}.", payload.size(), fileName);
+
+   ftags::BufferExtractor extractor(static_cast<std::byte*>(payload.data()), payload.size());
+
+   ftags::ProjectDb updatedTranslationUnit;
+   ftags::ProjectDb::deserialize(extractor, updatedTranslationUnit);
+
+   projectDb.updateFrom(fileName, updatedTranslationUnit);
+
+   ftags::Status status{};
+   status.set_timestamp(getTimeStamp());
+   status.set_type(ftags::Status_Type::Status_Type_TRANSLATION_UNIT_UPDATED);
+
+   const std::size_t replySize = status.ByteSizeLong();
+   zmq::message_t    reply(replySize);
+   status.SerializeToArray(reply.data(), static_cast<int>(replySize));
+
+   socket.send(reply);
+   spdlog::info("Acknowledged translation unit {}.", fileName);
+}
+
+void dispatchPing(zmq::socket_t& socket)
+{
+   ftags::Status status{};
+   status.set_timestamp(getTimeStamp());
+   status.set_type(ftags::Status_Type::Status_Type_IDLE);
+
+   const std::size_t replySize = status.ByteSizeLong();
+   zmq::message_t    reply(replySize);
+   status.SerializeToArray(reply.data(), static_cast<int>(replySize));
+
+   socket.send(reply);
+}
+
+void dispatchUnknownCommand(zmq::socket_t& socket)
+{
+   ftags::Status status{};
+   status.set_timestamp(getTimeStamp());
+   status.set_type(ftags::Status_Type::Status_Type_UNKNOWN);
+
+   const std::size_t replySize = status.ByteSizeLong();
+   zmq::message_t    reply(replySize);
+   status.SerializeToArray(reply.data(), static_cast<int>(replySize));
+
+   socket.send(reply);
+}
+
+void dispatchShutdown(zmq::socket_t& socket)
+{
+   ftags::Status status{};
+   status.set_timestamp(getTimeStamp());
+   status.set_type(ftags::Status_Type::Status_Type_SHUTTING_DOWN);
+
+   const std::size_t replySize = status.ByteSizeLong();
+   zmq::message_t    reply(replySize);
+   status.SerializeToArray(reply.data(), static_cast<int>(replySize));
+
+   socket.send(reply);
+}
 } // namespace
 
 int main(int argc, char* argv[])
 {
    GOOGLE_PROTOBUF_VERIFY_VERSION;
 
+   ftags::ProjectDb projectDb;
+
+#if 0
    if (argc < 2)
    {
       spdlog::error("Compilation database argument missing");
       return -1;
    }
-
-   const char* xdgRuntimeDir = std::getenv("XDG_RUNTIME_DIR");
-
-   const std::string socketLocation = fmt::format("ipc://{}/ftags_server", xdgRuntimeDir);
-
-   ftags::ProjectDb projectDb;
-
    ftags::parseProject(argv[1], projectDb);
+#endif
 
    //  Prepare our context and socket
    zmq::context_t context(1);
-   zmq::socket_t  socket(context, ZMQ_REP);
+
+   ftags::ZmqCentralLogger centralLogger{context, std::string{"server"}};
+
+   spdlog::info("Started");
+
+   const char*       xdgRuntimeDir  = std::getenv("XDG_RUNTIME_DIR");
+   const std::string socketLocation = fmt::format("ipc://{}/ftags_server", xdgRuntimeDir);
+
+   zmq::socket_t socket(context, ZMQ_REP);
    socket.bind(socketLocation);
 
-   while (true)
+   bool shuttingDown = false;
+
+   while (!shuttingDown)
    {
       zmq::message_t request;
       ftags::Command command{};
@@ -147,44 +220,37 @@ int main(int argc, char* argv[])
       command.ParseFromArray(request.data(), static_cast<int>(request.size()));
       spdlog::info("Received request from {}: {}", command.source(), command.Type_Name(command.type()));
 
-      if (command.type() == ftags::Command_Type::Command_Type_QUERY)
+      switch (command.type())
       {
+
+      case ftags::Command_Type::Command_Type_QUERY:
          dispatchFindAll(socket, projectDb, command.symbolname());
+         break;
 
-         continue;
-      }
-
-      if (command.type() == ftags::Command_Type::Command_Type_DUMP_TRANSLATION_UNIT)
-      {
+      case ftags::Command_Type::Command_Type_DUMP_TRANSLATION_UNIT:
          dispatchDumpTranslationUnit(socket, projectDb, command.filename());
+         break;
 
-         continue;
-      }
+      case ftags::Command_Type::Command_Type_UPDATE_TRANSLATION_UNIT:
+         dispatchUpdateTranslationUnit(socket, projectDb, command.filename());
+         break;
 
-      ftags::Status status{};
-      status.set_timestamp(getTimeStamp());
+      case ftags::Command_Type::Command_Type_PING:
+         dispatchPing(socket);
+         break;
 
-      //  Send reply back to client
-      if (command.type() == ftags::Command_Type::Command_Type_SHUT_DOWN)
-      {
-         status.set_type(ftags::Status_Type::Status_Type_SHUTTING_DOWN);
-      }
-      else
-      {
-         status.set_type(ftags::Status_Type::Status_Type_IDLE);
-      }
+      case ftags::Command_Type::Command_Type_SHUT_DOWN:
+         dispatchShutdown(socket);
+         shuttingDown = true;
+         break;
 
-      std::string serializedStatus;
-      status.SerializeToString(&serializedStatus);
-      zmq::message_t reply(serializedStatus.size());
-      memcpy(reply.data(), serializedStatus.data(), serializedStatus.size());
-      socket.send(reply, ZMQ_SNDMORE);
-
-      if (command.type() == ftags::Command_Type::Command_Type_SHUT_DOWN)
-      {
+      default:
+         dispatchUnknownCommand(socket);
          break;
       }
    }
+
+   spdlog::info("Shutting down");
 
    return 0;
 }

@@ -11,9 +11,13 @@ message Command
       SHUT_DOWN = 2;
       GET_STATUS = 3;
       FLUSH = 4;
-      SAVE_DATABASE = 5;
-      QUERY = 6;
-      DUMP_TRANSLATION_UNIT = 7;
+
+      SAVE_DATABASE = 10;
+
+      QUERY = 60;
+
+      UPDATE_TRANSLATION_UNIT = 70;
+      DUMP_TRANSLATION_UNIT = 71;
    }
 
    Type type = 1;
@@ -42,8 +46,12 @@ message Status
       UNKNOWN = 0;
       STARTING = 1;
       IDLE = 2;
-      QUERY_RESULTS = 3;
-      QUERY_NO_RESULTS = 4;
+
+      QUERY_RESULTS = 60;
+      QUERY_NO_RESULTS = 61;
+
+      TRANSLATION_UNIT_UPDATED = 70;
+
       SHUTTING_DOWN = 127;
    }
 

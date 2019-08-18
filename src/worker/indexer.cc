@@ -14,6 +14,8 @@
    limitations under the License.
 */
 
+#include <project.h>
+
 #include <zmq_logger_sink.h>
 
 #include <ftags.pb.h>
@@ -107,14 +109,19 @@ int main()
 
    zmq::context_t context(1);
 
-   ftags::ZmqCentralLogger centralLogger{context, std::string{"indexer"}, ftags::LoggerPort};
+   ftags::ZmqCentralLogger centralLogger{context, std::string{"indexer"}};
 
    spdlog::info("Indexer started");
 
    zmq::socket_t receiver(context, ZMQ_PULL);
 
-   const std::string connectionString = std::string("tcp://localhost:") + std::to_string(ftags::WorkerPort);
+   const char*       xdgRuntimeDir    = std::getenv("XDG_RUNTIME_DIR");
+   const std::string connectionString = fmt::format("ipc://{}/ftags_worker", xdgRuntimeDir);
    receiver.connect(connectionString);
+
+   const std::string serverLocation = fmt::format("ipc://{}/ftags_server", xdgRuntimeDir);
+   zmq::socket_t     serverSocket(context, ZMQ_REQ);
+   serverSocket.connect(serverLocation);
 
    spdlog::info("Connection established");
 
@@ -133,8 +140,7 @@ int main()
 
          spdlog::info("Received message");
 
-         CXIndex index = clang_createIndex(/* excludeDeclarationsFromPCH = */ 0,
-                                           /* displayDiagnostics         = */ 0);
+         spdlog::info("Processing {}", indexRequest.filename());
 
          std::vector<const char*> arguments;
          const int                argCount = indexRequest.argument_size();
@@ -144,34 +150,34 @@ int main()
             arguments.push_back(indexRequest.argument(ii).c_str());
          }
 
-         CXTranslationUnit translationUnit = nullptr;
+         ftags::ProjectDb projectDb;
 
-         spdlog::info("Processing {}", indexRequest.filename());
+         ftags::parseOneFile(indexRequest.filename(), arguments, projectDb);
 
-         const CXErrorCode parseError =
-            clang_parseTranslationUnit2(/* CIdx                  = */ index,
-                                        /* source_filename       = */ indexRequest.filename().c_str(),
-                                        /* command_line_args     = */ arguments.data(),
-                                        /* num_command_line_args = */ static_cast<int>(arguments.size()),
-                                        /* unsaved_files         = */ nullptr,
-                                        /* num_unsaved_files     = */ 0,
-                                        /* options               = */ CXTranslationUnit_DetailedPreprocessingRecord |
-                                           CXTranslationUnit_SingleFileParse,
-                                        /* out_TU                = */ &translationUnit);
+         ftags::Command command{};
+         command.set_source("indexer");
+         command.set_type(ftags::Command::Type::Command_Type_UPDATE_TRANSLATION_UNIT);
+         command.set_filename(indexRequest.filename());
 
-         spdlog::info("Parse status for {}: {}", indexRequest.filename(), parseError);
-         if (parseError == CXError_Success)
-         {
-#if 0
-            CXCursor cursor = clang_getTranslationUnitCursor(translationUnit);
-            VisitData visitData;
-            clang_visitChildren(cursor, visitTranslationUnit, &visitData);
-#endif
+         const std::size_t headerSize = command.ByteSizeLong();
+         zmq::message_t    header(headerSize);
+         command.SerializeToArray(header.data(), static_cast<int>(headerSize));
+         serverSocket.send(header, ZMQ_SNDMORE);
 
-            clang_disposeTranslationUnit(translationUnit);
-         }
+         const std::size_t     payloadSize = projectDb.computeSerializedSize();
+         zmq::message_t        projectMessage(payloadSize);
+         ftags::BufferInsertor insertor(static_cast<std::byte*>(projectMessage.data()), payloadSize);
+         projectDb.serialize(insertor);
 
-         clang_disposeIndex(index);
+         serverSocket.send(projectMessage);
+
+         /*
+          * wait for the server to acknowledge
+          */
+         zmq::message_t reply;
+         serverSocket.recv(&reply);
+         ftags::Status status;
+         status.ParseFromArray(reply.data(), static_cast<int>(reply.size()));
       }
       catch (zmq::error_t& ze)
       {

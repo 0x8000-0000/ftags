@@ -736,6 +736,8 @@ public:
     */
    void mergeFrom(const ProjectDb& other);
 
+   void updateFrom(const std::string& fileName, const ProjectDb& other);
+
    /*
     * Debugging
     */
@@ -806,6 +808,8 @@ private:
 };
 
 void parseProject(const char* parentDirectory, ftags::ProjectDb& projectDb);
+
+void parseOneFile(const std::string& fileName, std::vector<const char*> arguments, ftags::ProjectDb& projectDb);
 
 } // namespace ftags
 

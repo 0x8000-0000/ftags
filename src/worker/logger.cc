@@ -41,7 +41,6 @@ static void setupSignals(void)
    sigaction(SIGTERM, &action, NULL);
 }
 
-
 int main()
 {
    setupSignals();
@@ -51,8 +50,10 @@ int main()
    zmq::context_t context{1};
    zmq::socket_t  receiver{context, ZMQ_PULL};
 
-   const std::string connectionString = std::string("tcp://*:") + std::to_string(ftags::LoggerPort);
-   receiver.bind(connectionString);
+   const char*       xdgRuntimeDir  = std::getenv("XDG_RUNTIME_DIR");
+   const std::string socketLocation = fmt::format("ipc://{}/ftags_logger", xdgRuntimeDir);
+
+   receiver.bind(socketLocation);
 
    spdlog::info("Connection established");
 

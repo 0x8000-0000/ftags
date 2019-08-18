@@ -35,8 +35,7 @@ void dispatchFindAll(zmq::socket_t& socket, const std::string& symbolName)
 
    ftags::Command command{};
    command.set_source("client");
-   std::string   serializedCommand;
-   ftags::Status status;
+   std::string serializedCommand;
 
    command.set_type(ftags::Command::Type::Command_Type_QUERY);
    command.set_symbolname(symbolName);
@@ -50,6 +49,7 @@ void dispatchFindAll(zmq::socket_t& socket, const std::string& symbolName)
    zmq::message_t reply;
    socket.recv(&reply);
 
+   ftags::Status status;
    status.ParseFromArray(reply.data(), static_cast<int>(reply.size()));
 
    if (status.type() == ftags::Status_Type::Status_Type_QUERY_RESULTS)
@@ -160,8 +160,7 @@ int main(int argc, char* argv[])
       exit(-1);
    }
 
-   const char* xdgRuntimeDir = std::getenv("XDG_RUNTIME_DIR");
-
+   const char*       xdgRuntimeDir  = std::getenv("XDG_RUNTIME_DIR");
    const std::string socketLocation = fmt::format("ipc://{}/ftags_server", xdgRuntimeDir);
 
    //  Prepare our context and socket

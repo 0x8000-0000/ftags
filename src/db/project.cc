@@ -291,3 +291,9 @@ void ftags::ProjectDb::mergeFrom(const ProjectDb& other)
       m_fileIndex[fileNameKeyMapping.lookup(otherTranslationUnit.getFileNameKey())->first] = translationUnitPos;
    }
 }
+
+void ftags::ProjectDb::updateFrom(const std::string& /* fileName */, const ProjectDb& other)
+{
+   // TODO: check if the file name is indexed already and remove its entries
+   mergeFrom(other);
+}

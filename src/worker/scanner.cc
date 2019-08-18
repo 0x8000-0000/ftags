@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
 
    zmq::context_t context(1);
 
-   ftags::ZmqCentralLogger centralLogger{context, std::string{"scanner"}, ftags::LoggerPort};
+   ftags::ZmqCentralLogger centralLogger{context, std::string{"scanner"}};
 
    spdlog::info("Indexer started");
 
@@ -44,9 +44,11 @@ int main(int argc, char* argv[])
       return 0;
    }
 
-   zmq::socket_t  socket(context, ZMQ_PUSH);
+   zmq::socket_t socket(context, ZMQ_PUSH);
 
-   const std::string connectionString = std::string("tcp://*:") + std::to_string(ftags::WorkerPort);
+   const char*       xdgRuntimeDir    = std::getenv("XDG_RUNTIME_DIR");
+   const std::string connectionString = fmt::format("ipc://{}/ftags_worker", xdgRuntimeDir);
+
    socket.bind(connectionString);
 
    spdlog::info("Connection established");
