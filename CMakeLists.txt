@@ -84,7 +84,6 @@ endif ()
 
 
 find_package (Protobuf REQUIRED)
-find_package (spdlog)
 
 # fails on Debian, and not needed but left here for other platforms
 #find_package (ZeroMQ REQUIRED)

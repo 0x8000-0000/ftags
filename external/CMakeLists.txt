@@ -8,3 +8,11 @@ if (USE_SYSTEM_GOOGLETEST)
 else ()
    add_subdirectory (googletest)
 endif ()
+
+option (USE_SYSTEM_SPDLOG "Use system package for spdlog" OFF)
+
+if (USE_SYSTEM_SPDLOG)
+   find_package (spdlog)
+else ()
+   add_subdirectory (spdlog)
+endif ()
