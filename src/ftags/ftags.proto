@@ -11,6 +11,7 @@ message Command
       SHUT_DOWN = 2;
       GET_STATUS = 3;
       FLUSH = 4;
+      QUERY_STATISTICS = 5;
 
       SAVE_DATABASE = 10;
 
@@ -48,6 +49,7 @@ message Status
       UNKNOWN = 0;
       STARTING = 1;
       IDLE = 2;
+      STATISTICS_REMARKS = 3;
 
       QUERY_RESULTS = 60;
       QUERY_NO_RESULTS = 61;
@@ -61,7 +63,7 @@ message Status
 
    string timestamp = 2;
 
-   bytes cursorSet = 99;
+   repeated string remarks = 99;
 }
 
 message TranslationUnitArguments

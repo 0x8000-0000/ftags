@@ -16,6 +16,8 @@
 
 #include <project.h>
 
+#include <fmt/format.h>
+
 #include <algorithm>
 #include <numeric>
 
@@ -286,4 +288,15 @@ void ftags::ProjectDb::updateFrom(const std::string& /* fileName */, const Proje
 {
    // TODO: check if the file name is indexed already and remove its entries
    mergeFrom(other);
+}
+
+std::vector<std::string> ftags::ProjectDb::getStatisticsRemarks() const
+{
+   std::vector<std::string> remarks;
+
+   remarks.emplace_back(fmt::format("{:n} translation units indexed", m_translationUnits.size()));
+
+   remarks.emplace_back(fmt::format("Serialized size is {:n} bytes", computeSerializedSize()));
+
+   return remarks;
 }

@@ -142,6 +142,26 @@ void dispatchUpdateTranslationUnit(zmq::socket_t& socket, ftags::ProjectDb& proj
    spdlog::info("Acknowledged translation unit {}", fileName);
 }
 
+void dispatchQueryStatistics(zmq::socket_t& socket, const ftags::ProjectDb& projectDb)
+{
+   ftags::Status status{};
+   status.set_timestamp(getTimeStamp());
+   status.set_type(ftags::Status_Type::Status_Type_STATISTICS_REMARKS);
+
+   std::vector<std::string> statisticsRemarks = projectDb.getStatisticsRemarks();
+
+   for (const auto& remark : statisticsRemarks)
+   {
+      *status.add_remarks() = remark;
+   }
+
+   const std::size_t replySize = status.ByteSizeLong();
+   zmq::message_t    reply(replySize);
+   status.SerializeToArray(reply.data(), static_cast<int>(replySize));
+
+   socket.send(reply);
+}
+
 void dispatchPing(zmq::socket_t& socket)
 {
    ftags::Status status{};
@@ -258,6 +278,10 @@ int main(int argc, char* argv[])
 
       case ftags::Command_Type::Command_Type_PING:
          dispatchPing(socket);
+         break;
+
+      case ftags::Command_Type::Command_Type_QUERY_STATISTICS:
+         dispatchQueryStatistics(socket, projectDb);
          break;
 
       case ftags::Command_Type::Command_Type_SHUT_DOWN:

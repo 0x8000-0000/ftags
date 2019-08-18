@@ -749,6 +749,8 @@ public:
       return m_recordSpanCache.getRecordCount();
    }
 
+   std::vector<std::string> getStatisticsRemarks() const;
+
    /*
     * Serialization interface
     */

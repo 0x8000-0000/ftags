@@ -140,11 +140,13 @@ bool        findFunction        = false;
 bool        dumpTranslationUnit = false;
 bool        doQuit              = false;
 bool        doPing              = false;
+bool        queryStats          = false;
 std::string symbolName;
 std::string fileName;
 
 auto cli = clara::Help(showHelp) | clara::Opt(doQuit)["-q"]["--quit"]("Shutdown server") |
            clara::Opt(doPing)["-i"]["--ping"]("Ping server") |
+           clara::Opt(queryStats)["-q"]["--stats"]("Query statistics from running server") |
            clara::Opt(findAll)["-a"]["--all"]("Find all occurrences of symbol") |
            clara::Opt(findFunction)["-f"]["--function"]("Find function") |
            clara::Opt(dumpTranslationUnit)["--dump"]("Dump symbols for translation unit") |
@@ -188,13 +190,11 @@ int main(int argc, char* argv[])
    if (doPing)
    {
       command.set_type(ftags::Command::Type::Command_Type_PING);
-      command.SerializeToString(&serializedCommand);
-
-      zmq::message_t request(serializedCommand.size());
-      memcpy(request.data(), serializedCommand.data(), serializedCommand.size());
+      const std::size_t requestSize = command.ByteSizeLong();
+      zmq::message_t    request(requestSize);
+      command.SerializeToArray(request.data(), static_cast<int>(requestSize));
       socket.send(request);
 
-      //  Get the reply.
       zmq::message_t reply;
       socket.recv(&reply);
 
@@ -202,8 +202,7 @@ int main(int argc, char* argv[])
 
       spdlog::info("Received timestamp {} with status {}.", status.timestamp(), status.type());
    }
-
-   if (findAll)
+   else if (findAll)
    {
       dispatchFindAll(socket, symbolName);
    }
@@ -211,8 +210,25 @@ int main(int argc, char* argv[])
    {
       dispatchDumpTranslationUnit(socket, fileName);
    }
+   else if (queryStats)
+   {
+      command.set_type(ftags::Command::Type::Command_Type_QUERY_STATISTICS);
+      const std::size_t requestSize = command.ByteSizeLong();
+      zmq::message_t    request(requestSize);
+      command.SerializeToArray(request.data(), static_cast<int>(requestSize));
+      socket.send(request);
 
-   if (doQuit)
+      zmq::message_t reply;
+      socket.recv(&reply);
+
+      status.ParseFromArray(reply.data(), static_cast<int>(reply.size()));
+
+      for (int ii = 0; ii < status.remarks_size(); ii++)
+      {
+         std::cout << status.remarks(ii) << std::endl;
+      }
+   }
+   else if (doQuit)
    {
       command.set_type(ftags::Command::Type::Command_Type_SHUT_DOWN);
       std::string quitCommand;

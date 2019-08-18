@@ -4,7 +4,7 @@ add_library (db STATIC string_table.cc string_table_io.cc
 target_link_libraries (db PRIVATE project_options project_warnings)
 target_include_directories (db PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries (db PUBLIC -lstdc++fs)
-target_link_libraries (db PUBLIC ftags zmq)
+target_link_libraries (db PUBLIC ftags zmq fmt)
 target_link_libraries (db PUBLIC spookyhash)
 
 add_library (db-parse STATIC tags_builder.cc project_index.cc)
