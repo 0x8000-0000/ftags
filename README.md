@@ -73,6 +73,19 @@ compile\_commands.json contains invalid relative paths to the generated files
 instead of absolute paths. So your code completion engine will not find some
 of the protobuf-generated files.
 
+
+Running
+-------
+
+At this stage, the service components need to be started manually:
+
+* src/worker/ft\_logger
+* src/server/ft\_server
+* src/worker/ft\_indexer # you may launch several instances
+* src/worker/ft\_scanner -p tags .
+* src/client/ft\_client --all --symbol main      # to test
+
+
 License
 -------
 
