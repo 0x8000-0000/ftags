@@ -338,7 +338,7 @@ TEST(TagsIndexTest, InflateResults)
    const ftags::Cursor cursor = originalCursorSet.inflateRecord(*iter);
    ASSERT_STREQ("function", cursor.symbolName);
 
-   ++ iter;
+   ++iter;
    ASSERT_EQ(iter, originalCursorSet.end());
 }
 
@@ -384,9 +384,9 @@ TEST(TagsIndexTest, SerializeDeserializeResults)
 
    const ftags::CursorSet originalCursorSet = tagsDb.inflateRecords(functionDeclaration);
 
-   const std::size_t bufferSpace = originalCursorSet.computeSerializedSize();
+   const std::size_t      bufferSpace = originalCursorSet.computeSerializedSize();
    std::vector<std::byte> buffer(/* size = */ bufferSpace);
-   ftags::BufferInsertor insertor(buffer);
+   ftags::BufferInsertor  insertor(buffer);
    originalCursorSet.serialize(insertor);
    ftags::BufferExtractor extractor(buffer);
 
@@ -398,7 +398,7 @@ TEST(TagsIndexTest, SerializeDeserializeResults)
    const ftags::Cursor cursor = restoredCursorSet.inflateRecord(*iter);
    ASSERT_STREQ("function", cursor.symbolName);
 
-   ++ iter;
+   ++iter;
    ASSERT_EQ(iter, restoredCursorSet.end());
 }
 
@@ -455,3 +455,63 @@ TEST(TagsIndexTest, FindVariables)
    ASSERT_EQ(6, allArg.size());
 }
 
+TEST(TagsIndexTest, MergeProjectDatabases)
+{
+   ftags::ProjectDb mergedDb;
+
+   const auto path = std::filesystem::current_path();
+
+   const std::vector<const char*> arguments = {
+      "-Wall",
+      "-Wextra",
+      "-isystem",
+      "/usr/include",
+   };
+
+   {
+      ftags::ProjectDb tagsDb;
+
+      const auto libPath = path / "test" / "db" / "data" / "multi-module" / "lib.cc";
+      ASSERT_TRUE(std::filesystem::exists(libPath));
+
+      ftags::StringTable           symbolTable;
+      ftags::StringTable           fileNameTable;
+      const ftags::TranslationUnit libCpp =
+         ftags::TranslationUnit::parse(libPath, arguments, symbolTable, fileNameTable);
+
+      tagsDb.addTranslationUnit(libPath, libCpp, symbolTable, fileNameTable);
+
+      mergedDb.mergeFrom(tagsDb);
+   }
+
+   {
+      ftags::ProjectDb tagsDb;
+
+      const auto testPath = path / "test" / "db" / "data" / "multi-module" / "test.cc";
+      ASSERT_TRUE(std::filesystem::exists(testPath));
+
+      ftags::StringTable           symbolTable;
+      ftags::StringTable           fileNameTable;
+      const ftags::TranslationUnit testCpp =
+         ftags::TranslationUnit::parse(testPath, arguments, symbolTable, fileNameTable);
+
+      tagsDb.addTranslationUnit(testPath, testCpp, symbolTable, fileNameTable);
+
+      mergedDb.mergeFrom(tagsDb);
+   }
+
+   const std::vector<const ftags::Record*> countDefinition = mergedDb.findDefinition("count");
+   ASSERT_EQ(1, countDefinition.size());
+
+   const std::vector<const ftags::Record*> countReference = mergedDb.findReference("count");
+   ASSERT_EQ(1, countReference.size());
+
+   const std::vector<const ftags::Record*> allCount = mergedDb.findSymbol("count");
+   ASSERT_EQ(2, allCount.size());
+
+   const std::vector<const ftags::Record*> argReference = mergedDb.findReference("arg");
+   ASSERT_EQ(3, argReference.size());
+
+   const std::vector<const ftags::Record*> allArg = mergedDb.findSymbol("arg");
+   ASSERT_EQ(6, allArg.size());
+}
