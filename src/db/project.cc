@@ -24,10 +24,6 @@
  * ProjectDb
  */
 
-ftags::ProjectDb::ProjectDb() : m_operatingState{OptimizedForParse}
-{
-}
-
 bool ftags::ProjectDb::operator==(const ftags::ProjectDb& other) const
 {
    if (this == &other)

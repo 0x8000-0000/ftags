@@ -664,7 +664,6 @@ public:
    /*
     * Construction and maintenance
     */
-   ProjectDb();
 
    bool operator==(const ProjectDb& other) const;
 
@@ -760,11 +759,6 @@ public:
    static void deserialize(ftags::BufferExtractor& extractor, ftags::ProjectDb& projectDb);
 
 private:
-   enum State
-   {
-      OptimizedForParse,
-      OptimizedForQuery,
-   } m_operatingState;
 
    void updateIndices();
 
