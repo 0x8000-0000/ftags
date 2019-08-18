@@ -119,7 +119,7 @@ void dispatchUpdateTranslationUnit(zmq::socket_t& socket, ftags::ProjectDb& proj
    zmq::message_t payload;
    socket.recv(&payload);
 
-   spdlog::info("Received {} bytes of serialized data for translation unit {}.", payload.size(), fileName);
+   spdlog::info("Received {:n} bytes of serialized data for translation unit {}.", payload.size(), fileName);
 
    ftags::BufferExtractor extractor(static_cast<std::byte*>(payload.data()), payload.size());
 
@@ -137,7 +137,7 @@ void dispatchUpdateTranslationUnit(zmq::socket_t& socket, ftags::ProjectDb& proj
    status.SerializeToArray(reply.data(), static_cast<int>(replySize));
 
    socket.send(reply);
-   spdlog::info("Acknowledged translation unit {}.", fileName);
+   spdlog::info("Acknowledged translation unit {}", fileName);
 }
 
 void dispatchPing(zmq::socket_t& socket)

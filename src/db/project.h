@@ -24,7 +24,6 @@
 #include <iosfwd>
 #include <map>
 #include <memory>
-#include <mutex>
 #include <numeric>
 #include <string>
 #include <unordered_map>
@@ -794,11 +793,10 @@ private:
     */
    using TranslationUnitStore = std::vector<TranslationUnit>;
    TranslationUnitStore m_translationUnits;
-   std::mutex           m_updateTranslationUnits;
 
-   StringTable m_symbolTable{true}; // enable concurrent access on all symbol tables
-   StringTable m_namespaceTable{true};
-   StringTable m_fileNameTable{true};
+   StringTable m_symbolTable;
+   StringTable m_namespaceTable;
+   StringTable m_fileNameTable;
 
    /** Maps from a file name key to a position in the translation units vector.
     */

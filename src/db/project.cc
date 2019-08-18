@@ -104,11 +104,6 @@ const ftags::TranslationUnit& ftags::ProjectDb::addTranslationUnit(const std::st
                                                                    const StringTable&     fileNameTable)
 {
    /*
-    * protect access
-    */
-   std::lock_guard<std::mutex> lock(m_updateTranslationUnits);
-
-   /*
     * add the new translation unit to database
     */
    const TranslationUnitStore::size_type translationUnitPos = m_translationUnits.size();
@@ -266,11 +261,6 @@ void ftags::ProjectDb::deserialize(ftags::BufferExtractor& extractor, ftags::Pro
 
 void ftags::ProjectDb::mergeFrom(const ProjectDb& other)
 {
-   /*
-    * protect access
-    */
-   std::lock_guard<std::mutex> lock(m_updateTranslationUnits);
-
    /*
     * merge the symbols
     */

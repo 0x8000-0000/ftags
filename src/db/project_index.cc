@@ -252,7 +252,7 @@ void ftags::parseOneFile(const std::string& fileName, std::vector<const char*> a
       ftags::TranslationUnit translationUnit =
          ftags::TranslationUnit::parse(fileName, arguments, symbolTable, fileNameTable);
 
-      spdlog::info("Loaded {} records from {}, {} from main file",
+      spdlog::info("Loaded {:n} records from {}, {:n} from main file",
                    translationUnit.getRecordCount(),
                    fileName,
                    translationUnit.getRecords(true).size());
