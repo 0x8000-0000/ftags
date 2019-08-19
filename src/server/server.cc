@@ -149,9 +149,7 @@ void dispatchUpdateTranslationUnit(zmq::socket_t& socket, ftags::ProjectDb* proj
 
    ftags::BufferExtractor extractor(static_cast<std::byte*>(payload.data()), payload.size());
 
-   ftags::ProjectDb updatedTranslationUnit{/* name = */ projectDb->getName(),
-                                           /* rootDirectory = */ projectDb->getRoot()};
-   ftags::ProjectDb::deserialize(extractor, updatedTranslationUnit);
+   ftags::ProjectDb updatedTranslationUnit = ftags::ProjectDb::deserialize(extractor);
 
    projectDb->updateFrom(fileName, updatedTranslationUnit);
 

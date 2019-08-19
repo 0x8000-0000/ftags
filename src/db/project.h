@@ -782,7 +782,7 @@ public:
 
    void serialize(ftags::BufferInsertor& insertor) const;
 
-   static void deserialize(ftags::BufferExtractor& extractor, ftags::ProjectDb& projectDb);
+   static ftags::ProjectDb deserialize(ftags::BufferExtractor& extractor);
 
 private:
    void updateIndices();

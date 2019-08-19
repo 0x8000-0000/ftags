@@ -242,13 +242,15 @@ void ftags::ProjectDb::serialize(ftags::BufferInsertor& insertor) const
                  [&insertor](const TranslationUnit& translationUnit) { translationUnit.serialize(insertor); });
 }
 
-void ftags::ProjectDb::deserialize(ftags::BufferExtractor& extractor, ftags::ProjectDb& projectDb)
+ftags::ProjectDb ftags::ProjectDb::deserialize(ftags::BufferExtractor& extractor)
 {
    ftags::SerializedObjectHeader header;
    extractor >> header;
 
-   projectDb.m_name = ftags::Serializer<std::string>::deserialize(extractor);
-   projectDb.m_root = ftags::Serializer<std::string>::deserialize(extractor);
+   const std::string name = ftags::Serializer<std::string>::deserialize(extractor);
+   const std::string root = ftags::Serializer<std::string>::deserialize(extractor);
+
+   ftags::ProjectDb projectDb(name, root);
 
    projectDb.m_fileNameTable  = StringTable::deserialize(extractor);
    projectDb.m_symbolTable    = StringTable::deserialize(extractor);
@@ -266,6 +268,8 @@ void ftags::ProjectDb::deserialize(ftags::BufferExtractor& extractor, ftags::Pro
    {
       projectDb.m_translationUnits.push_back(TranslationUnit::deserialize(extractor, projectDb.m_recordSpanCache));
    }
+
+   return projectDb;
 }
 
 void ftags::ProjectDb::mergeFrom(const ProjectDb& other)

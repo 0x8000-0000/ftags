@@ -146,8 +146,7 @@ TEST(ProjectSerializationTest, DeserializedProjectDbEqualsInput)
    tagsDb.serialize(insertor);
 
    ftags::BufferExtractor extractor{buffer};
-   ftags::ProjectDb       restoredTagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
-   ftags::ProjectDb::deserialize(extractor, restoredTagsDb);
+   ftags::ProjectDb       restoredTagsDb = ftags::ProjectDb::deserialize(extractor);
 
    ASSERT_EQ(tagsDb, restoredTagsDb);
 }
@@ -217,8 +216,7 @@ TEST(ProjectSerializationTest, FindVariablesInDeserializedProjectDb)
    }
 
    ftags::BufferExtractor extractor{buffer};
-   ftags::ProjectDb       restoredTagsDb{/* name = */ "foo", /* rootDirectory = */ "bar"};
-   ftags::ProjectDb::deserialize(extractor, restoredTagsDb);
+   ftags::ProjectDb       restoredTagsDb = ftags::ProjectDb::deserialize(extractor);
 
    std::string restoredName = restoredTagsDb.getName();
    ASSERT_STREQ("test", restoredName.data());
