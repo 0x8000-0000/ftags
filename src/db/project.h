@@ -167,10 +167,11 @@ struct Attributes
    uint32_t isThrown : 1;
 
    uint32_t isFromMainFile : 1;
+   uint32_t isDefinedInMainFile : 1;
 
    uint32_t isNamespaceRef : 1;
 
-   uint32_t freeBits : 15;
+   uint32_t freeBits : 14;
 
    std::string getRecordType() const;
 
@@ -186,6 +187,8 @@ struct Cursor
       const char* fileName;
       int         line;
       int         column;
+      int         endLine;
+      int         endColumn;
    };
 
    char*       symbolNamespace;
@@ -195,8 +198,7 @@ struct Cursor
    Attributes attributes;
 
    Location location;
-   int      endLine;
-   int      endColumn;
+   Location definition;
 };
 
 struct Record
@@ -548,7 +550,10 @@ public:
                                 StringTable&                    symbolTable,
                                 StringTable&                    fileNameTable);
 
-   void addCursor(const Cursor& cursor, StringTable::Key symbolNameKey, StringTable::Key fileNameKey);
+   void addCursor(const Cursor&    cursor,
+                  StringTable::Key symbolNameKey,
+                  StringTable::Key fileNameKey,
+                  StringTable::Key referencedFileNameKey);
 
    /*
     * Query helper

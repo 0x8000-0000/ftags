@@ -55,18 +55,18 @@ void ftags::TranslationUnit::copyRecords(const TranslationUnit& original,
 
 void ftags::TranslationUnit::addCursor(const ftags::Cursor&    cursor,
                                        ftags::StringTable::Key symbolNameKey,
-                                       ftags::StringTable::Key fileNameKey)
+                                       ftags::StringTable::Key fileNameKey,
+                                       ftags::StringTable::Key referencedFileNameKey)
 {
    ftags::Record newRecord = {};
 
    newRecord.symbolNameKey = symbolNameKey;
+   newRecord.attributes    = cursor.attributes;
+
    newRecord.location.fileNameKey = fileNameKey;
-
-   newRecord.attributes = cursor.attributes;
-
    newRecord.location.startLine   = static_cast<uint32_t>(cursor.location.line);
    newRecord.location.startColumn = static_cast<uint16_t>(cursor.location.column);
-   newRecord.location.endLine     = static_cast<uint16_t>(cursor.endLine);
+   newRecord.location.endLine     = static_cast<uint16_t>(cursor.location.endLine);
 
    if (newRecord.location.fileNameKey != m_currentRecordSpanFileKey)
    {
@@ -76,6 +76,11 @@ void ftags::TranslationUnit::addCursor(const ftags::Cursor&    cursor,
       m_recordSpans.push_back(std::make_shared<RecordSpan>());
       m_currentRecordSpanFileKey = newRecord.location.fileNameKey;
    }
+
+   newRecord.definition.fileNameKey = fileNameKey;
+   newRecord.definition.startLine   = static_cast<uint32_t>(cursor.definition.line);
+   newRecord.definition.startColumn = static_cast<uint16_t>(cursor.definition.column);
+   newRecord.definition.endLine     = static_cast<uint16_t>(cursor.definition.endLine);
 
    m_recordSpans.back()->addRecord(newRecord);
 }

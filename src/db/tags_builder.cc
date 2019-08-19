@@ -298,6 +298,44 @@ struct TranslationUnitAccumulator
    void processCursor(CXCursor clangCursor);
 };
 
+bool getCursorLocation(CXCursor clangCursor, ftags::Cursor::Location& cursorLocation)
+{
+   CXStringWrapper fileName;
+   unsigned int    line   = 0;
+   unsigned int    column = 0;
+
+   CXSourceLocation location = clang_getCursorLocation(clangCursor);
+   clang_getPresumedLocation(location, fileName.get(), &line, &column);
+
+#ifdef USE_CANONICAL_PATHS
+   const char*           fileNameAsRawCString = fileName.c_str();
+   std::filesystem::path filePath{fileNameAsRawCString};
+   std::string           canonicalFilePathAsString{fileNameAsRawCString};
+   if (std::filesystem::exists(filePath))
+   {
+      std::filesystem::path canonicalFilePath = std::filesystem::canonical(filePath);
+      canonicalFilePathAsString               = canonicalFilePath.string();
+   }
+   else
+   {
+      std::filesystem::path otherPath = std::filesystem::current_path() / filePath;
+      if (std::filesystem::exists(otherPath))
+      {
+         std::filesystem::path canonicalFilePath = std::filesystem::canonical(otherPath);
+         canonicalFilePathAsString               = canonicalFilePath.string();
+      }
+   }
+   cursor.location.fileName = canonicalFilePathAsString.data();
+#else
+   cursorLocation.fileName = fileName.c_str();
+#endif
+
+   cursorLocation.line   = static_cast<int>(line);
+   cursorLocation.column = static_cast<int>(column);
+
+   return clang_Location_isFromMainFile(location);
+}
+
 void TranslationUnitAccumulator::processCursor(CXCursor clangCursor)
 {
    ftags::Cursor cursor = {};
@@ -321,59 +359,25 @@ void TranslationUnitAccumulator::processCursor(CXCursor clangCursor)
       return;
    }
 
-   CXStringWrapper fileName;
-   unsigned int    line   = 0;
-   unsigned int    column = 0;
-
-   CXSourceLocation location = clang_getCursorLocation(clangCursor);
-   clang_getPresumedLocation(location, fileName.get(), &line, &column);
-
-   if (clang_Location_isFromMainFile(location))
-   {
-      cursor.attributes.isFromMainFile = 1;
-   }
+   cursor.attributes.isFromMainFile = getCursorLocation(clangCursor, cursor.location);
 
    if (clang_isCursorDefinition(clangCursor))
    {
       cursor.attributes.isDefinition = 1;
    }
 
-#ifdef USE_CANONICAL_PATHS
-   const char*           fileNameAsRawCString = fileName.c_str();
-   std::filesystem::path filePath{fileNameAsRawCString};
-   std::string           canonicalFilePathAsString{fileNameAsRawCString};
-   if (std::filesystem::exists(filePath))
-   {
-      std::filesystem::path canonicalFilePath = std::filesystem::canonical(filePath);
-      canonicalFilePathAsString               = canonicalFilePath.string();
-   }
-   else
-   {
-      std::filesystem::path otherPath = std::filesystem::current_path() / filePath;
-      if (std::filesystem::exists(otherPath))
-      {
-         std::filesystem::path canonicalFilePath = std::filesystem::canonical(otherPath);
-         canonicalFilePathAsString               = canonicalFilePath.string();
-      }
-   }
-   cursor.location.fileName = canonicalFilePathAsString.data();
-#else
-   cursor.location.fileName = fileName.c_str();
-#endif
-
-   cursor.location.line   = static_cast<int>(line);
-   cursor.location.column = static_cast<int>(column);
-
    CXStringWrapper unifiedSymbol{clang_getCursorUSR(clangCursor)};
 
    cursor.unifiedSymbol = unifiedSymbol.c_str();
 
-   const ftags::StringTable::Key symbolNameKey = symbolTable.addKey(cursor.symbolName);
-   const ftags::StringTable::Key fileNameKey   = fileNameTable.addKey(cursor.location.fileName);
+   CXCursor referencedCursor             = clang_getCursorReferenced(clangCursor);
+   cursor.attributes.isDefinedInMainFile = getCursorLocation(referencedCursor, cursor.definition);
 
-   // CXCursor referencedCursor = clang_getCursorReferenced(clangCursor);
+   const ftags::StringTable::Key symbolNameKey         = symbolTable.addKey(cursor.symbolName);
+   const ftags::StringTable::Key fileNameKey           = fileNameTable.addKey(cursor.location.fileName);
+   const ftags::StringTable::Key referencedFileNameKey = fileNameTable.addKey(cursor.definition.fileName);
 
-   translationUnit.addCursor(cursor, symbolNameKey, fileNameKey);
+   translationUnit.addCursor(cursor, symbolNameKey, fileNameKey, referencedFileNameKey);
 }
 
 CXChildVisitResult visitTranslationUnit(CXCursor cursor, CXCursor /* parent */, CXClientData clientData)
