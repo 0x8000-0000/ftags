@@ -5,7 +5,7 @@
 #include <iostream>
 #include <vector>
 
-void dumpTranslationUnit(const ftags::TranslationUnit& translationUnit, const std::string& fileName)
+void dumpTranslationUnit(const ftags::ProjectDb::TranslationUnit& translationUnit, const std::string& fileName)
 {
 #if 0
    std::ofstream out(fileName);
@@ -41,10 +41,11 @@ int main(int argc, char* argv[])
 
    ftags::StringTable     symbolTable;
    ftags::StringTable     fileNameTable;
-   ftags::TranslationUnit translationUnit = ftags::TranslationUnit::parse(argv[1], arguments, symbolTable, fileNameTable);
+   ftags::ProjectDb::TranslationUnit translationUnit =
+      ftags::ProjectDb::TranslationUnit::parse(argv[1], arguments, symbolTable, fileNameTable);
 
    ftags::ProjectDb              tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
-   const ftags::TranslationUnit& mergedTranslationUnit =
+   const ftags::ProjectDb::TranslationUnit& mergedTranslationUnit =
       tagsDb.addTranslationUnit(argv[1], translationUnit, symbolTable, fileNameTable);
 
    dumpTranslationUnit(translationUnit, std::string(argv[1]) + ".dump.orig");

@@ -511,146 +511,6 @@ public:
 
 using KeyMap = ftags::FlatMap<ftags::StringTable::Key, ftags::StringTable::Key>;
 
-/** Contains all the symbols in a C++ translation unit.
- */
-class TranslationUnit
-{
-public:
-   using Key = ftags::StringTable::Key;
-
-   void copyRecords(const TranslationUnit& other,
-                    RecordSpanCache&       spanCache,
-                    const KeyMap&          symbolKeyMapping,
-                    const KeyMap&          fileNameKeyMapping);
-
-   Key getFileNameKey() const
-   {
-      return m_fileNameKey;
-   }
-
-   /*
-    * Statistics
-    */
-   std::vector<Record>::size_type getRecordCount() const
-   {
-      return std::accumulate(m_recordSpans.cbegin(),
-                             m_recordSpans.cend(),
-                             0u,
-                             [](std::vector<Record>::size_type acc, const std::shared_ptr<RecordSpan>& elem) {
-                                return acc + elem->getRecordCount();
-                             });
-   }
-
-   /*
-    * General queries
-    */
-   std::vector<const Record*> getRecords(bool isFromMainFile) const
-   {
-      std::vector<const ftags::Record*> records;
-
-      forEachRecord([&records, isFromMainFile](const ftags::Record* record) {
-         if (record->attributes.isFromMainFile == isFromMainFile)
-         {
-            records.push_back(record);
-         }
-      });
-
-      return records;
-   }
-
-   std::vector<Record*> getFunctions() const;
-
-   std::vector<Record*> getClasses() const;
-
-   std::vector<Record*> getGlobalVariables() const;
-
-   /*
-    * Specific queries
-    */
-   std::vector<Record*> findDeclaration(const std::string& symbolName) const;
-
-   std::vector<Record*> findDeclaration(const std::string& symbolName, SymbolType type) const;
-
-   std::vector<Record*> findDefinition(const std::string& symbolName) const;
-
-   static TranslationUnit parse(const std::string&              fileName,
-                                const std::vector<const char*>& arguments,
-                                StringTable&                    symbolTable,
-                                StringTable&                    fileNameTable);
-
-   void addCursor(const Cursor&    cursor,
-                  StringTable::Key symbolNameKey,
-                  StringTable::Key fileNameKey,
-                  StringTable::Key referencedFileNameKey);
-
-   /*
-    * Query helper
-    */
-   template <typename F>
-   void forEachRecord(F func) const
-   {
-      std::for_each(m_recordSpans.cbegin(), m_recordSpans.cend(), [func](const std::shared_ptr<RecordSpan>& elem) {
-         elem->forEachRecord(func);
-      });
-   }
-
-   struct RecordSymbolComparator
-   {
-      RecordSymbolComparator(const std::vector<Record>& records) : m_records{records}
-      {
-      }
-
-      bool operator()(std::vector<Record>::size_type recordPos, Key symbolNameKey)
-      {
-         return m_records[recordPos].symbolNameKey < symbolNameKey;
-      }
-
-      bool operator()(Key symbolNameKey, std::vector<Record>::size_type recordPos)
-      {
-         return symbolNameKey < m_records[recordPos].symbolNameKey;
-      }
-
-      const std::vector<Record>& m_records;
-   };
-
-   template <typename F>
-   void forEachRecordWithSymbol(Key symbolNameKey, F func) const
-   {
-      std::for_each(m_recordSpans.cbegin(),
-                    m_recordSpans.cend(),
-                    [symbolNameKey, func](const std::shared_ptr<RecordSpan>& elem) {
-                       elem->forEachRecordWithSymbol(symbolNameKey, func);
-                    });
-   }
-
-   /*
-    * Debugging
-    */
-   void dumpRecords(std::ostream&             os,
-                    const ftags::StringTable& symbolTable,
-                    const ftags::StringTable& fileNameTable) const;
-
-   /*
-    * Serialization interface
-    */
-   std::size_t computeSerializedSize() const;
-
-   void serialize(ftags::BufferInsertor& insertor) const;
-
-   static TranslationUnit deserialize(ftags::BufferExtractor& extractor, const RecordSpanCache& spanCache);
-
-private:
-   // key of the file name of the main translation unit
-   Key m_fileNameKey = 0;
-
-   // persistent data
-   std::vector<std::shared_ptr<RecordSpan>> m_recordSpans;
-
-   Key m_currentRecordSpanFileKey = 0;
-
-   void updateIndices();
-};
-
 class CursorSet
 {
 public:
@@ -716,11 +576,6 @@ public:
    }
 
    bool operator==(const ProjectDb& other) const;
-
-   const ftags::TranslationUnit& addTranslationUnit(const std::string&     fileName,
-                                                    const TranslationUnit& translationUnit,
-                                                    const StringTable&     symbolTable,
-                                                    const StringTable&     fileNameTable);
 
    void removeTranslationUnit(const std::string& fileName);
 
@@ -811,6 +666,151 @@ public:
    void serialize(ftags::BufferInsertor& insertor) const;
 
    static ftags::ProjectDb deserialize(ftags::BufferExtractor& extractor);
+
+   /** Contains all the symbols in a C++ translation unit.
+    */
+   class TranslationUnit
+   {
+   public:
+      using Key = ftags::StringTable::Key;
+
+      void copyRecords(const TranslationUnit& other,
+                       RecordSpanCache&       spanCache,
+                       const KeyMap&          symbolKeyMapping,
+                       const KeyMap&          fileNameKeyMapping);
+
+      Key getFileNameKey() const
+      {
+         return m_fileNameKey;
+      }
+
+      /*
+       * Statistics
+       */
+      std::vector<Record>::size_type getRecordCount() const
+      {
+         return std::accumulate(m_recordSpans.cbegin(),
+                                m_recordSpans.cend(),
+                                0u,
+                                [](std::vector<Record>::size_type acc, const std::shared_ptr<RecordSpan>& elem) {
+                                   return acc + elem->getRecordCount();
+                                });
+      }
+
+      /*
+       * General queries
+       */
+      std::vector<const Record*> getRecords(bool isFromMainFile) const
+      {
+         std::vector<const ftags::Record*> records;
+
+         forEachRecord([&records, isFromMainFile](const ftags::Record* record) {
+            if (record->attributes.isFromMainFile == isFromMainFile)
+            {
+               records.push_back(record);
+            }
+         });
+
+         return records;
+      }
+
+      std::vector<Record*> getFunctions() const;
+
+      std::vector<Record*> getClasses() const;
+
+      std::vector<Record*> getGlobalVariables() const;
+
+      /*
+       * Specific queries
+       */
+      std::vector<Record*> findDeclaration(const std::string& symbolName) const;
+
+      std::vector<Record*> findDeclaration(const std::string& symbolName, SymbolType type) const;
+
+      std::vector<Record*> findDefinition(const std::string& symbolName) const;
+
+      static TranslationUnit parse(const std::string&              fileName,
+                                   const std::vector<const char*>& arguments,
+                                   StringTable&                    symbolTable,
+                                   StringTable&                    fileNameTable);
+
+      void addCursor(const Cursor&    cursor,
+                     StringTable::Key symbolNameKey,
+                     StringTable::Key fileNameKey,
+                     StringTable::Key referencedFileNameKey);
+
+      /*
+       * Query helper
+       */
+      template <typename F>
+      void forEachRecord(F func) const
+      {
+         std::for_each(m_recordSpans.cbegin(), m_recordSpans.cend(), [func](const std::shared_ptr<RecordSpan>& elem) {
+            elem->forEachRecord(func);
+         });
+      }
+
+      struct RecordSymbolComparator
+      {
+         RecordSymbolComparator(const std::vector<Record>& records) : m_records{records}
+         {
+         }
+
+         bool operator()(std::vector<Record>::size_type recordPos, Key symbolNameKey)
+         {
+            return m_records[recordPos].symbolNameKey < symbolNameKey;
+         }
+
+         bool operator()(Key symbolNameKey, std::vector<Record>::size_type recordPos)
+         {
+            return symbolNameKey < m_records[recordPos].symbolNameKey;
+         }
+
+         const std::vector<Record>& m_records;
+      };
+
+      template <typename F>
+      void forEachRecordWithSymbol(Key symbolNameKey, F func) const
+      {
+         std::for_each(m_recordSpans.cbegin(),
+                       m_recordSpans.cend(),
+                       [symbolNameKey, func](const std::shared_ptr<RecordSpan>& elem) {
+                          elem->forEachRecordWithSymbol(symbolNameKey, func);
+                       });
+      }
+
+      /*
+       * Debugging
+       */
+      void dumpRecords(std::ostream&             os,
+                       const ftags::StringTable& symbolTable,
+                       const ftags::StringTable& fileNameTable) const;
+
+      /*
+       * Serialization interface
+       */
+      std::size_t computeSerializedSize() const;
+
+      void serialize(ftags::BufferInsertor& insertor) const;
+
+      static TranslationUnit deserialize(ftags::BufferExtractor& extractor, const RecordSpanCache& spanCache);
+
+   private:
+      // key of the file name of the main translation unit
+      Key m_fileNameKey = 0;
+
+      // persistent data
+      std::vector<std::shared_ptr<RecordSpan>> m_recordSpans;
+
+      Key m_currentRecordSpanFileKey = 0;
+
+      void updateIndices();
+   };
+
+   const TranslationUnit& addTranslationUnit(const std::string&     fileName,
+                                             const TranslationUnit& translationUnit,
+                                             const StringTable&     symbolTable,
+                                             const StringTable&     fileNameTable);
 
 private:
    void updateIndices();

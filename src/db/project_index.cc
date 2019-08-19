@@ -54,7 +54,7 @@ const char* g_defaultArguments[] = {
    "/usr/lib/gcc/x86_64-linux-gnu/8/include",
 };
 
-void dumpTranslationUnit(const ftags::TranslationUnit& translationUnit, const std::string& fileName)
+void dumpTranslationUnit(const ftags::ProjectDb::TranslationUnit& translationUnit, const std::string& fileName)
 {
 #if 0
    std::ofstream out(fileName);
@@ -110,8 +110,8 @@ void parseTranslationUnit(ftags::ProjectDb&                        projectDb,
       {
          clangMutex.lock();
 
-         ftags::TranslationUnit translationUnit =
-            ftags::TranslationUnit::parse(request.fileName, arguments, symbolTable, fileNameTable);
+         ftags::ProjectDb::TranslationUnit translationUnit =
+            ftags::ProjectDb::TranslationUnit::parse(request.fileName, arguments, symbolTable, fileNameTable);
 
          clangMutex.unlock();
 
@@ -120,7 +120,7 @@ void parseTranslationUnit(ftags::ProjectDb&                        projectDb,
                       request.fileName,
                       translationUnit.getRecords(true).size());
 
-         const ftags::TranslationUnit& mergedTranslationUnit =
+         const ftags::ProjectDb::TranslationUnit& mergedTranslationUnit =
             projectDb.addTranslationUnit(request.fileName, translationUnit, symbolTable, fileNameTable);
 
          dumpTranslationUnit(translationUnit, request.fileName + ".orig");
@@ -249,8 +249,8 @@ void ftags::parseOneFile(const std::string& fileName, std::vector<const char*> a
 
    try
    {
-      ftags::TranslationUnit translationUnit =
-         ftags::TranslationUnit::parse(fileName, arguments, symbolTable, fileNameTable);
+      ftags::ProjectDb::TranslationUnit translationUnit =
+         ftags::ProjectDb::TranslationUnit::parse(fileName, arguments, symbolTable, fileNameTable);
 
       spdlog::info("Loaded {:n} records from {}, {:n} from main file",
                    translationUnit.getRecordCount(),

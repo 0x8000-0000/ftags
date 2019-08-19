@@ -16,16 +16,16 @@
 
 #include <project.h>
 
-void ftags::TranslationUnit::updateIndices()
+void ftags::ProjectDb::TranslationUnit::updateIndices()
 {
    std::for_each(
       m_recordSpans.begin(), m_recordSpans.end(), [](std::shared_ptr<RecordSpan>& rs) { rs->updateIndices(); });
 }
 
-void ftags::TranslationUnit::copyRecords(const TranslationUnit& original,
-                                         RecordSpanCache&       spanCache,
-                                         const KeyMap&          symbolKeyMapping,
-                                         const KeyMap&          fileNameKeyMapping)
+void ftags::ProjectDb::TranslationUnit::copyRecords(const TranslationUnit& original,
+                                                    RecordSpanCache&       spanCache,
+                                                    const KeyMap&          symbolKeyMapping,
+                                                    const KeyMap&          fileNameKeyMapping)
 {
    /*
     * copy the original records
@@ -53,10 +53,10 @@ void ftags::TranslationUnit::copyRecords(const TranslationUnit& original,
 #endif
 }
 
-void ftags::TranslationUnit::addCursor(const ftags::Cursor&    cursor,
-                                       ftags::StringTable::Key symbolNameKey,
-                                       ftags::StringTable::Key fileNameKey,
-                                       ftags::StringTable::Key referencedFileNameKey)
+void ftags::ProjectDb::TranslationUnit::addCursor(const ftags::Cursor&    cursor,
+                                                  ftags::StringTable::Key symbolNameKey,
+                                                  ftags::StringTable::Key fileNameKey,
+                                                  ftags::StringTable::Key referencedFileNameKey)
 {
    ftags::Record newRecord = {};
 
@@ -81,7 +81,7 @@ void ftags::TranslationUnit::addCursor(const ftags::Cursor&    cursor,
    m_recordSpans.back()->addRecord(newRecord);
 }
 
-std::size_t ftags::TranslationUnit::computeSerializedSize() const
+std::size_t ftags::ProjectDb::TranslationUnit::computeSerializedSize() const
 {
    std::vector<uint64_t> recordSpanHashes(/* size = */ m_recordSpans.size());
 
@@ -89,7 +89,7 @@ std::size_t ftags::TranslationUnit::computeSerializedSize() const
           ftags::Serializer<std::vector<uint64_t>>::computeSerializedSize(recordSpanHashes);
 }
 
-void ftags::TranslationUnit::serialize(ftags::BufferInsertor& insertor) const
+void ftags::ProjectDb::TranslationUnit::serialize(ftags::BufferInsertor& insertor) const
 {
    ftags::SerializedObjectHeader header{"ftags::TranslationUnit"};
    insertor << header;
@@ -105,10 +105,10 @@ void ftags::TranslationUnit::serialize(ftags::BufferInsertor& insertor) const
    ftags::Serializer<std::vector<uint64_t>>::serialize(recordSpanHashes, insertor);
 }
 
-ftags::TranslationUnit ftags::TranslationUnit::deserialize(ftags::BufferExtractor& extractor,
-                                                           const RecordSpanCache&  spanCache)
+ftags::ProjectDb::TranslationUnit ftags::ProjectDb::TranslationUnit::deserialize(ftags::BufferExtractor& extractor,
+                                                                                 const RecordSpanCache&  spanCache)
 {
-   ftags::TranslationUnit retval;
+   ftags::ProjectDb::TranslationUnit retval;
 
    ftags::SerializedObjectHeader header = {};
    extractor >> header;

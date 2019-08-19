@@ -127,8 +127,8 @@ TEST(ProjectSerializationTest, DeserializedProjectDbEqualsInput)
 
       ftags::StringTable           symbolTable;
       ftags::StringTable           fileNameTable;
-      const ftags::TranslationUnit libCpp =
-         ftags::TranslationUnit::parse(libPath, arguments, symbolTable, fileNameTable);
+      const ftags::ProjectDb::TranslationUnit libCpp =
+         ftags::ProjectDb::TranslationUnit::parse(libPath, arguments, symbolTable, fileNameTable);
 
       tagsDb.addTranslationUnit(libPath, libCpp, symbolTable, fileNameTable);
    }
@@ -139,8 +139,8 @@ TEST(ProjectSerializationTest, DeserializedProjectDbEqualsInput)
 
       ftags::StringTable           symbolTable;
       ftags::StringTable           fileNameTable;
-      const ftags::TranslationUnit testCpp =
-         ftags::TranslationUnit::parse(testPath, arguments, symbolTable, fileNameTable);
+      const ftags::ProjectDb::TranslationUnit testCpp =
+         ftags::ProjectDb::TranslationUnit::parse(testPath, arguments, symbolTable, fileNameTable);
 
       tagsDb.addTranslationUnit(testPath, testCpp, symbolTable, fileNameTable);
    }
@@ -179,8 +179,8 @@ TEST(ProjectSerializationTest, FindVariablesInDeserializedProjectDb)
 
          ftags::StringTable           symbolTable;
          ftags::StringTable           fileNameTable;
-         const ftags::TranslationUnit libCpp =
-            ftags::TranslationUnit::parse(libPath, arguments, symbolTable, fileNameTable);
+         const ftags::ProjectDb::TranslationUnit libCpp =
+            ftags::ProjectDb::TranslationUnit::parse(libPath, arguments, symbolTable, fileNameTable);
 
          tagsDb.addTranslationUnit(libPath, libCpp, symbolTable, fileNameTable);
       }
@@ -191,8 +191,8 @@ TEST(ProjectSerializationTest, FindVariablesInDeserializedProjectDb)
 
          ftags::StringTable           symbolTable;
          ftags::StringTable           fileNameTable;
-         const ftags::TranslationUnit testCpp =
-            ftags::TranslationUnit::parse(testPath, arguments, symbolTable, fileNameTable);
+         const ftags::ProjectDb::TranslationUnit testCpp =
+            ftags::ProjectDb::TranslationUnit::parse(testPath, arguments, symbolTable, fileNameTable);
 
          tagsDb.addTranslationUnit(testPath, testCpp, symbolTable, fileNameTable);
       }

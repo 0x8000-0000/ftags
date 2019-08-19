@@ -81,9 +81,9 @@ void ftags::RecordSpan::dumpRecords(std::ostream&             os,
    });
 }
 
-void ftags::TranslationUnit::dumpRecords(std::ostream&             os,
-                                         const ftags::StringTable& symbolTable,
-                                         const ftags::StringTable& fileNameTable) const
+void ftags::ProjectDb::TranslationUnit::dumpRecords(std::ostream&             os,
+                                                    const ftags::StringTable& symbolTable,
+                                                    const ftags::StringTable& fileNameTable) const
 {
    os << " Found " << getRecordCount() << " records." << std::endl;
 

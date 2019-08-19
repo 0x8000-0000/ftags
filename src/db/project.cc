@@ -100,10 +100,10 @@ ftags::Cursor ftags::ProjectDb::inflateRecord(const ftags::Record* record) const
    return cursor;
 }
 
-const ftags::TranslationUnit& ftags::ProjectDb::addTranslationUnit(const std::string&     fullPath,
-                                                                   const TranslationUnit& translationUnit,
-                                                                   const StringTable&     symbolTable,
-                                                                   const StringTable&     fileNameTable)
+const ftags::ProjectDb::TranslationUnit& ftags::ProjectDb::addTranslationUnit(const std::string&     fullPath,
+                                                                              const TranslationUnit& translationUnit,
+                                                                              const StringTable&     symbolTable,
+                                                                              const StringTable&     fileNameTable)
 {
    /*
     * add the new translation unit to database
@@ -192,7 +192,7 @@ std::vector<const ftags::Record*> ftags::ProjectDb::dumpTranslationUnit(const st
 {
    const StringTable::Key        fileKey            = m_fileNameTable.getKey(fileName.data());
    const auto                    translationUnitPos = m_fileIndex.at(fileKey);
-   const ftags::TranslationUnit& translationUnit    = m_translationUnits.at(translationUnitPos);
+   const ftags::ProjectDb::TranslationUnit& translationUnit    = m_translationUnits.at(translationUnitPos);
 
    return translationUnit.getRecords(true);
 }

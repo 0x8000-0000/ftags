@@ -291,9 +291,9 @@ static void getSymbolType(CXCursor clangCursor, ftags::Attributes& attributes)
 
 struct TranslationUnitAccumulator
 {
-   ftags::TranslationUnit& translationUnit;
-   ftags::StringTable&     symbolTable;
-   ftags::StringTable&     fileNameTable;
+   ftags::ProjectDb::TranslationUnit& translationUnit;
+   ftags::StringTable&                symbolTable;
+   ftags::StringTable&                fileNameTable;
 
    void processCursor(CXCursor clangCursor);
 };
@@ -392,12 +392,12 @@ CXChildVisitResult visitTranslationUnit(CXCursor cursor, CXCursor /* parent */, 
 
 } // namespace
 
-ftags::TranslationUnit ftags::TranslationUnit::parse(const std::string&              fileName,
-                                                     const std::vector<const char*>& arguments,
-                                                     StringTable&                    symbolTable,
-                                                     StringTable&                    fileNameTable)
+ftags::ProjectDb::TranslationUnit ftags::ProjectDb::TranslationUnit::parse(const std::string&              fileName,
+                                                                           const std::vector<const char*>& arguments,
+                                                                           StringTable& symbolTable,
+                                                                           StringTable& fileNameTable)
 {
-   ftags::TranslationUnit translationUnit;
+   ftags::ProjectDb::TranslationUnit translationUnit;
 
    TranslationUnitAccumulator accumulator{translationUnit, symbolTable, fileNameTable};
 

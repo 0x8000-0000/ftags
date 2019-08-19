@@ -39,10 +39,10 @@ TEST(TagsIndexTest, IndexOneFile)
       "-Wextra",
    };
 
-   ftags::StringTable           symbolTable;
-   ftags::StringTable           fileNameTable;
-   const ftags::TranslationUnit helloCpp =
-      ftags::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
+   ftags::StringTable                      symbolTable;
+   ftags::StringTable                      fileNameTable;
+   const ftags::ProjectDb::TranslationUnit helloCpp =
+      ftags::ProjectDb::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
 
    ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
    tagsDb.addTranslationUnit(helloPath, helloCpp, symbolTable, fileNameTable);
@@ -67,10 +67,10 @@ TEST(TagsIndexTest, IndexOneFileHasFunctions)
       "-Wextra",
    };
 
-   ftags::StringTable           symbolTable;
-   ftags::StringTable           fileNameTable;
-   const ftags::TranslationUnit helloCpp =
-      ftags::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
+   ftags::StringTable                      symbolTable;
+   ftags::StringTable                      fileNameTable;
+   const ftags::ProjectDb::TranslationUnit helloCpp =
+      ftags::ProjectDb::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
 
    ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
    tagsDb.addTranslationUnit(helloPath, helloCpp, symbolTable, fileNameTable);
@@ -93,10 +93,10 @@ TEST(TagsIndexTest, HelloWorldHasMainFunction)
       "-Wextra",
    };
 
-   ftags::StringTable           symbolTable;
-   ftags::StringTable           fileNameTable;
-   const ftags::TranslationUnit helloCpp =
-      ftags::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
+   ftags::StringTable                      symbolTable;
+   ftags::StringTable                      fileNameTable;
+   const ftags::ProjectDb::TranslationUnit helloCpp =
+      ftags::ProjectDb::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
 
    ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
    tagsDb.addTranslationUnit(helloPath, helloCpp, symbolTable, fileNameTable);
@@ -119,10 +119,10 @@ TEST(TagsIndexTest, HelloWorldCallsPrintfFunction)
       "--gcc-toolchain=/usr",
    };
 
-   ftags::StringTable           symbolTable;
-   ftags::StringTable           fileNameTable;
-   const ftags::TranslationUnit helloCpp =
-      ftags::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
+   ftags::StringTable                      symbolTable;
+   ftags::StringTable                      fileNameTable;
+   const ftags::ProjectDb::TranslationUnit helloCpp =
+      ftags::ProjectDb::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
 
    ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
    tagsDb.addTranslationUnit(helloPath, helloCpp, symbolTable, fileNameTable);
@@ -158,10 +158,10 @@ TEST(TagsIndexTest, DistinguishDeclarationFromDefinition)
       "/usr/include",
    };
 
-   ftags::StringTable           symbolTable;
-   ftags::StringTable           fileNameTable;
-   const ftags::TranslationUnit translationUnit =
-      ftags::TranslationUnit::parse(translationUnitPath, arguments, symbolTable, fileNameTable);
+   ftags::StringTable                      symbolTable;
+   ftags::StringTable                      fileNameTable;
+   const ftags::ProjectDb::TranslationUnit translationUnit =
+      ftags::ProjectDb::TranslationUnit::parse(translationUnitPath, arguments, symbolTable, fileNameTable);
 
    ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
    tagsDb.addTranslationUnit(translationUnitPath, translationUnit, symbolTable, fileNameTable);
@@ -204,10 +204,10 @@ TEST(TagsIndexTest, ManageTwoTranslationUnits)
          "-Wextra",
       };
 
-      ftags::StringTable           symbolTable;
-      ftags::StringTable           fileNameTable;
-      const ftags::TranslationUnit helloCpp =
-         ftags::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
+      ftags::StringTable                      symbolTable;
+      ftags::StringTable                      fileNameTable;
+      const ftags::ProjectDb::TranslationUnit helloCpp =
+         ftags::ProjectDb::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
 
       tagsDb.addTranslationUnit(helloPath, helloCpp, symbolTable, fileNameTable);
    }
@@ -225,10 +225,10 @@ TEST(TagsIndexTest, ManageTwoTranslationUnits)
          "/usr/include",
       };
 
-      ftags::StringTable           symbolTable;
-      ftags::StringTable           fileNameTable;
-      const ftags::TranslationUnit translationUnit =
-         ftags::TranslationUnit::parse(translationUnitPath, arguments, symbolTable, fileNameTable);
+      ftags::StringTable                      symbolTable;
+      ftags::StringTable                      fileNameTable;
+      const ftags::ProjectDb::TranslationUnit translationUnit =
+         ftags::ProjectDb::TranslationUnit::parse(translationUnitPath, arguments, symbolTable, fileNameTable);
 
       tagsDb.addTranslationUnit(translationUnitPath, translationUnit, symbolTable, fileNameTable);
    }
@@ -260,10 +260,10 @@ TEST(TagsIndexTest, MultiModuleEliminateDuplicates)
       const auto libPath = path / "test" / "db" / "data" / "multi-module" / "lib.cc";
       ASSERT_TRUE(std::filesystem::exists(libPath));
 
-      ftags::StringTable           symbolTable;
-      ftags::StringTable           fileNameTable;
-      const ftags::TranslationUnit libCpp =
-         ftags::TranslationUnit::parse(libPath, arguments, symbolTable, fileNameTable);
+      ftags::StringTable                      symbolTable;
+      ftags::StringTable                      fileNameTable;
+      const ftags::ProjectDb::TranslationUnit libCpp =
+         ftags::ProjectDb::TranslationUnit::parse(libPath, arguments, symbolTable, fileNameTable);
 
       tagsDb.addTranslationUnit(libPath, libCpp, symbolTable, fileNameTable);
    }
@@ -272,10 +272,10 @@ TEST(TagsIndexTest, MultiModuleEliminateDuplicates)
       const auto testPath = path / "test" / "db" / "data" / "multi-module" / "test.cc";
       ASSERT_TRUE(std::filesystem::exists(testPath));
 
-      ftags::StringTable           symbolTable;
-      ftags::StringTable           fileNameTable;
-      const ftags::TranslationUnit testCpp =
-         ftags::TranslationUnit::parse(testPath, arguments, symbolTable, fileNameTable);
+      ftags::StringTable                      symbolTable;
+      ftags::StringTable                      fileNameTable;
+      const ftags::ProjectDb::TranslationUnit testCpp =
+         ftags::ProjectDb::TranslationUnit::parse(testPath, arguments, symbolTable, fileNameTable);
 
       tagsDb.addTranslationUnit(testPath, testCpp, symbolTable, fileNameTable);
    }
@@ -307,10 +307,10 @@ TEST(TagsIndexTest, InflateResults)
       const auto libPath = path / "test" / "db" / "data" / "multi-module" / "lib.cc";
       ASSERT_TRUE(std::filesystem::exists(libPath));
 
-      ftags::StringTable           symbolTable;
-      ftags::StringTable           fileNameTable;
-      const ftags::TranslationUnit libCpp =
-         ftags::TranslationUnit::parse(libPath, arguments, symbolTable, fileNameTable);
+      ftags::StringTable                      symbolTable;
+      ftags::StringTable                      fileNameTable;
+      const ftags::ProjectDb::TranslationUnit libCpp =
+         ftags::ProjectDb::TranslationUnit::parse(libPath, arguments, symbolTable, fileNameTable);
 
       tagsDb.addTranslationUnit(libPath, libCpp, symbolTable, fileNameTable);
    }
@@ -319,10 +319,10 @@ TEST(TagsIndexTest, InflateResults)
       const auto testPath = path / "test" / "db" / "data" / "multi-module" / "test.cc";
       ASSERT_TRUE(std::filesystem::exists(testPath));
 
-      ftags::StringTable           symbolTable;
-      ftags::StringTable           fileNameTable;
-      const ftags::TranslationUnit testCpp =
-         ftags::TranslationUnit::parse(testPath, arguments, symbolTable, fileNameTable);
+      ftags::StringTable                      symbolTable;
+      ftags::StringTable                      fileNameTable;
+      const ftags::ProjectDb::TranslationUnit testCpp =
+         ftags::ProjectDb::TranslationUnit::parse(testPath, arguments, symbolTable, fileNameTable);
 
       tagsDb.addTranslationUnit(testPath, testCpp, symbolTable, fileNameTable);
    }
@@ -359,10 +359,10 @@ TEST(TagsIndexTest, SerializeDeserializeResults)
       const auto libPath = path / "test" / "db" / "data" / "multi-module" / "lib.cc";
       ASSERT_TRUE(std::filesystem::exists(libPath));
 
-      ftags::StringTable           symbolTable;
-      ftags::StringTable           fileNameTable;
-      const ftags::TranslationUnit libCpp =
-         ftags::TranslationUnit::parse(libPath, arguments, symbolTable, fileNameTable);
+      ftags::StringTable                      symbolTable;
+      ftags::StringTable                      fileNameTable;
+      const ftags::ProjectDb::TranslationUnit libCpp =
+         ftags::ProjectDb::TranslationUnit::parse(libPath, arguments, symbolTable, fileNameTable);
 
       tagsDb.addTranslationUnit(libPath, libCpp, symbolTable, fileNameTable);
    }
@@ -371,10 +371,10 @@ TEST(TagsIndexTest, SerializeDeserializeResults)
       const auto testPath = path / "test" / "db" / "data" / "multi-module" / "test.cc";
       ASSERT_TRUE(std::filesystem::exists(testPath));
 
-      ftags::StringTable           symbolTable;
-      ftags::StringTable           fileNameTable;
-      const ftags::TranslationUnit testCpp =
-         ftags::TranslationUnit::parse(testPath, arguments, symbolTable, fileNameTable);
+      ftags::StringTable                      symbolTable;
+      ftags::StringTable                      fileNameTable;
+      const ftags::ProjectDb::TranslationUnit testCpp =
+         ftags::ProjectDb::TranslationUnit::parse(testPath, arguments, symbolTable, fileNameTable);
 
       tagsDb.addTranslationUnit(testPath, testCpp, symbolTable, fileNameTable);
    }
@@ -419,10 +419,10 @@ TEST(TagsIndexTest, FindVariables)
       const auto libPath = path / "test" / "db" / "data" / "multi-module" / "lib.cc";
       ASSERT_TRUE(std::filesystem::exists(libPath));
 
-      ftags::StringTable           symbolTable;
-      ftags::StringTable           fileNameTable;
-      const ftags::TranslationUnit libCpp =
-         ftags::TranslationUnit::parse(libPath, arguments, symbolTable, fileNameTable);
+      ftags::StringTable                      symbolTable;
+      ftags::StringTable                      fileNameTable;
+      const ftags::ProjectDb::TranslationUnit libCpp =
+         ftags::ProjectDb::TranslationUnit::parse(libPath, arguments, symbolTable, fileNameTable);
 
       tagsDb.addTranslationUnit(libPath, libCpp, symbolTable, fileNameTable);
    }
@@ -431,10 +431,10 @@ TEST(TagsIndexTest, FindVariables)
       const auto testPath = path / "test" / "db" / "data" / "multi-module" / "test.cc";
       ASSERT_TRUE(std::filesystem::exists(testPath));
 
-      ftags::StringTable           symbolTable;
-      ftags::StringTable           fileNameTable;
-      const ftags::TranslationUnit testCpp =
-         ftags::TranslationUnit::parse(testPath, arguments, symbolTable, fileNameTable);
+      ftags::StringTable                      symbolTable;
+      ftags::StringTable                      fileNameTable;
+      const ftags::ProjectDb::TranslationUnit testCpp =
+         ftags::ProjectDb::TranslationUnit::parse(testPath, arguments, symbolTable, fileNameTable);
 
       tagsDb.addTranslationUnit(testPath, testCpp, symbolTable, fileNameTable);
    }
@@ -474,10 +474,10 @@ TEST(TagsIndexTest, MergeProjectDatabases)
       const auto libPath = path / "test" / "db" / "data" / "multi-module" / "lib.cc";
       ASSERT_TRUE(std::filesystem::exists(libPath));
 
-      ftags::StringTable           symbolTable;
-      ftags::StringTable           fileNameTable;
-      const ftags::TranslationUnit libCpp =
-         ftags::TranslationUnit::parse(libPath, arguments, symbolTable, fileNameTable);
+      ftags::StringTable                      symbolTable;
+      ftags::StringTable                      fileNameTable;
+      const ftags::ProjectDb::TranslationUnit libCpp =
+         ftags::ProjectDb::TranslationUnit::parse(libPath, arguments, symbolTable, fileNameTable);
 
       tagsDb.addTranslationUnit(libPath, libCpp, symbolTable, fileNameTable);
 
@@ -490,10 +490,10 @@ TEST(TagsIndexTest, MergeProjectDatabases)
       const auto testPath = path / "test" / "db" / "data" / "multi-module" / "test.cc";
       ASSERT_TRUE(std::filesystem::exists(testPath));
 
-      ftags::StringTable           symbolTable;
-      ftags::StringTable           fileNameTable;
-      const ftags::TranslationUnit testCpp =
-         ftags::TranslationUnit::parse(testPath, arguments, symbolTable, fileNameTable);
+      ftags::StringTable                      symbolTable;
+      ftags::StringTable                      fileNameTable;
+      const ftags::ProjectDb::TranslationUnit testCpp =
+         ftags::ProjectDb::TranslationUnit::parse(testPath, arguments, symbolTable, fileNameTable);
 
       tagsDb.addTranslationUnit(testPath, testCpp, symbolTable, fileNameTable);
 
