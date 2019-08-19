@@ -1,5 +1,7 @@
 add_subdirectory (Clara)
 add_subdirectory (burtle)
+add_subdirectory (fmt)
+add_subdirectory (spdlog)
 
 option (USE_SYSTEM_GOOGLETEST "Use system package for GoogleTest" OFF)
 
@@ -9,10 +11,3 @@ else ()
    add_subdirectory (googletest)
 endif ()
 
-option (USE_SYSTEM_SPDLOG "Use system package for spdlog" OFF)
-
-if (USE_SYSTEM_SPDLOG)
-   find_package (spdlog)
-else ()
-   add_subdirectory (spdlog)
-endif ()

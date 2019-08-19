@@ -2,6 +2,9 @@
 	path = external/Clara
 	url = https://github.com/0x8000-0000/Clara
 	branch = fix-warnings
+[submodule "fmt"]
+	path = external/fmt
+	url = https://github.com/fmtlib/fmt
 [submodule "external/googletest"]
 	path = external/googletest
 	url = https://github.com/google/googletest
