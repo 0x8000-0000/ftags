@@ -50,7 +50,8 @@ endif ()
 #
 add_library (project_warnings INTERFACE)
 
-target_compile_options (project_warnings INTERFACE -Wall -Wextra -Werror -pedantic -Wconversion -Wunused -Wshadow)
+target_compile_options (project_warnings INTERFACE -Wall -Wextra -Werror
+   -Wconversion -Wunused) # -pedantic -Wshadow
 
 if (CMAKE_COMPILER_IS_GNUCXX)
    target_compile_options (project_warnings INTERFACE
@@ -64,10 +65,12 @@ if (CMAKE_COMPILER_IS_GNUCXX)
       -Wnonnull-compare -Wno-sign-compare -Wno-switch
       -Wno-unused-parameter -Wnull-dereference -Woverflow -Wparentheses
       -Wpointer-arith -Wpointer-compare -Wreturn-type -Wsequence-point
-      -Wshadow -Wshift-count-overflow -Wshift-overflow=1
+      -Wshift-count-overflow -Wshift-overflow=1
       -Wsign-conversion -Wsizeof-pointer-memaccess -Wstrict-overflow=1
       -Wstringop-overflow -Wswitch-unreachable -Wuninitialized -Wunused
-      -Wunused-label -Wfloat-equal)
+      -Wunused-label
+      #-Wfloat-equal
+   )
 else ()
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
    target_compile_options (project_warnings INTERFACE -Weverything
@@ -78,7 +81,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
       -Wno-switch-enum -Wno-weak-vtables -Wno-missing-noreturn
       -Wno-undefined-func-template -Wno-disabled-macro-expansion
       -Wno-unused-member-function -Wno-exit-time-destructors
-      )
+   )
 endif ()
 endif ()
 
