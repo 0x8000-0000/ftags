@@ -30,7 +30,10 @@
 
 namespace
 {
-void dispatchFindAll(zmq::socket_t& socket, const std::string& projectName, const std::string& symbolName)
+void dispatchFindAll(zmq::socket_t&     socket,
+                     const std::string& projectName,
+                     const std::string& dirName,
+                     const std::string& symbolName)
 {
    spdlog::info("Searching for symbol {}", symbolName);
 
@@ -40,6 +43,7 @@ void dispatchFindAll(zmq::socket_t& socket, const std::string& projectName, cons
 
    command.set_type(ftags::Command::Type::Command_Type_QUERY);
    command.set_projectname(projectName);
+   command.set_directoryname(dirName);
    command.set_symbolname(symbolName);
    command.SerializeToString(&serializedCommand);
 
@@ -83,7 +87,10 @@ void dispatchFindAll(zmq::socket_t& socket, const std::string& projectName, cons
    }
 }
 
-void dispatchDumpTranslationUnit(zmq::socket_t& socket, const std::string& projectName, const std::string& fileName)
+void dispatchDumpTranslationUnit(zmq::socket_t&     socket,
+                                 const std::string& projectName,
+                                 const std::string& dirName,
+                                 const std::string& fileName)
 {
    std::filesystem::path filePath{fileName};
    std::string           canonicalFilePathAsString{fileName};
@@ -111,6 +118,7 @@ void dispatchDumpTranslationUnit(zmq::socket_t& socket, const std::string& proje
 
    command.set_type(ftags::Command::Type::Command_Type_DUMP_TRANSLATION_UNIT);
    command.set_projectname(projectName);
+   command.set_directoryname(dirName);
    command.set_filename(canonicalFilePathAsString);
    command.SerializeToString(&serializedCommand);
 
@@ -155,11 +163,13 @@ bool        queryStats          = false;
 std::string projectName;
 std::string symbolName;
 std::string fileName;
+std::string dirName;
 
 auto cli = clara::Help(showHelp) | clara::Opt(doQuit)["-q"]["--quit"]("Shutdown server") |
            clara::Opt(doPing)["-i"]["--ping"]("Ping server") |
            clara::Opt(queryStats)["-q"]["--stats"]("Query statistics from running server") |
            clara::Opt(projectName, "project")["-p"]["--project"]("Project name") |
+           clara::Opt(dirName, "directory")["-d"]["--directory"]("Project root directory") |
            clara::Opt(findAll)["-a"]["--all"]("Find all occurrences of symbol") |
            clara::Opt(findFunction)["-f"]["--function"]("Find function") |
            clara::Opt(dumpTranslationUnit)["--dump"]("Dump symbols for translation unit") |
@@ -177,6 +187,18 @@ int main(int argc, char* argv[])
    {
       spdlog::error("Failed to parse command line options: {}", result.errorMessage());
       exit(-1);
+   }
+
+   // canonicalize the project directory input
+   {
+      if (dirName.empty())
+      {
+         dirName = ".";
+      }
+
+      std::filesystem::path projectPath{dirName};
+      std::filesystem::path canonicalProjectPath = std::filesystem::canonical(projectPath);
+      dirName                                    = canonicalProjectPath.string();
    }
 
    if (showHelp)
@@ -217,16 +239,17 @@ int main(int argc, char* argv[])
    }
    else if (findAll)
    {
-      dispatchFindAll(socket, projectName, symbolName);
+      dispatchFindAll(socket, projectName, dirName, symbolName);
    }
    else if (dumpTranslationUnit)
    {
-      dispatchDumpTranslationUnit(socket, projectName, fileName);
+      dispatchDumpTranslationUnit(socket, projectName, dirName, fileName);
    }
    else if (queryStats)
    {
       command.set_type(ftags::Command::Type::Command_Type_QUERY_STATISTICS);
       command.set_projectname(projectName);
+      command.set_directoryname(dirName);
       const std::size_t requestSize = command.ByteSizeLong();
       zmq::message_t    request(requestSize);
       command.SerializeToArray(request.data(), static_cast<int>(requestSize));

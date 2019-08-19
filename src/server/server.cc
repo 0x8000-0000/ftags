@@ -26,6 +26,7 @@
 #include <spdlog/spdlog.h>
 
 #include <chrono>
+#include <filesystem>
 #include <iomanip>
 #include <iostream>
 #include <map>
@@ -249,7 +250,8 @@ int main(int argc, char* argv[])
       exit(0);
    }
 
-   std::map<std::string, ftags::ProjectDb> projects;
+   std::map<std::string, ftags::ProjectDb>  projects;
+   std::map<std::string, ftags::ProjectDb*> projectsByPath;
 
    //  Prepare our context and socket
    zmq::context_t context(1);
@@ -278,7 +280,30 @@ int main(int argc, char* argv[])
 
       ftags::ProjectDb* projectDb = nullptr;
 
-      if (!command.projectname().empty())
+      if (command.projectname().empty())
+      {
+         if (!command.directoryname().empty())
+         {
+            std::filesystem::path inputPath{command.directoryname()};
+
+            /*
+             * traverse directory up to find a project root
+             */
+            while ((nullptr == projectDb) && (inputPath != inputPath.root_directory()))
+            {
+               auto iter = projectsByPath.find(inputPath.string());
+               if (iter != projectsByPath.end())
+               {
+                  projectDb = iter->second;
+               }
+               else
+               {
+                  inputPath = inputPath.parent_path();
+               }
+            }
+         }
+      }
+      else
       {
          auto iter = projects.find(command.projectname());
          if (iter != projects.end())
@@ -321,6 +346,8 @@ int main(int argc, char* argv[])
                command.projectname(),
                ftags::ProjectDb(/* name = */ command.projectname(), /* rootDirectory = */ command.directoryname()));
             projectDb = &iter.first->second;
+
+            projectsByPath.emplace(command.directoryname(), projectDb);
          }
          dispatchUpdateTranslationUnit(socket, projectDb, command.filename());
          break;
