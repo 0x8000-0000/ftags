@@ -35,27 +35,25 @@ Dependencies
 
 Dependencies imported from the OS image (referenced, not included)
 
-   * [{fmt}](https://github.com/fmtlib/fmt)
-
-   * [Google Benchmark](https://github.com/google/benchmark)
-
-   * [Google Test](https://github.com/google/googletest)
-
    * [Google Protocol Buffers](https://developers.google.com/protocol-buffers/)
-
-   * [spdlog](https://github.com/gabime/spdlog)
 
    * [ØMQ](http://zeromq.org/)
 
 To install the prerequisites on Debian run the following command:
 
-    sudo apt install libzmq3-dev libspdlog-dev libfmt-dev libbenchmark-dev \
-        libbenchmark-tools libgtest-dev libclang-7-dev libclang1-7 clang-7 \
+    sudo apt install libzmq3-dev libbenchmark-dev \
+        libbenchmark-tools libclang-7-dev libclang1-7 clang-7 \
         libprotobuf-dev protobuf-c-compiler
+
+On Ubuntu 18.04, the protobuf version included is too old. Please install
+version v3.7.1 from [source](https://github.com/protocolbuffers/protobuf).
 
 Included dependencies:
 
-   * [Clara](https://github.com/catchorg/Clara/)
+   * [Clara](https://github.com/catchorg/Clara)
+   * [{fmt}](https://github.com/fmtlib/fmt)
+   * [GoogleTest](https://github.com/google/googletest)
+   * [spdlog](https://github.com/gabime/spdlog)
 
 
 Building
