@@ -371,6 +371,8 @@ void TranslationUnitAccumulator::processCursor(CXCursor clangCursor)
    const ftags::StringTable::Key symbolNameKey = symbolTable.addKey(cursor.symbolName);
    const ftags::StringTable::Key fileNameKey   = fileNameTable.addKey(cursor.location.fileName);
 
+   // CXCursor referencedCursor = clang_getCursorReferenced(clangCursor);
+
    translationUnit.addCursor(cursor, symbolNameKey, fileNameKey);
 }
 

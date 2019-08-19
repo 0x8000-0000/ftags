@@ -179,15 +179,15 @@ struct Attributes
 
 static_assert(sizeof(Attributes) == 8, "sizeof(Attributes) exceeds 8 bytes");
 
-struct Location
-{
-   const char* fileName;
-   int         line;
-   int         column;
-};
-
 struct Cursor
 {
+   struct Location
+   {
+      const char* fileName;
+      int         line;
+      int         column;
+   };
+
    char*       symbolNamespace;
    const char* symbolName;
    const char* unifiedSymbol;
@@ -205,13 +205,19 @@ struct Record
    using NamespaceNameKey = ftags::StringTable::Key;
    using FileNameKey      = ftags::StringTable::Key;
 
+   struct Location
+   {
+      FileNameKey fileNameKey;
+      uint32_t    startLine;
+      uint16_t    startColumn;
+      uint16_t    endLine;
+   };
+
    SymbolNameKey    symbolNameKey;
    NamespaceNameKey namespaceKey;
 
-   FileNameKey fileNameKey;
-   uint32_t    startLine;
-   uint16_t    startColumn;
-   uint16_t    endLine;
+   Location location;
+   Location definition;
 
    Attributes attributes;
 
@@ -221,7 +227,7 @@ struct Record
    }
 };
 
-static_assert(sizeof(Record) == 28, "sizeof(Record) exceeds 28 bytes");
+static_assert(sizeof(Record) == 40, "sizeof(Record) exceeds 40 bytes");
 
 /** Contains all the symbols in a C++ translation unit that are adjacent in
  * a physical file.
@@ -714,8 +720,8 @@ public:
    Record* getDefinition(Record* record) const;
    Record* getDeclaration(Record* record) const;
 
-   Record* followLocation(const Location& location) const;
-   Record* followLocation(const Location& location, int endLine, int endColumn) const;
+   Record* followLocation(const Record::Location& location) const;
+   Record* followLocation(const Record::Location& location, int endLine, int endColumn) const;
 
    std::vector<const Record*> dumpTranslationUnit(const std::string& fileName) const;
 

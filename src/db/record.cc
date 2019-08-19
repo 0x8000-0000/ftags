@@ -55,21 +55,21 @@ private:
 
 bool compareRecordsByLocation(const ftags::Record& leftRecord, const ftags::Record& rightRecord)
 {
-   if (leftRecord.fileNameKey < rightRecord.fileNameKey)
+   if (leftRecord.location.fileNameKey < rightRecord.location.fileNameKey)
    {
       return true;
    }
 
-   if (leftRecord.fileNameKey == rightRecord.fileNameKey)
+   if (leftRecord.location.fileNameKey == rightRecord.location.fileNameKey)
    {
-      if (leftRecord.startLine < rightRecord.startLine)
+      if (leftRecord.location.startLine < rightRecord.location.startLine)
       {
          return true;
       }
 
-      if (leftRecord.startLine == rightRecord.startLine)
+      if (leftRecord.location.startLine == rightRecord.location.startLine)
       {
-         if (leftRecord.startColumn < rightRecord.startColumn)
+         if (leftRecord.location.startColumn < rightRecord.location.startColumn)
          {
             return true;
          }
@@ -131,9 +131,9 @@ void ftags::RecordSpan::addRecords(const RecordSpan&               other,
    for (auto& record : m_records)
    {
       {
-         auto fileNameIter = fileNameKeyMapping.lookup(record.fileNameKey);
+         auto fileNameIter = fileNameKeyMapping.lookup(record.location.fileNameKey);
          assert(fileNameIter != fileNameKeyMapping.none());
-         record.fileNameKey = fileNameIter->second;
+         record.location.fileNameKey = fileNameIter->second;
       }
 
       {

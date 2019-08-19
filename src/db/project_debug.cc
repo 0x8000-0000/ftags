@@ -38,21 +38,21 @@ public:
       const ftags::Record& leftRecord  = m_records[left];
       const ftags::Record& rightRecord = m_records[right];
 
-      if (leftRecord.fileNameKey < rightRecord.fileNameKey)
+      if (leftRecord.location.fileNameKey < rightRecord.location.fileNameKey)
       {
          return true;
       }
 
-      if (leftRecord.fileNameKey == rightRecord.fileNameKey)
+      if (leftRecord.location.fileNameKey == rightRecord.location.fileNameKey)
       {
-         if (leftRecord.startLine < rightRecord.startLine)
+         if (leftRecord.location.startLine < rightRecord.location.startLine)
          {
             return true;
          }
 
-         if (leftRecord.startLine == rightRecord.startLine)
+         if (leftRecord.location.startLine == rightRecord.location.startLine)
          {
-            if (leftRecord.startColumn < rightRecord.startColumn)
+            if (leftRecord.location.startColumn < rightRecord.location.startColumn)
             {
                return true;
             }
@@ -66,7 +66,6 @@ private:
    const std::vector<ftags::Record>& m_records;
 };
 
-
 } // anonymous namespace
 
 void ftags::RecordSpan::dumpRecords(std::ostream&             os,
@@ -75,10 +74,10 @@ void ftags::RecordSpan::dumpRecords(std::ostream&             os,
 {
    std::for_each(m_records.cbegin(), m_records.cend(), [&os, symbolTable, fileNameTable](const Record& record) {
       const char* symbolName = symbolTable.getString(record.symbolNameKey);
-      const char* fileName   = fileNameTable.getString(record.fileNameKey);
+      const char* fileName   = fileNameTable.getString(record.location.fileNameKey);
       std::string symbolType = record.attributes.getRecordType();
-      os << "    " << symbolName << "    " << symbolType << "   " << fileName << ':' << record.startLine << ':'
-         << record.startColumn << std::endl;
+      os << "    " << symbolName << "    " << symbolType << "   " << fileName << ':' << record.location.startLine
+         << ':' << record.location.startColumn << std::endl;
    });
 }
 
@@ -116,6 +115,7 @@ void ftags::ProjectDb::dumpRecords(std::ostream& os) const
 void ftags::ProjectDb::dumpStats(std::ostream& os) const
 {
    os << "ProjectDb stats: ";
-   os << "Cache utilization: " << m_recordSpanCache.getActiveSpanCount() << " live spans out of " << m_recordSpanCache.getTotalSpanCount();
+   os << "Cache utilization: " << m_recordSpanCache.getActiveSpanCount() << " live spans out of "
+      << m_recordSpanCache.getTotalSpanCount();
    os << std::endl;
 }

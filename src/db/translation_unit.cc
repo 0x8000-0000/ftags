@@ -60,21 +60,21 @@ void ftags::TranslationUnit::addCursor(const ftags::Cursor&    cursor,
    ftags::Record newRecord = {};
 
    newRecord.symbolNameKey = symbolNameKey;
-   newRecord.fileNameKey   = fileNameKey;
+   newRecord.location.fileNameKey = fileNameKey;
 
    newRecord.attributes = cursor.attributes;
 
-   newRecord.startLine   = static_cast<uint32_t>(cursor.location.line);
-   newRecord.startColumn = static_cast<uint16_t>(cursor.location.column);
-   newRecord.endLine     = static_cast<uint16_t>(cursor.endLine);
+   newRecord.location.startLine   = static_cast<uint32_t>(cursor.location.line);
+   newRecord.location.startColumn = static_cast<uint16_t>(cursor.location.column);
+   newRecord.location.endLine     = static_cast<uint16_t>(cursor.endLine);
 
-   if (newRecord.fileNameKey != m_currentRecordSpanFileKey)
+   if (newRecord.location.fileNameKey != m_currentRecordSpanFileKey)
    {
       /*
        * Open a new span because the file name key is different
        */
       m_recordSpans.push_back(std::make_shared<RecordSpan>());
-      m_currentRecordSpanFileKey = newRecord.fileNameKey;
+      m_currentRecordSpanFileKey = newRecord.location.fileNameKey;
    }
 
    m_recordSpans.back()->addRecord(newRecord);

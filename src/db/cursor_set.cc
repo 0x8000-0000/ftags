@@ -33,10 +33,10 @@ ftags::CursorSet::CursorSet(std::vector<const Record*> records,
       auto& newRecord = m_records.back();
 
       const char* symbolName = symbolTable.getString(record->symbolNameKey);
-      const char* fileName   = fileNameTable.getString(record->fileNameKey);
+      const char* fileName   = fileNameTable.getString(record->location.fileNameKey);
 
       newRecord.symbolNameKey = m_symbolTable.addKey(symbolName);
-      newRecord.fileNameKey   = m_fileNameTable.addKey(fileName);
+      newRecord.location.fileNameKey = m_fileNameTable.addKey(fileName);
    }
 }
 
@@ -46,9 +46,9 @@ ftags::Cursor ftags::CursorSet::inflateRecord(const ftags::Record& record) const
 
    cursor.symbolName = m_symbolTable.getString(record.symbolNameKey);
 
-   cursor.location.fileName = m_fileNameTable.getString(record.fileNameKey);
-   cursor.location.line     = static_cast<int>(record.startLine);
-   cursor.location.column   = record.startColumn;
+   cursor.location.fileName = m_fileNameTable.getString(record.location.fileNameKey);
+   cursor.location.line     = static_cast<int>(record.location.startLine);
+   cursor.location.column   = record.location.startColumn;
 
    cursor.attributes = record.attributes;
 

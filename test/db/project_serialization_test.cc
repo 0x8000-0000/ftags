@@ -72,9 +72,9 @@ TEST(ProjectSerializationTest, CursorSet)
    three.symbolNameKey = symbolTable.addKey("gamma");
 
    const auto fileKey = fileNameTable.addKey("hello.cc");
-   one.fileNameKey    = fileKey;
-   two.fileNameKey    = fileKey;
-   three.fileNameKey  = fileKey;
+   one.location.fileNameKey   = fileKey;
+   two.location.fileNameKey   = fileKey;
+   three.location.fileNameKey = fileKey;
 
    input.push_back(&one);
    input.push_back(&two);
