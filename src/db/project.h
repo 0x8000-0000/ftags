@@ -673,6 +673,19 @@ public:
    /*
     * Construction and maintenance
     */
+   ProjectDb(std::string_view name, std::string_view rootDirectory) : m_name{name}, m_root{rootDirectory}
+   {
+   }
+
+   const std::string& getName() const
+   {
+      return m_name;
+   }
+
+   const std::string& getRoot() const
+   {
+      return m_root;
+   }
 
    bool operator==(const ProjectDb& other) const;
 
@@ -802,8 +815,9 @@ private:
       return results;
    }
 
-   /** Contains all the symbol definitions.
-    */
+   std::string m_name;
+   std::string m_root;
+
    using TranslationUnitStore = std::vector<TranslationUnit>;
    TranslationUnitStore m_translationUnits;
 

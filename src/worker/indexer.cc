@@ -141,7 +141,8 @@ int main()
 
          spdlog::info("Received index request with {} translation units", indexRequest.translationunit_size());
 
-         ftags::ProjectDb projectDb;
+         ftags::ProjectDb projectDb{/* name = */ indexRequest.projectname(),
+                                    /* rootDirectory = */ indexRequest.directoryname()};
 
          for (int tt = 0; tt < indexRequest.translationunit_size(); tt++)
          {
@@ -157,7 +158,8 @@ int main()
                arguments.push_back(translationUnitArguments.argument(ii).c_str());
             }
 
-            ftags::ProjectDb translationUnitDb;
+            ftags::ProjectDb translationUnitDb{/* name = */ indexRequest.projectname(),
+                                               /* rootDirectory = */ indexRequest.directoryname()};
             ftags::parseOneFile(translationUnitArguments.filename(), arguments, translationUnitDb);
             projectDb.mergeFrom(translationUnitDb);
          }
@@ -165,6 +167,8 @@ int main()
          ftags::Command command{};
          command.set_source("indexer");
          command.set_type(ftags::Command::Type::Command_Type_UPDATE_TRANSLATION_UNIT);
+         command.set_projectname(projectDb.getName());
+         command.set_directoryname(projectDb.getRoot());
 
          for (int tt = 0; tt < indexRequest.translationunit_size(); tt++)
          {

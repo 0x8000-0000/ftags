@@ -214,7 +214,8 @@ std::size_t ftags::ProjectDb::computeSerializedSize() const
          0u,
          [](std::size_t acc, const TranslationUnit& elem) { return acc + elem.computeSerializedSize(); });
 
-   return sizeof(ftags::SerializedObjectHeader) + m_fileNameTable.computeSerializedSize() +
+   return sizeof(ftags::SerializedObjectHeader) + ftags::Serializer<std::string>::computeSerializedSize(m_name) +
+          ftags::Serializer<std::string>::computeSerializedSize(m_root) + m_fileNameTable.computeSerializedSize() +
           m_symbolTable.computeSerializedSize() + m_namespaceTable.computeSerializedSize() +
           m_recordSpanCache.computeSerializedSize() + sizeof(uint64_t) + translationUnitSize;
 }
@@ -223,6 +224,9 @@ void ftags::ProjectDb::serialize(ftags::BufferInsertor& insertor) const
 {
    ftags::SerializedObjectHeader header{"ftags::ProjectDb"};
    insertor << header;
+
+   ftags::Serializer<std::string>::serialize(m_name, insertor);
+   ftags::Serializer<std::string>::serialize(m_root, insertor);
 
    m_fileNameTable.serialize(insertor);
    m_symbolTable.serialize(insertor);
@@ -242,6 +246,9 @@ void ftags::ProjectDb::deserialize(ftags::BufferExtractor& extractor, ftags::Pro
 {
    ftags::SerializedObjectHeader header;
    extractor >> header;
+
+   projectDb.m_name = ftags::Serializer<std::string>::deserialize(extractor);
+   projectDb.m_root = ftags::Serializer<std::string>::deserialize(extractor);
 
    projectDb.m_fileNameTable  = StringTable::deserialize(extractor);
    projectDb.m_symbolTable    = StringTable::deserialize(extractor);

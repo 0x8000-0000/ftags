@@ -156,3 +156,30 @@ std::vector<uint64_t> ftags::Serializer<std::vector<uint64_t>>::deserialize(ftag
 
    return retval;
 }
+
+/*
+ * std::string
+ */
+template <>
+std::size_t ftags::Serializer<std::string>::computeSerializedSize(const std::string& val)
+{
+   return sizeof(uint64_t) + val.size();
+}
+
+template <>
+void ftags::Serializer<std::string>::serialize(const std::string& val, ftags::BufferInsertor& insertor)
+{
+   const uint64_t size = val.size();
+   insertor << size;
+   insertor.serialize(val.data(), size);
+}
+
+template <>
+std::string ftags::Serializer<std::string>::deserialize(ftags::BufferExtractor& extractor)
+{
+   uint64_t size = 0;
+   extractor >> size;
+   std::string retval(/* n = */ size, /* c = */ '\0');
+   extractor.deserialize(retval.data(), size);
+   return retval;
+}

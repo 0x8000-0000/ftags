@@ -28,6 +28,7 @@
 #include <chrono>
 #include <iomanip>
 #include <iostream>
+#include <map>
 #include <sstream>
 #include <string>
 #include <thread>
@@ -47,13 +48,35 @@ std::string getTimeStamp()
    return ss.str();
 }
 
-void dispatchFindAll(zmq::socket_t& socket, const ftags::ProjectDb& projectDb, const std::string& symbolName)
+void reportUnknownProject(zmq::socket_t&                                 socket,
+                          const std::string&                             projectName,
+                          const std::map<std::string, ftags::ProjectDb>& projects)
+{
+   ftags::Status status{};
+   status.set_timestamp(getTimeStamp());
+   status.set_type(ftags::Status_Type::Status_Type_UNKNOWN_PROJECT);
+   status.set_projectname(projectName);
+
+   *status.add_remarks() = "Known projects:";
+
+   for (const auto& iter : projects)
+   {
+      *status.add_remarks() = fmt::format("{} in {}", iter.second.getName(), iter.second.getRoot());
+   }
+
+   const std::size_t headerSize = status.ByteSizeLong();
+   zmq::message_t    reply(headerSize);
+   status.SerializeToArray(reply.data(), static_cast<int>(headerSize));
+   socket.send(reply);
+}
+
+void dispatchFindAll(zmq::socket_t& socket, const ftags::ProjectDb* projectDb, const std::string& symbolName)
 {
    ftags::Status status{};
    status.set_timestamp(getTimeStamp());
 
-   spdlog::info("Received query for {}", symbolName);
-   const std::vector<const ftags::Record*> queryResultsVector = projectDb.findSymbol(symbolName);
+   spdlog::info("Received query for {} in project {}", symbolName, projectDb->getName());
+   const std::vector<const ftags::Record*> queryResultsVector = projectDb->findSymbol(symbolName);
    spdlog::info("Found {} occurrences for {}", queryResultsVector.size(), symbolName);
 
    std::string serializedStatus;
@@ -72,7 +95,7 @@ void dispatchFindAll(zmq::socket_t& socket, const ftags::ProjectDb& projectDb, c
    status.SerializeToArray(reply.data(), static_cast<int>(headerSize));
    socket.send(reply, ZMQ_SNDMORE);
 
-   const ftags::CursorSet queryResultsCursor = projectDb.inflateRecords(queryResultsVector);
+   const ftags::CursorSet queryResultsCursor = projectDb->inflateRecords(queryResultsVector);
 
    const std::size_t     payloadSize = queryResultsCursor.computeSerializedSize();
    zmq::message_t        resultsMessage(payloadSize);
@@ -82,14 +105,14 @@ void dispatchFindAll(zmq::socket_t& socket, const ftags::ProjectDb& projectDb, c
 }
 
 void dispatchDumpTranslationUnit(zmq::socket_t&          socket,
-                                 const ftags::ProjectDb& projectDb,
+                                 const ftags::ProjectDb* projectDb,
                                  const std::string&      fileName)
 {
    ftags::Status status{};
    status.set_timestamp(getTimeStamp());
 
    spdlog::info("Received dump request for {}", fileName);
-   const std::vector<const ftags::Record*> queryResultsVector = projectDb.dumpTranslationUnit(fileName);
+   const std::vector<const ftags::Record*> queryResultsVector = projectDb->dumpTranslationUnit(fileName);
 
    std::string serializedStatus;
 
@@ -107,7 +130,7 @@ void dispatchDumpTranslationUnit(zmq::socket_t&          socket,
    status.SerializeToArray(reply.data(), static_cast<int>(headerSize));
    socket.send(reply, ZMQ_SNDMORE);
 
-   const ftags::CursorSet queryResultsCursor = projectDb.inflateRecords(queryResultsVector);
+   const ftags::CursorSet queryResultsCursor = projectDb->inflateRecords(queryResultsVector);
 
    const std::size_t     payloadSize = queryResultsCursor.computeSerializedSize();
    zmq::message_t        resultsMessage(payloadSize);
@@ -116,19 +139,20 @@ void dispatchDumpTranslationUnit(zmq::socket_t&          socket,
    socket.send(resultsMessage);
 }
 
-void dispatchUpdateTranslationUnit(zmq::socket_t& socket, ftags::ProjectDb& projectDb, const std::string& fileName)
+void dispatchUpdateTranslationUnit(zmq::socket_t& socket, ftags::ProjectDb* projectDb, const std::string& fileName)
 {
    zmq::message_t payload;
    socket.recv(&payload);
 
-   spdlog::info("Received {:n} bytes of serialized data for translation unit {}.", payload.size(), fileName);
+   spdlog::info("Received {:n} bytes of serialized data for project {}", payload.size(), projectDb->getName());
 
    ftags::BufferExtractor extractor(static_cast<std::byte*>(payload.data()), payload.size());
 
-   ftags::ProjectDb updatedTranslationUnit;
+   ftags::ProjectDb updatedTranslationUnit{/* name = */ projectDb->getName(),
+                                           /* rootDirectory = */ projectDb->getRoot()};
    ftags::ProjectDb::deserialize(extractor, updatedTranslationUnit);
 
-   projectDb.updateFrom(fileName, updatedTranslationUnit);
+   projectDb->updateFrom(fileName, updatedTranslationUnit);
 
    ftags::Status status{};
    status.set_timestamp(getTimeStamp());
@@ -142,13 +166,13 @@ void dispatchUpdateTranslationUnit(zmq::socket_t& socket, ftags::ProjectDb& proj
    spdlog::info("Acknowledged translation unit {}", fileName);
 }
 
-void dispatchQueryStatistics(zmq::socket_t& socket, const ftags::ProjectDb& projectDb)
+void dispatchQueryStatistics(zmq::socket_t& socket, const ftags::ProjectDb* projectDb)
 {
    ftags::Status status{};
    status.set_timestamp(getTimeStamp());
    status.set_type(ftags::Status_Type::Status_Type_STATISTICS_REMARKS);
 
-   std::vector<std::string> statisticsRemarks = projectDb.getStatisticsRemarks();
+   std::vector<std::string> statisticsRemarks = projectDb->getStatisticsRemarks();
 
    for (const auto& remark : statisticsRemarks)
    {
@@ -225,16 +249,7 @@ int main(int argc, char* argv[])
       exit(0);
    }
 
-   ftags::ProjectDb projectDb;
-
-#if 0
-   if (argc < 2)
-   {
-      spdlog::error("Compilation database argument missing");
-      return -1;
-   }
-   ftags::parseProject(argv[1], projectDb);
-#endif
+   std::map<std::string, ftags::ProjectDb> projects;
 
    //  Prepare our context and socket
    zmq::context_t context(1);
@@ -261,18 +276,52 @@ int main(int argc, char* argv[])
       command.ParseFromArray(request.data(), static_cast<int>(request.size()));
       spdlog::info("Received request from {}: {}", command.source(), command.Type_Name(command.type()));
 
+      ftags::ProjectDb* projectDb = nullptr;
+
+      if (!command.projectname().empty())
+      {
+         auto iter = projects.find(command.projectname());
+         if (iter != projects.end())
+         {
+            projectDb = &iter->second;
+         }
+      }
+
       switch (command.type())
       {
 
       case ftags::Command_Type::Command_Type_QUERY:
-         dispatchFindAll(socket, projectDb, command.symbolname());
+         if (nullptr == projectDb)
+         {
+            reportUnknownProject(socket, command.projectname(), projects);
+         }
+         else
+         {
+            dispatchFindAll(socket, projectDb, command.symbolname());
+         }
          break;
 
       case ftags::Command_Type::Command_Type_DUMP_TRANSLATION_UNIT:
-         dispatchDumpTranslationUnit(socket, projectDb, command.filename());
+         if (nullptr == projectDb)
+         {
+            reportUnknownProject(socket, command.projectname(), projects);
+         }
+         else
+         {
+            dispatchDumpTranslationUnit(socket, projectDb, command.filename());
+         }
          break;
 
       case ftags::Command_Type::Command_Type_UPDATE_TRANSLATION_UNIT:
+         if (nullptr == projectDb)
+         {
+            spdlog::info(
+               fmt::format("Creating new project: {} in {}", command.projectname(), command.directoryname()));
+            auto iter = projects.emplace(
+               command.projectname(),
+               ftags::ProjectDb(/* name = */ command.projectname(), /* rootDirectory = */ command.directoryname()));
+            projectDb = &iter.first->second;
+         }
          dispatchUpdateTranslationUnit(socket, projectDb, command.filename());
          break;
 
@@ -281,7 +330,14 @@ int main(int argc, char* argv[])
          break;
 
       case ftags::Command_Type::Command_Type_QUERY_STATISTICS:
-         dispatchQueryStatistics(socket, projectDb);
+         if (nullptr == projectDb)
+         {
+            reportUnknownProject(socket, command.projectname(), projects);
+         }
+         else
+         {
+            dispatchQueryStatistics(socket, projectDb);
+         }
          break;
 
       case ftags::Command_Type::Command_Type_SHUT_DOWN:

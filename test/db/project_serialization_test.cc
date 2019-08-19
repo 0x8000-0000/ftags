@@ -104,7 +104,7 @@ TEST(ProjectSerializationTest, CursorSet)
 
 TEST(ProjectSerializationTest, DeserializedProjectDbEqualsInput)
 {
-   ftags::ProjectDb tagsDb;
+   ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
 
    const auto path = std::filesystem::current_path();
 
@@ -146,7 +146,7 @@ TEST(ProjectSerializationTest, DeserializedProjectDbEqualsInput)
    tagsDb.serialize(insertor);
 
    ftags::BufferExtractor extractor{buffer};
-   ftags::ProjectDb       restoredTagsDb;
+   ftags::ProjectDb       restoredTagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
    ftags::ProjectDb::deserialize(extractor, restoredTagsDb);
 
    ASSERT_EQ(tagsDb, restoredTagsDb);
@@ -157,7 +157,7 @@ TEST(ProjectSerializationTest, FindVariablesInDeserializedProjectDb)
    std::vector<std::byte> buffer;
 
    {
-      ftags::ProjectDb tagsDb;
+      ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
 
       const auto path = std::filesystem::current_path();
 
@@ -217,8 +217,11 @@ TEST(ProjectSerializationTest, FindVariablesInDeserializedProjectDb)
    }
 
    ftags::BufferExtractor extractor{buffer};
-   ftags::ProjectDb       restoredTagsDb;
+   ftags::ProjectDb       restoredTagsDb{/* name = */ "foo", /* rootDirectory = */ "bar"};
    ftags::ProjectDb::deserialize(extractor, restoredTagsDb);
+
+   std::string restoredName = restoredTagsDb.getName();
+   ASSERT_STREQ("test", restoredName.data());
 
    {
       const std::vector<const ftags::Record*> countDefinition = restoredTagsDb.findDefinition("count");

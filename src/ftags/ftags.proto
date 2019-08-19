@@ -35,9 +35,11 @@ message Command
 
    QueryType queryType = 3;
 
-   string symbolName = 4;
-   string namespaceName = 5;
-   string fileName = 6;
+   string projectName = 4;
+   string directoryName = 5;
+   string symbolName = 6;
+   string namespaceName = 7;
+   string fileName = 8;
 
    repeated string translationUnit = 10;
 }
@@ -51,6 +53,8 @@ message Status
       IDLE = 2;
       STATISTICS_REMARKS = 3;
 
+      UNKNOWN_PROJECT = 10;
+
       QUERY_RESULTS = 60;
       QUERY_NO_RESULTS = 61;
 
@@ -62,6 +66,8 @@ message Status
    Type type = 1;
 
    string timestamp = 2;
+
+   string projectName = 3;
 
    repeated string remarks = 99;
 }

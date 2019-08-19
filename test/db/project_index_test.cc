@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
       return -1;
    }
 
-   ftags::ProjectDb projectDb;
+   ftags::ProjectDb projectDb{/* name = */ "test", /* rootDirectory = */ argv[1]};
 
    ftags::parseProject(argv[1], projectDb);
 

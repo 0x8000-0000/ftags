@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
    ftags::StringTable     fileNameTable;
    ftags::TranslationUnit translationUnit = ftags::TranslationUnit::parse(argv[1], arguments, symbolTable, fileNameTable);
 
-   ftags::ProjectDb tagsDb;
+   ftags::ProjectDb              tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
    const ftags::TranslationUnit& mergedTranslationUnit =
       tagsDb.addTranslationUnit(argv[1], translationUnit, symbolTable, fileNameTable);
 

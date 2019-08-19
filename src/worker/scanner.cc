@@ -29,6 +29,7 @@
 #include <spdlog/spdlog.h>
 
 #include <chrono>
+#include <filesystem>
 #include <string>
 #include <thread>
 #include <vector>
@@ -62,6 +63,23 @@ int main(int argc, char* argv[])
    {
       std::cout << cli << std::endl;
       exit(0);
+   }
+
+   std::filesystem::path projectPath{dirName};
+   {
+      std::filesystem::path compilationDatabaseFile = projectPath / "compile_commands.json";
+      if (std::filesystem::exists(compilationDatabaseFile))
+      {
+         std::filesystem::path canonicalProjectPath = std::filesystem::canonical(projectPath);
+         dirName                                    = canonicalProjectPath.string();
+         spdlog::info(fmt::format("Scanning project {} in {}", projectName, dirName));
+      }
+      else
+      {
+         std::cout << fmt::format("Specified directory {} does not contain a compilation database file.", dirName)
+                   << std::endl;
+         exit(-2);
+      }
    }
 
    zmq::context_t context(1);

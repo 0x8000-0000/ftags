@@ -73,10 +73,8 @@ public:
    template <typename T>
    BufferInsertor& operator<<(const T& value)
    {
-#ifndef NDEBUG
       assert(sizeof(value) <= m_size);
       m_size -= sizeof(value);
-#endif
       std::memcpy(m_buffer, &value, sizeof(value));
       m_buffer += sizeof(value);
 
@@ -87,12 +85,20 @@ public:
    BufferInsertor& operator<<(const std::vector<T>& value)
    {
       const std::size_t size = value.size() * sizeof(T);
-#ifndef NDEBUG
       assert(size <= m_size);
       m_size -= size;
-#endif
       std::memcpy(m_buffer, value.data(), size);
       m_buffer += size;
+
+      return *this;
+   }
+
+   BufferInsertor& serialize(const void* data, std::size_t byteSize)
+   {
+      assert(byteSize <= m_size);
+      m_size -= byteSize;
+      std::memcpy(m_buffer, data, byteSize);
+      m_buffer += byteSize;
 
       return *this;
    }
@@ -166,6 +172,16 @@ public:
 #endif
       std::memcpy(value.data(), m_buffer, size);
       m_buffer += size;
+
+      return *this;
+   }
+
+   BufferExtractor& deserialize(void* data, std::size_t byteSize)
+   {
+      assert(byteSize <= m_size);
+      m_size -= byteSize;
+      std::memcpy(data, m_buffer, byteSize);
+      m_buffer += byteSize;
 
       return *this;
    }

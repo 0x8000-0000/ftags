@@ -44,7 +44,7 @@ TEST(TagsIndexTest, IndexOneFile)
    const ftags::TranslationUnit helloCpp =
       ftags::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
 
-   ftags::ProjectDb tagsDb;
+   ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
    tagsDb.addTranslationUnit(helloPath, helloCpp, symbolTable, fileNameTable);
 
    ASSERT_TRUE(tagsDb.isFileIndexed(helloPath));
@@ -72,7 +72,7 @@ TEST(TagsIndexTest, IndexOneFileHasFunctions)
    const ftags::TranslationUnit helloCpp =
       ftags::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
 
-   ftags::ProjectDb tagsDb;
+   ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
    tagsDb.addTranslationUnit(helloPath, helloCpp, symbolTable, fileNameTable);
 
    ASSERT_TRUE(tagsDb.isFileIndexed(helloPath));
@@ -98,7 +98,7 @@ TEST(TagsIndexTest, HelloWorldHasMainFunction)
    const ftags::TranslationUnit helloCpp =
       ftags::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
 
-   ftags::ProjectDb tagsDb;
+   ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
    tagsDb.addTranslationUnit(helloPath, helloCpp, symbolTable, fileNameTable);
 
    const std::vector<const ftags::Record*> results = tagsDb.findDefinition("main");
@@ -124,7 +124,7 @@ TEST(TagsIndexTest, HelloWorldCallsPrintfFunction)
    const ftags::TranslationUnit helloCpp =
       ftags::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
 
-   ftags::ProjectDb tagsDb;
+   ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
    tagsDb.addTranslationUnit(helloPath, helloCpp, symbolTable, fileNameTable);
 
    std::stringstream output;
@@ -163,7 +163,7 @@ TEST(TagsIndexTest, DistinguishDeclarationFromDefinition)
    const ftags::TranslationUnit translationUnit =
       ftags::TranslationUnit::parse(translationUnitPath, arguments, symbolTable, fileNameTable);
 
-   ftags::ProjectDb tagsDb;
+   ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
    tagsDb.addTranslationUnit(translationUnitPath, translationUnit, symbolTable, fileNameTable);
 
    const std::vector<const ftags::Record*> alphaDefinition = tagsDb.findDefinition("alpha");
@@ -191,7 +191,7 @@ TEST(TagsIndexTest, DistinguishDeclarationFromDefinition)
 
 TEST(TagsIndexTest, ManageTwoTranslationUnits)
 {
-   ftags::ProjectDb tagsDb;
+   ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
 
    {
       const auto path = std::filesystem::current_path();
@@ -245,7 +245,7 @@ TEST(TagsIndexTest, ManageTwoTranslationUnits)
 
 TEST(TagsIndexTest, MultiModuleEliminateDuplicates)
 {
-   ftags::ProjectDb tagsDb;
+   ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
 
    const auto path = std::filesystem::current_path();
 
@@ -292,7 +292,7 @@ TEST(TagsIndexTest, MultiModuleEliminateDuplicates)
 
 TEST(TagsIndexTest, InflateResults)
 {
-   ftags::ProjectDb tagsDb;
+   ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
 
    const auto path = std::filesystem::current_path();
 
@@ -344,7 +344,7 @@ TEST(TagsIndexTest, InflateResults)
 
 TEST(TagsIndexTest, SerializeDeserializeResults)
 {
-   ftags::ProjectDb tagsDb;
+   ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
 
    const auto path = std::filesystem::current_path();
 
@@ -404,7 +404,7 @@ TEST(TagsIndexTest, SerializeDeserializeResults)
 
 TEST(TagsIndexTest, FindVariables)
 {
-   ftags::ProjectDb tagsDb;
+   ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
 
    const auto path = std::filesystem::current_path();
 
@@ -457,7 +457,7 @@ TEST(TagsIndexTest, FindVariables)
 
 TEST(TagsIndexTest, MergeProjectDatabases)
 {
-   ftags::ProjectDb mergedDb;
+   ftags::ProjectDb mergedDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
 
    const auto path = std::filesystem::current_path();
 
@@ -469,7 +469,7 @@ TEST(TagsIndexTest, MergeProjectDatabases)
    };
 
    {
-      ftags::ProjectDb tagsDb;
+      ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
 
       const auto libPath = path / "test" / "db" / "data" / "multi-module" / "lib.cc";
       ASSERT_TRUE(std::filesystem::exists(libPath));
@@ -485,7 +485,7 @@ TEST(TagsIndexTest, MergeProjectDatabases)
    }
 
    {
-      ftags::ProjectDb tagsDb;
+      ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
 
       const auto testPath = path / "test" / "db" / "data" / "multi-module" / "test.cc";
       ASSERT_TRUE(std::filesystem::exists(testPath));
