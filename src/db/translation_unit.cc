@@ -63,10 +63,8 @@ void ftags::TranslationUnit::addCursor(const ftags::Cursor&    cursor,
    newRecord.symbolNameKey = symbolNameKey;
    newRecord.attributes    = cursor.attributes;
 
-   newRecord.location.fileNameKey = fileNameKey;
-   newRecord.location.startLine   = static_cast<uint32_t>(cursor.location.line);
-   newRecord.location.startColumn = static_cast<uint16_t>(cursor.location.column);
-   newRecord.location.endLine     = static_cast<uint16_t>(cursor.location.endLine);
+   newRecord.setLocationFileKey(fileNameKey);
+   newRecord.setLocationAddress(cursor.location.line, cursor.location.endLine, cursor.location.column);
 
    if (newRecord.location.fileNameKey != m_currentRecordSpanFileKey)
    {
@@ -77,10 +75,8 @@ void ftags::TranslationUnit::addCursor(const ftags::Cursor&    cursor,
       m_currentRecordSpanFileKey = newRecord.location.fileNameKey;
    }
 
-   newRecord.definition.fileNameKey = fileNameKey;
-   newRecord.definition.startLine   = static_cast<uint32_t>(cursor.definition.line);
-   newRecord.definition.startColumn = static_cast<uint16_t>(cursor.definition.column);
-   newRecord.definition.endLine     = static_cast<uint16_t>(cursor.definition.endLine);
+   newRecord.setDefinitionFileKey(referencedFileNameKey);
+   newRecord.setDefinitionAddress(cursor.definition.line, cursor.definition.endLine, cursor.definition.column);
 
    m_recordSpans.back()->addRecord(newRecord);
 }

@@ -133,7 +133,13 @@ void ftags::RecordSpan::addRecords(const RecordSpan&               other,
       {
          auto fileNameIter = fileNameKeyMapping.lookup(record.location.fileNameKey);
          assert(fileNameIter != fileNameKeyMapping.none());
-         record.location.fileNameKey = fileNameIter->second;
+         record.setLocationFileKey(fileNameIter->second);
+      }
+
+      {
+         auto fileNameIter = fileNameKeyMapping.lookup(record.definition.fileNameKey);
+         assert(fileNameIter != fileNameKeyMapping.none());
+         record.setDefinitionFileKey(fileNameIter->second);
       }
 
       {

@@ -32,11 +32,20 @@ ftags::CursorSet::CursorSet(std::vector<const Record*> records,
       m_records.push_back(*record);
       auto& newRecord = m_records.back();
 
-      const char* symbolName = symbolTable.getString(record->symbolNameKey);
-      const char* fileName   = fileNameTable.getString(record->location.fileNameKey);
+      {
+         const char* symbolName  = symbolTable.getString(record->symbolNameKey);
+         newRecord.symbolNameKey = m_symbolTable.addKey(symbolName);
+      }
 
-      newRecord.symbolNameKey        = m_symbolTable.addKey(symbolName);
-      newRecord.location.fileNameKey = m_fileNameTable.addKey(fileName);
+      {
+         const char* fileName = fileNameTable.getString(record->location.fileNameKey);
+         newRecord.setLocationFileKey(m_fileNameTable.addKey(fileName));
+      }
+
+      {
+         const char* referenceFileName = fileNameTable.getString(record->definition.fileNameKey);
+         newRecord.setDefinitionFileKey(m_fileNameTable.addKey(referenceFileName));
+      }
    }
 }
 

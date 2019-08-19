@@ -142,8 +142,6 @@ enum class Relation : uint8_t
 
 struct Attributes
 {
-   uint32_t lineSpan : 8;
-
    SymbolType type : 16;
 
    uint32_t isDeclaration : 1;
@@ -171,7 +169,10 @@ struct Attributes
 
    uint32_t isNamespaceRef : 1;
 
-   uint32_t freeBits : 14;
+   uint32_t locationLineSpan : 8;
+   uint32_t definitionLineSpan : 8;
+
+   uint32_t freeBits : 6;
 
    std::string getRecordType() const;
 
@@ -210,9 +211,8 @@ struct Record
    struct Location
    {
       FileNameKey fileNameKey;
-      uint32_t    startLine;
-      uint16_t    startColumn;
-      uint16_t    endLine;
+      uint32_t    startLine : 20;
+      uint32_t    startColumn : 12;
    };
 
    SymbolNameKey    symbolNameKey;
@@ -227,9 +227,37 @@ struct Record
    {
       return attributes.type;
    }
+
+   void setLocationFileKey(FileNameKey key)
+   {
+      location.fileNameKey = key;
+   }
+
+   void setDefinitionFileKey(FileNameKey key)
+   {
+      definition.fileNameKey = key;
+   }
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+
+   void setLocationAddress(int startLine, int endLine, int startColumn)
+   {
+      location.startLine          = static_cast<uint32_t>(startLine);
+      location.startColumn        = static_cast<uint32_t>(startColumn);
+      attributes.locationLineSpan = static_cast<uint32_t>(endLine - startLine);
+   }
+
+   void setDefinitionAddress(int startLine, int endLine, int startColumn)
+   {
+      definition.startLine          = static_cast<uint32_t>(startLine);
+      definition.startColumn        = static_cast<uint32_t>(startColumn);
+      attributes.definitionLineSpan = static_cast<uint32_t>(endLine - startLine);
+   }
+#pragma GCC diagnostic pop
 };
 
-static_assert(sizeof(Record) == 40, "sizeof(Record) exceeds 40 bytes");
+static_assert(sizeof(Record) == 32, "sizeof(Record) exceeds 32 bytes");
 
 /** Contains all the symbols in a C++ translation unit that are adjacent in
  * a physical file.
