@@ -39,13 +39,8 @@ TEST(TagsIndexTest, IndexOneFile)
       "-Wextra",
    };
 
-   ftags::StringTable                      symbolTable;
-   ftags::StringTable                      fileNameTable;
-   const ftags::ProjectDb::TranslationUnit helloCpp =
-      ftags::ProjectDb::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
-
    ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
-   tagsDb.addTranslationUnit(helloPath, helloCpp, symbolTable, fileNameTable);
+   tagsDb.parseOneFile(helloPath, arguments);
 
    ASSERT_TRUE(tagsDb.isFileIndexed(helloPath));
 }
@@ -67,13 +62,8 @@ TEST(TagsIndexTest, IndexOneFileHasFunctions)
       "-Wextra",
    };
 
-   ftags::StringTable                      symbolTable;
-   ftags::StringTable                      fileNameTable;
-   const ftags::ProjectDb::TranslationUnit helloCpp =
-      ftags::ProjectDb::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
-
    ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
-   tagsDb.addTranslationUnit(helloPath, helloCpp, symbolTable, fileNameTable);
+   tagsDb.parseOneFile(helloPath, arguments);
 
    ASSERT_TRUE(tagsDb.isFileIndexed(helloPath));
 
@@ -93,13 +83,8 @@ TEST(TagsIndexTest, HelloWorldHasMainFunction)
       "-Wextra",
    };
 
-   ftags::StringTable                      symbolTable;
-   ftags::StringTable                      fileNameTable;
-   const ftags::ProjectDb::TranslationUnit helloCpp =
-      ftags::ProjectDb::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
-
    ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
-   tagsDb.addTranslationUnit(helloPath, helloCpp, symbolTable, fileNameTable);
+   tagsDb.parseOneFile(helloPath, arguments);
 
    const std::vector<const ftags::Record*> results = tagsDb.findDefinition("main");
    ASSERT_EQ(1, results.size());
@@ -119,13 +104,8 @@ TEST(TagsIndexTest, HelloWorldCallsPrintfFunction)
       "--gcc-toolchain=/usr",
    };
 
-   ftags::StringTable                      symbolTable;
-   ftags::StringTable                      fileNameTable;
-   const ftags::ProjectDb::TranslationUnit helloCpp =
-      ftags::ProjectDb::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
-
    ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
-   tagsDb.addTranslationUnit(helloPath, helloCpp, symbolTable, fileNameTable);
+   tagsDb.parseOneFile(helloPath, arguments);
 
    std::stringstream output;
 
@@ -158,13 +138,8 @@ TEST(TagsIndexTest, DistinguishDeclarationFromDefinition)
       "/usr/include",
    };
 
-   ftags::StringTable                      symbolTable;
-   ftags::StringTable                      fileNameTable;
-   const ftags::ProjectDb::TranslationUnit translationUnit =
-      ftags::ProjectDb::TranslationUnit::parse(translationUnitPath, arguments, symbolTable, fileNameTable);
-
    ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
-   tagsDb.addTranslationUnit(translationUnitPath, translationUnit, symbolTable, fileNameTable);
+   tagsDb.parseOneFile(translationUnitPath, arguments);
 
    const std::vector<const ftags::Record*> alphaDefinition = tagsDb.findDefinition("alpha");
    ASSERT_EQ(1, alphaDefinition.size());
@@ -204,12 +179,7 @@ TEST(TagsIndexTest, ManageTwoTranslationUnits)
          "-Wextra",
       };
 
-      ftags::StringTable                      symbolTable;
-      ftags::StringTable                      fileNameTable;
-      const ftags::ProjectDb::TranslationUnit helloCpp =
-         ftags::ProjectDb::TranslationUnit::parse(helloPath, arguments, symbolTable, fileNameTable);
-
-      tagsDb.addTranslationUnit(helloPath, helloCpp, symbolTable, fileNameTable);
+      tagsDb.parseOneFile(helloPath, arguments);
    }
 
    {
@@ -225,12 +195,7 @@ TEST(TagsIndexTest, ManageTwoTranslationUnits)
          "/usr/include",
       };
 
-      ftags::StringTable                      symbolTable;
-      ftags::StringTable                      fileNameTable;
-      const ftags::ProjectDb::TranslationUnit translationUnit =
-         ftags::ProjectDb::TranslationUnit::parse(translationUnitPath, arguments, symbolTable, fileNameTable);
-
-      tagsDb.addTranslationUnit(translationUnitPath, translationUnit, symbolTable, fileNameTable);
+      tagsDb.parseOneFile(translationUnitPath, arguments);
    }
 
    const std::vector<const ftags::Record*> mainDefinition = tagsDb.findDefinition("main");
@@ -259,25 +224,13 @@ TEST(TagsIndexTest, MultiModuleEliminateDuplicates)
    {
       const auto libPath = path / "test" / "db" / "data" / "multi-module" / "lib.cc";
       ASSERT_TRUE(std::filesystem::exists(libPath));
-
-      ftags::StringTable                      symbolTable;
-      ftags::StringTable                      fileNameTable;
-      const ftags::ProjectDb::TranslationUnit libCpp =
-         ftags::ProjectDb::TranslationUnit::parse(libPath, arguments, symbolTable, fileNameTable);
-
-      tagsDb.addTranslationUnit(libPath, libCpp, symbolTable, fileNameTable);
+      tagsDb.parseOneFile(libPath, arguments);
    }
 
    {
       const auto testPath = path / "test" / "db" / "data" / "multi-module" / "test.cc";
       ASSERT_TRUE(std::filesystem::exists(testPath));
-
-      ftags::StringTable                      symbolTable;
-      ftags::StringTable                      fileNameTable;
-      const ftags::ProjectDb::TranslationUnit testCpp =
-         ftags::ProjectDb::TranslationUnit::parse(testPath, arguments, symbolTable, fileNameTable);
-
-      tagsDb.addTranslationUnit(testPath, testCpp, symbolTable, fileNameTable);
+      tagsDb.parseOneFile(testPath, arguments);
    }
 
    const std::vector<const ftags::Record*> mainDefinition = tagsDb.findDefinition("main");
@@ -306,25 +259,13 @@ TEST(TagsIndexTest, InflateResults)
    {
       const auto libPath = path / "test" / "db" / "data" / "multi-module" / "lib.cc";
       ASSERT_TRUE(std::filesystem::exists(libPath));
-
-      ftags::StringTable                      symbolTable;
-      ftags::StringTable                      fileNameTable;
-      const ftags::ProjectDb::TranslationUnit libCpp =
-         ftags::ProjectDb::TranslationUnit::parse(libPath, arguments, symbolTable, fileNameTable);
-
-      tagsDb.addTranslationUnit(libPath, libCpp, symbolTable, fileNameTable);
+      tagsDb.parseOneFile(libPath, arguments);
    }
 
    {
       const auto testPath = path / "test" / "db" / "data" / "multi-module" / "test.cc";
       ASSERT_TRUE(std::filesystem::exists(testPath));
-
-      ftags::StringTable                      symbolTable;
-      ftags::StringTable                      fileNameTable;
-      const ftags::ProjectDb::TranslationUnit testCpp =
-         ftags::ProjectDb::TranslationUnit::parse(testPath, arguments, symbolTable, fileNameTable);
-
-      tagsDb.addTranslationUnit(testPath, testCpp, symbolTable, fileNameTable);
+      tagsDb.parseOneFile(testPath, arguments);
    }
 
    const std::vector<const ftags::Record*> functionDeclaration = tagsDb.findDeclaration("function");
@@ -358,25 +299,13 @@ TEST(TagsIndexTest, SerializeDeserializeResults)
    {
       const auto libPath = path / "test" / "db" / "data" / "multi-module" / "lib.cc";
       ASSERT_TRUE(std::filesystem::exists(libPath));
-
-      ftags::StringTable                      symbolTable;
-      ftags::StringTable                      fileNameTable;
-      const ftags::ProjectDb::TranslationUnit libCpp =
-         ftags::ProjectDb::TranslationUnit::parse(libPath, arguments, symbolTable, fileNameTable);
-
-      tagsDb.addTranslationUnit(libPath, libCpp, symbolTable, fileNameTable);
+      tagsDb.parseOneFile(libPath, arguments);
    }
 
    {
       const auto testPath = path / "test" / "db" / "data" / "multi-module" / "test.cc";
       ASSERT_TRUE(std::filesystem::exists(testPath));
-
-      ftags::StringTable                      symbolTable;
-      ftags::StringTable                      fileNameTable;
-      const ftags::ProjectDb::TranslationUnit testCpp =
-         ftags::ProjectDb::TranslationUnit::parse(testPath, arguments, symbolTable, fileNameTable);
-
-      tagsDb.addTranslationUnit(testPath, testCpp, symbolTable, fileNameTable);
+      tagsDb.parseOneFile(testPath, arguments);
    }
 
    const std::vector<const ftags::Record*> functionDeclaration = tagsDb.findDeclaration("function");
@@ -418,25 +347,13 @@ TEST(TagsIndexTest, FindVariables)
    {
       const auto libPath = path / "test" / "db" / "data" / "multi-module" / "lib.cc";
       ASSERT_TRUE(std::filesystem::exists(libPath));
-
-      ftags::StringTable                      symbolTable;
-      ftags::StringTable                      fileNameTable;
-      const ftags::ProjectDb::TranslationUnit libCpp =
-         ftags::ProjectDb::TranslationUnit::parse(libPath, arguments, symbolTable, fileNameTable);
-
-      tagsDb.addTranslationUnit(libPath, libCpp, symbolTable, fileNameTable);
+      tagsDb.parseOneFile(libPath, arguments);
    }
 
    {
       const auto testPath = path / "test" / "db" / "data" / "multi-module" / "test.cc";
       ASSERT_TRUE(std::filesystem::exists(testPath));
-
-      ftags::StringTable                      symbolTable;
-      ftags::StringTable                      fileNameTable;
-      const ftags::ProjectDb::TranslationUnit testCpp =
-         ftags::ProjectDb::TranslationUnit::parse(testPath, arguments, symbolTable, fileNameTable);
-
-      tagsDb.addTranslationUnit(testPath, testCpp, symbolTable, fileNameTable);
+      tagsDb.parseOneFile(testPath, arguments);
    }
 
    const std::vector<const ftags::Record*> countDefinition = tagsDb.findDefinition("count");
@@ -469,33 +386,21 @@ TEST(TagsIndexTest, MergeProjectDatabases)
    };
 
    {
-      ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
-
       const auto libPath = path / "test" / "db" / "data" / "multi-module" / "lib.cc";
       ASSERT_TRUE(std::filesystem::exists(libPath));
 
-      ftags::StringTable                      symbolTable;
-      ftags::StringTable                      fileNameTable;
-      const ftags::ProjectDb::TranslationUnit libCpp =
-         ftags::ProjectDb::TranslationUnit::parse(libPath, arguments, symbolTable, fileNameTable);
-
-      tagsDb.addTranslationUnit(libPath, libCpp, symbolTable, fileNameTable);
+      ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
+      tagsDb.parseOneFile(libPath, arguments);
 
       mergedDb.mergeFrom(tagsDb);
    }
 
    {
-      ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
-
       const auto testPath = path / "test" / "db" / "data" / "multi-module" / "test.cc";
       ASSERT_TRUE(std::filesystem::exists(testPath));
 
-      ftags::StringTable                      symbolTable;
-      ftags::StringTable                      fileNameTable;
-      const ftags::ProjectDb::TranslationUnit testCpp =
-         ftags::ProjectDb::TranslationUnit::parse(testPath, arguments, symbolTable, fileNameTable);
-
-      tagsDb.addTranslationUnit(testPath, testCpp, symbolTable, fileNameTable);
+      ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
+      tagsDb.parseOneFile(testPath, arguments);
 
       mergedDb.mergeFrom(tagsDb);
    }

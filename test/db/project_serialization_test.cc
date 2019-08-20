@@ -124,25 +124,13 @@ TEST(ProjectSerializationTest, DeserializedProjectDbEqualsInput)
    {
       const auto libPath = path / "test" / "db" / "data" / "multi-module" / "lib.cc";
       ASSERT_TRUE(std::filesystem::exists(libPath));
-
-      ftags::StringTable           symbolTable;
-      ftags::StringTable           fileNameTable;
-      const ftags::ProjectDb::TranslationUnit libCpp =
-         ftags::ProjectDb::TranslationUnit::parse(libPath, arguments, symbolTable, fileNameTable);
-
-      tagsDb.addTranslationUnit(libPath, libCpp, symbolTable, fileNameTable);
+      tagsDb.parseOneFile(libPath, arguments);
    }
 
    {
       const auto testPath = path / "test" / "db" / "data" / "multi-module" / "test.cc";
       ASSERT_TRUE(std::filesystem::exists(testPath));
-
-      ftags::StringTable           symbolTable;
-      ftags::StringTable           fileNameTable;
-      const ftags::ProjectDb::TranslationUnit testCpp =
-         ftags::ProjectDb::TranslationUnit::parse(testPath, arguments, symbolTable, fileNameTable);
-
-      tagsDb.addTranslationUnit(testPath, testCpp, symbolTable, fileNameTable);
+      tagsDb.parseOneFile(testPath, arguments);
    }
 
    std::vector<std::byte> buffer(/* size = */ tagsDb.computeSerializedSize());
@@ -176,25 +164,13 @@ TEST(ProjectSerializationTest, FindVariablesInDeserializedProjectDb)
       {
          const auto libPath = path / "test" / "db" / "data" / "multi-module" / "lib.cc";
          ASSERT_TRUE(std::filesystem::exists(libPath));
-
-         ftags::StringTable           symbolTable;
-         ftags::StringTable           fileNameTable;
-         const ftags::ProjectDb::TranslationUnit libCpp =
-            ftags::ProjectDb::TranslationUnit::parse(libPath, arguments, symbolTable, fileNameTable);
-
-         tagsDb.addTranslationUnit(libPath, libCpp, symbolTable, fileNameTable);
+         tagsDb.parseOneFile(libPath, arguments);
       }
 
       {
          const auto testPath = path / "test" / "db" / "data" / "multi-module" / "test.cc";
          ASSERT_TRUE(std::filesystem::exists(testPath));
-
-         ftags::StringTable           symbolTable;
-         ftags::StringTable           fileNameTable;
-         const ftags::ProjectDb::TranslationUnit testCpp =
-            ftags::ProjectDb::TranslationUnit::parse(testPath, arguments, symbolTable, fileNameTable);
-
-         tagsDb.addTranslationUnit(testPath, testCpp, symbolTable, fileNameTable);
+         tagsDb.parseOneFile(testPath, arguments);
       }
 
       buffer.resize(tagsDb.computeSerializedSize());

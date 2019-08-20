@@ -807,13 +807,14 @@ public:
       void updateIndices();
    };
 
+   const TranslationUnit& parseOneFile(const std::string& fileName, std::vector<const char*> arguments);
+
+private:
    const TranslationUnit& addTranslationUnit(const std::string&     fileName,
                                              const TranslationUnit& translationUnit,
                                              const StringTable&     symbolTable,
                                              const StringTable&     fileNameTable);
-
-private:
-   void updateIndices();
+   void                   updateIndices();
 
    template <typename F>
    std::vector<const Record*> filterRecordsWithSymbol(const std::string& symbolName, F selectRecord) const
@@ -861,8 +862,6 @@ private:
 };
 
 void parseProject(const char* parentDirectory, ftags::ProjectDb& projectDb);
-
-void parseOneFile(const std::string& fileName, std::vector<const char*> arguments, ftags::ProjectDb& projectDb);
 
 } // namespace ftags
 

@@ -51,11 +51,6 @@ configure_file (data/multi-module/test.cc data/multi-module/test.cc)
 #
 # Stand-alone tests
 #
-add_executable (project_index_test project_index_test.cc)
-
-target_link_libraries (project_index_test PRIVATE project_options project_warnings)
-target_link_libraries (project_index_test PRIVATE ftags db-parse)
-
 add_executable (dump_records dump_records.cc)
 
 target_link_libraries (dump_records PRIVATE project_options project_warnings)

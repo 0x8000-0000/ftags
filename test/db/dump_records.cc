@@ -34,22 +34,15 @@ int main(int argc, char* argv[])
    arguments.push_back("-Wall");
    arguments.push_back("-Wextra");
 
-   for (int ii = 2; ii < argc; ii ++)
+   for (int ii = 2; ii < argc; ii++)
    {
       arguments.push_back(argv[ii]);
    }
 
-   ftags::StringTable     symbolTable;
-   ftags::StringTable     fileNameTable;
-   ftags::ProjectDb::TranslationUnit translationUnit =
-      ftags::ProjectDb::TranslationUnit::parse(argv[1], arguments, symbolTable, fileNameTable);
-
-   ftags::ProjectDb              tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
-   const ftags::ProjectDb::TranslationUnit& mergedTranslationUnit =
-      tagsDb.addTranslationUnit(argv[1], translationUnit, symbolTable, fileNameTable);
+   ftags::ProjectDb                         tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
+   const ftags::ProjectDb::TranslationUnit& translationUnit = tagsDb.parseOneFile(argv[1], arguments);
 
    dumpTranslationUnit(translationUnit, std::string(argv[1]) + ".dump.orig");
-   dumpTranslationUnit(mergedTranslationUnit, std::string(argv[1]) + ".dump.merged");
 
    tagsDb.dumpRecords(std::cout);
 
