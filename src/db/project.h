@@ -316,11 +316,6 @@ public:
 
    using Key = ftags::StringTable::Key;
 
-   Key getFileNameKey() const
-   {
-      return m_fileNameKey;
-   }
-
    /*
     * Statistics
     */
@@ -426,9 +421,6 @@ public:
    }
 
 private:
-   // key of the file name of the main translation unit
-   Key m_fileNameKey = 0;
-
    // persistent data
    std::vector<Record> m_records;
 

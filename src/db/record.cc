@@ -266,7 +266,7 @@ ftags::Serializer<std::vector<ftags::Record>>::deserialize(ftags::BufferExtracto
 
 std::size_t ftags::RecordSpan::computeSerializedSize() const
 {
-   return sizeof(ftags::SerializedObjectHeader) + sizeof(uint64_t) +
+   return sizeof(ftags::SerializedObjectHeader) +
           ftags::Serializer<std::vector<Record>>::computeSerializedSize(m_records);
 }
 
@@ -274,8 +274,6 @@ void ftags::RecordSpan::serialize(ftags::BufferInsertor& insertor) const
 {
    ftags::SerializedObjectHeader header{"ftags::RecordSpan"};
    insertor << header;
-
-   insertor << m_fileNameKey;
 
    ftags::Serializer<std::vector<Record>>::serialize(m_records, insertor);
 }
@@ -286,8 +284,6 @@ ftags::RecordSpan ftags::RecordSpan::deserialize(ftags::BufferExtractor& extract
 
    ftags::SerializedObjectHeader header;
    extractor >> header;
-
-   extractor >> retval.m_fileNameKey;
 
    retval.m_records = ftags::Serializer<std::vector<Record>>::deserialize(extractor);
 
