@@ -316,6 +316,10 @@ public:
 
    using Key = ftags::StringTable::Key;
 
+   RecordSpan(std::size_t capacity) : m_records(/* size = */ capacity)
+   {
+   }
+
    /*
     * Statistics
     */
@@ -460,6 +464,11 @@ public:
    std::pair<index_type::const_iterator, index_type::const_iterator> getSpansForSymbol(StringTable::Key key) const
    {
       return m_symbolIndex.equal_range(key);
+   }
+
+   std::shared_ptr<RecordSpan> makeEmptySpan(std::size_t capacity)
+   {
+      return std::make_shared<RecordSpan>(capacity);
    }
 
    std::shared_ptr<RecordSpan> add(std::shared_ptr<RecordSpan> newSpan);
@@ -727,12 +736,14 @@ public:
                                    const std::vector<const char*>& arguments,
                                    StringTable&                    symbolTable,
                                    StringTable&                    fileNameTable,
+                                   ftags::RecordSpanCache&         recordSpanCache,
                                    const std::string&              filterPath);
 
-      void addCursor(const Cursor&    cursor,
-                     StringTable::Key symbolNameKey,
-                     StringTable::Key fileNameKey,
-                     StringTable::Key referencedFileNameKey);
+      void addCursor(const Cursor&           cursor,
+                     StringTable::Key        symbolNameKey,
+                     StringTable::Key        fileNameKey,
+                     StringTable::Key        referencedFileNameKey,
+                     ftags::RecordSpanCache& spanCache);
 
       /*
        * Query helper

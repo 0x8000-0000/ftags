@@ -307,6 +307,7 @@ struct TranslationUnitAccumulator
    ftags::ProjectDb::TranslationUnit& translationUnit;
    ftags::StringTable&                symbolTable;
    ftags::StringTable&                fileNameTable;
+   ftags::RecordSpanCache&            recordSpanCache;
    std::string                        filterPath;
 
    void processCursor(CXCursor clangCursor);
@@ -414,7 +415,7 @@ void TranslationUnitAccumulator::processCursor(CXCursor clangCursor)
    const ftags::StringTable::Key fileNameKey           = fileNameTable.addKey(cursor.location.fileName);
    const ftags::StringTable::Key referencedFileNameKey = fileNameTable.addKey(cursor.definition.fileName);
 
-   translationUnit.addCursor(cursor, symbolNameKey, fileNameKey, referencedFileNameKey);
+   translationUnit.addCursor(cursor, symbolNameKey, fileNameKey, referencedFileNameKey, recordSpanCache);
 }
 
 CXChildVisitResult visitTranslationUnit(CXCursor cursor, CXCursor /* parent */, CXClientData clientData)
@@ -431,13 +432,14 @@ CXChildVisitResult visitTranslationUnit(CXCursor cursor, CXCursor /* parent */, 
 
 ftags::ProjectDb::TranslationUnit ftags::ProjectDb::TranslationUnit::parse(const std::string&              fileName,
                                                                            const std::vector<const char*>& arguments,
-                                                                           StringTable&       symbolTable,
-                                                                           StringTable&       fileNameTable,
-                                                                           const std::string& filterPath)
+                                                                           StringTable&            symbolTable,
+                                                                           StringTable&            fileNameTable,
+                                                                           ftags::RecordSpanCache& recordSpanCache,
+                                                                           const std::string&      filterPath)
 {
    ftags::ProjectDb::TranslationUnit translationUnit;
 
-   TranslationUnitAccumulator accumulator{translationUnit, symbolTable, fileNameTable, filterPath};
+   TranslationUnitAccumulator accumulator{translationUnit, symbolTable, fileNameTable, recordSpanCache, filterPath};
 
    auto clangIndex = std::unique_ptr<void, CXIndexDestroyer>(clang_createIndex(/* excludeDeclarationsFromPCH = */ 0,
                                                                                /* displayDiagnostics         = */ 0));

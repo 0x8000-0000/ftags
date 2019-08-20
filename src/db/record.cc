@@ -280,7 +280,7 @@ void ftags::RecordSpan::serialize(ftags::BufferInsertor& insertor) const
 
 ftags::RecordSpan ftags::RecordSpan::deserialize(ftags::BufferExtractor& extractor)
 {
-   ftags::RecordSpan retval;
+   ftags::RecordSpan retval{0};
 
    ftags::SerializedObjectHeader header;
    extractor >> header;
@@ -341,7 +341,7 @@ ftags::RecordSpanCache ftags::RecordSpanCache::deserialize(ftags::BufferExtracto
 
    for (size_t ii = 0; ii < cacheSize; ii++)
    {
-      std::shared_ptr<RecordSpan> newSpan = std::make_shared<RecordSpan>();
+      std::shared_ptr<RecordSpan> newSpan = std::make_shared<RecordSpan>(0);
       *newSpan                            = RecordSpan::deserialize(extractor);
       hardReferences.push_back(newSpan);
 
