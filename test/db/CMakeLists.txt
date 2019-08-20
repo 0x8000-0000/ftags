@@ -54,4 +54,4 @@ configure_file (data/multi-module/test.cc data/multi-module/test.cc)
 add_executable (dump_records dump_records.cc)
 
 target_link_libraries (dump_records PRIVATE project_options project_warnings)
-target_link_libraries (dump_records PRIVATE ftags db-parse)
+target_link_libraries (dump_records PRIVATE ftags db-parse clara)

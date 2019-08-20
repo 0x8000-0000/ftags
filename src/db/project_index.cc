@@ -25,8 +25,6 @@ const ftags::ProjectDb::TranslationUnit& ftags::ProjectDb::parseOneFile(const st
                                                                         std::vector<const char*> arguments,
                                                                         bool                     includeEverything)
 {
-   spdlog::debug("Parsing {}", fileName);
-
    try
    {
       std::string filterPath;
@@ -38,10 +36,10 @@ const ftags::ProjectDb::TranslationUnit& ftags::ProjectDb::parseOneFile(const st
       ftags::ProjectDb::TranslationUnit translationUnit =
          ftags::ProjectDb::TranslationUnit::parse(fileName, arguments, m_symbolTable, m_fileNameTable, filterPath);
 
-      spdlog::info("Loaded {:n} records from {}, {:n} from main file",
-                   translationUnit.getRecordCount(),
-                   fileName,
-                   translationUnit.getRecords(true).size());
+      spdlog::debug("Loaded {:n} records from {}, {:n} from main file",
+                    translationUnit.getRecordCount(),
+                    fileName,
+                    translationUnit.getRecords(true).size());
 
       return addTranslationUnit(fileName, translationUnit);
    }

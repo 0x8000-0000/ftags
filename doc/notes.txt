@@ -1,0 +1,41 @@
+Debugging
+=========
+
+Dumping ast:
+
+   clang++ -Xclang -ast-dump -fsyntax-only test/db/data/multi-module/test.cc
+
+Dumping the captured cursors:
+
+   test/db/dump_records -c test/db/data/multi-module/test.cc 
+
+
+TODO:
+
+   Identify function calls and generate only one reference record for
+   them:
+
+      Some FunctionCallExpression are followed by DeclarationReferenceExpression and optional NamespaceReference:
+
+      stoi    FunctionCallExpression   /home/florin/work/ftags.gcc.dbg/test/db/data/multi-module/test.cc:13:22
+      stoi    DeclarationReferenceExpression   /home/florin/work/ftags.gcc.dbg/test/db/data/multi-module/test.cc:13:27
+      std    NamespaceReference   /home/florin/work/ftags.gcc.dbg/test/db/data/multi-module/test.cc:13:22
+      basic_string    FunctionCallExpression   /home/florin/work/ftags.gcc.dbg/test/db/data/multi-module/test.cc:13:32
+
+      Implicitly constructed string has only FunctionCallExpression, no DeclarationReferenceExpression!
+
+   Why are these records "interleaved"?
+	
+    operator<<    FunctionCallExpression   /home/florin/work/ftags.gcc.dbg/test/db/data/multi-module/test.cc:21:4
+    operator<<    FunctionCallExpression   /home/florin/work/ftags.gcc.dbg/test/db/data/multi-module/test.cc:21:4
+    cout    DeclarationReferenceExpression   /home/florin/work/ftags.gcc.dbg/test/db/data/multi-module/test.cc:21:9
+    std    NamespaceReference   /home/florin/work/ftags.gcc.dbg/test/db/data/multi-module/test.cc:21:4
+    operator<<    DeclarationReferenceExpression   /home/florin/work/ftags.gcc.dbg/test/db/data/multi-module/test.cc:21:14
+    arg    DeclarationReferenceExpression   /home/florin/work/ftags.gcc.dbg/test/db/data/multi-module/test.cc:21:17
+    operator<<    DeclarationReferenceExpression   /home/florin/work/ftags.gcc.dbg/test/db/data/multi-module/test.cc:21:21
+    endl    DeclarationReferenceExpression   /home/florin/work/ftags.gcc.dbg/test/db/data/multi-module/test.cc:21:29
+    std    NamespaceReference   /home/florin/work/ftags.gcc.dbg/test/db/data/multi-module/test.cc:21:24
+
+   We can't ignore FunctionCallExpression because it gives a type to
+   subsequent DeclarationReferenceExpression and also they are inserted
+   for implicitly constructed objects.

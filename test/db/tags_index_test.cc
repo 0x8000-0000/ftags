@@ -90,6 +90,31 @@ TEST(TagsIndexTest, HelloWorldHasMainFunction)
    ASSERT_EQ(1, results.size());
 }
 
+TEST(TagsIndexTest, CanDumpRecords)
+{
+   const auto path = std::filesystem::current_path();
+
+   const auto helloPath = path / "test" / "db" / "data" / "hello" / "hello.cc";
+   ASSERT_TRUE(std::filesystem::exists(helloPath));
+
+   const std::vector<const char*> arguments = {
+      "-Wall",
+      "-Wextra",
+      "-stdlib=libstdc++",
+      "--gcc-toolchain=/usr",
+   };
+
+   ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ path.string()};
+   tagsDb.parseOneFile(helloPath, arguments, true);
+
+   std::stringstream output;
+
+   tagsDb.dumpRecords(output);
+
+   const std::string result = output.str();
+   ASSERT_FALSE(result.empty());
+}
+
 TEST(TagsIndexTest, HelloWorldCallsPrintfFunction)
 {
    const auto path = std::filesystem::current_path();
@@ -107,21 +132,59 @@ TEST(TagsIndexTest, HelloWorldCallsPrintfFunction)
    ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
    tagsDb.parseOneFile(helloPath, arguments);
 
-   std::stringstream output;
-
-   tagsDb.dumpRecords(output);
-
-   const std::string result = output.str();
-   ASSERT_FALSE(result.empty());
-
    const std::vector<const ftags::Record*> results = tagsDb.findReference("printf");
-   ASSERT_EQ(2, results.size());
+   ASSERT_EQ(1, results.size());
 
    const ftags::Cursor cursor0 = tagsDb.inflateRecord(results[0]);
    ASSERT_STREQ("printf", cursor0.symbolName);
+}
 
-   const ftags::Cursor cursor1 = tagsDb.inflateRecord(results[0]);
-   ASSERT_STREQ("printf", cursor1.symbolName);
+TEST(TagsIndexTest, IndexEverythingHasPrintfDeclaration)
+{
+   const auto path = std::filesystem::current_path();
+
+   const auto helloPath = path / "test" / "db" / "data" / "hello" / "hello.cc";
+   ASSERT_TRUE(std::filesystem::exists(helloPath));
+
+   const std::vector<const char*> arguments = {
+      "-Wall",
+      "-Wextra",
+      "-stdlib=libstdc++",
+      "--gcc-toolchain=/usr",
+   };
+
+   ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ path.string()};
+   tagsDb.parseOneFile(helloPath, arguments);
+
+   const std::vector<const ftags::Record*> printfDeclaration = tagsDb.findDeclaration("printf");
+   ASSERT_EQ(1, printfDeclaration.size());
+
+   const std::vector<const ftags::Record*> printfReference = tagsDb.findReference("printf");
+   ASSERT_EQ(1, printfReference.size());
+}
+
+TEST(TagsIndexTest, IndexProjectOnlyDoesNotHavePrintfDeclaration)
+{
+   const auto path = std::filesystem::current_path();
+
+   const auto helloPath = path / "test" / "db" / "data" / "hello" / "hello.cc";
+   ASSERT_TRUE(std::filesystem::exists(helloPath));
+
+   const std::vector<const char*> arguments = {
+      "-Wall",
+      "-Wextra",
+      "-stdlib=libstdc++",
+      "--gcc-toolchain=/usr",
+   };
+
+   ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ path.string()};
+   tagsDb.parseOneFile(helloPath, arguments, false);
+
+   const std::vector<const ftags::Record*> printfDeclaration = tagsDb.findDeclaration("printf");
+   ASSERT_EQ(0, printfDeclaration.size());
+
+   const std::vector<const ftags::Record*> printfReference = tagsDb.findReference("printf");
+   ASSERT_EQ(1, printfReference.size());
 }
 
 TEST(TagsIndexTest, DistinguishDeclarationFromDefinition)
@@ -151,17 +214,12 @@ TEST(TagsIndexTest, DistinguishDeclarationFromDefinition)
    ASSERT_EQ(1, betaDefinition.size());
 
    const std::vector<const ftags::Record*> betaDeclaration = tagsDb.findDeclaration("beta");
-   ASSERT_EQ(2, betaDeclaration.size());
+   ASSERT_EQ(1, betaDeclaration.size());
 
    const std::vector<const ftags::Record*> betaReferences = tagsDb.findReference("beta");
-   ASSERT_EQ(2, betaReferences.size());
+   ASSERT_EQ(1, betaReferences.size());
 
-   const std::set<ftags::SymbolType> expectedTypes{ftags::SymbolType::FunctionCallExpression,
-                                                   ftags::SymbolType::DeclarationReferenceExpression};
-
-   const std::set<ftags::SymbolType> actualTypes{betaReferences[0]->getType(), betaReferences[1]->getType()};
-
-   ASSERT_EQ(expectedTypes, actualTypes);
+   ASSERT_EQ(ftags::SymbolType::FunctionCallExpression, betaReferences[0]->getType());
 }
 
 TEST(TagsIndexTest, ManageTwoTranslationUnits)

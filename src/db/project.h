@@ -334,6 +334,11 @@ public:
       m_records.push_back(record);
    }
 
+   Record& getLastRecord()
+   {
+      return m_records.back();
+   }
+
    void addRecords(const RecordSpan& other);
 
    void addRecords(const RecordSpan&               other,
@@ -806,7 +811,7 @@ public:
    };
 
    const TranslationUnit&
-   parseOneFile(const std::string& fileName, std::vector<const char*> arguments, bool includeEverything = false);
+   parseOneFile(const std::string& fileName, std::vector<const char*> arguments, bool includeEverything = true);
 
 private:
    const TranslationUnit& addTranslationUnit(const std::string& fileName, const TranslationUnit& translationUnit);

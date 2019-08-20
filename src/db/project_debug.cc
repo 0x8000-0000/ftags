@@ -16,6 +16,8 @@
 
 #include <project.h>
 
+#include <fmt/format.h>
+
 #include <algorithm>
 #include <numeric>
 #include <ostream>
@@ -73,11 +75,22 @@ void ftags::RecordSpan::dumpRecords(std::ostream&             os,
                                     const ftags::StringTable& fileNameTable) const
 {
    std::for_each(m_records.cbegin(), m_records.cend(), [&os, symbolTable, fileNameTable](const Record& record) {
-      const char* symbolName = symbolTable.getString(record.symbolNameKey);
-      const char* fileName   = fileNameTable.getString(record.location.fileNameKey);
-      std::string symbolType = record.attributes.getRecordType();
-      os << "    " << symbolName << "    " << symbolType << "   " << fileName << ':' << record.location.line << ':'
-         << record.location.column << std::endl;
+      std::string namespaceName;
+      if (record.namespaceKey)
+      {
+         namespaceName = fmt::format("{}::", symbolTable.getString(record.namespaceKey));
+      }
+      const char*       symbolName = symbolTable.getString(record.symbolNameKey);
+      const char*       fileName   = fileNameTable.getString(record.location.fileNameKey);
+      const std::string symbolType = record.attributes.getRecordType();
+      os << fmt::format("   {}{}  {} {} {}:{}",
+                        namespaceName,
+                        symbolName,
+                        symbolType,
+                        fileName,
+                        record.location.line,
+                        record.location.column)
+         << std::endl;
    });
 }
 

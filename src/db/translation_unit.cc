@@ -62,6 +62,33 @@ void ftags::ProjectDb::TranslationUnit::addCursor(const ftags::Cursor&    cursor
                                                   ftags::StringTable::Key fileNameKey,
                                                   ftags::StringTable::Key referencedFileNameKey)
 {
+   if (cursor.attributes.type == ftags::SymbolType::DeclarationReferenceExpression)
+   {
+      assert(!m_recordSpans.empty());
+
+      ftags::Record& oldRecord = m_recordSpans.back()->getLastRecord();
+
+      if (oldRecord.attributes.type == ftags::SymbolType::FunctionCallExpression)
+      {
+         if (oldRecord.symbolNameKey == symbolNameKey)
+         {
+            // skip over this record since it is a duplicate FunctionCallExpression / DeclarationReferenceExpression
+            return;
+         }
+      }
+   }
+
+   if (cursor.attributes.type == ftags::SymbolType::NamespaceReference)
+   {
+      assert(!m_recordSpans.empty());
+
+      ftags::Record& oldRecord = m_recordSpans.back()->getLastRecord();
+
+      oldRecord.namespaceKey = symbolNameKey;
+
+      return;
+   }
+
    ftags::Record newRecord = {};
 
    newRecord.symbolNameKey = symbolNameKey;

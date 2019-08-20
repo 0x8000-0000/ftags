@@ -19,6 +19,10 @@
 #include <clang-c/CXString.h>
 #include <clang-c/Index.h>
 
+#ifdef DUMP_SKIPPED_CURSORS
+#include <iostream>
+#endif
+
 #include <filesystem>
 #include <memory>
 #include <stdexcept>
@@ -283,6 +287,9 @@ static void getSymbolType(CXCursor clangCursor, ftags::Attributes& attributes)
       break;
 
    default:
+#ifdef DUMP_SKIPPED_CURSORS
+      std::cerr << "Ignoring " << cursorKind << std::endl;
+#endif
       break;
    }
 
@@ -334,6 +341,27 @@ bool getCursorLocation(CXCursor clangCursor, ftags::Cursor::Location& cursorLoca
 
 void TranslationUnitAccumulator::processCursor(CXCursor clangCursor)
 {
+   // check if the cursor is defined in a file below filterPath and if not, bail out early
+   if (!filterPath.empty())
+   {
+      CXStringWrapper fileName;
+
+      CXSourceLocation location = clang_getCursorLocation(clangCursor);
+      clang_getPresumedLocation(location, fileName.get(), nullptr, nullptr);
+
+      const std::size_t thisPathLength = strlen(fileName.c_str());
+
+      if (thisPathLength < filterPath.size())
+      {
+         return;
+      }
+
+      if (memcmp(fileName.c_str(), filterPath.data(), filterPath.size()) != 0)
+      {
+         return;
+      }
+   }
+
    ftags::Cursor cursor = {};
    // get it early to aid debugging
    CXStringWrapper name{clang_getCursorSpelling(clangCursor)};
@@ -355,8 +383,12 @@ void TranslationUnitAccumulator::processCursor(CXCursor clangCursor)
       return;
    }
 
-   // TODO: check if the cursor is defined in a file below filterPath and if not
-   // bail out early
+#if 0
+   const CXSourceRange    sourceRange = clang_getCursorExtent(clangCursor);
+   const CXSourceLocation rangeStart  = clang_getRangeStart(sourceRange);
+   const CXSourceLocation rangeEnd    = clang_getRangeEnd(sourceRange);
+   // TODO: combine FunctionCallExpression with the subsequent DeclarationReferenceExpression and optional NamespaceReference
+#endif
 
    cursor.attributes.isFromMainFile = getCursorLocation(clangCursor, cursor.location);
 
