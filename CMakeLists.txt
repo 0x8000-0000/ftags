@@ -53,7 +53,7 @@ add_library (project_warnings INTERFACE)
 target_compile_options (project_warnings INTERFACE -Wall -Wextra -Werror
    -Wconversion -Wunused) # -pedantic -Wshadow
 
-if (CMAKE_COMPILER_IS_GNUCXX)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
    target_compile_options (project_warnings INTERFACE
       -Waggressive-loop-optimizations -Warray-bounds -Wbool-operation
       -Wcast-align -Wconversion -Wdelete-incomplete
@@ -81,6 +81,8 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
       -Wno-switch-enum -Wno-weak-vtables -Wno-missing-noreturn
       -Wno-undefined-func-template -Wno-disabled-macro-expansion
       -Wno-unused-member-function -Wno-exit-time-destructors
+      -Wno-extra-semi -Wno-float-equal -Wno-shadow-field-in-constructor
+      -Wno-newline-eof -Wno-signed-enum-bitfield
    )
 endif ()
 endif ()
