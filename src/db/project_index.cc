@@ -22,14 +22,21 @@
 #include <vector>
 
 const ftags::ProjectDb::TranslationUnit& ftags::ProjectDb::parseOneFile(const std::string&       fileName,
-                                                                        std::vector<const char*> arguments)
+                                                                        std::vector<const char*> arguments,
+                                                                        bool                     includeEverything)
 {
    spdlog::debug("Parsing {}", fileName);
 
    try
    {
+      std::string filterPath;
+      if (!includeEverything)
+      {
+         filterPath = m_root;
+      }
+
       ftags::ProjectDb::TranslationUnit translationUnit =
-         ftags::ProjectDb::TranslationUnit::parse(fileName, arguments, m_symbolTable, m_fileNameTable);
+         ftags::ProjectDb::TranslationUnit::parse(fileName, arguments, m_symbolTable, m_fileNameTable, filterPath);
 
       spdlog::info("Loaded {:n} records from {}, {:n} from main file",
                    translationUnit.getRecordCount(),

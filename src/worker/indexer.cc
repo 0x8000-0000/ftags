@@ -160,7 +160,8 @@ int main()
 
             ftags::ProjectDb translationUnitDb{/* name = */ indexRequest.projectname(),
                                                /* rootDirectory = */ indexRequest.directoryname()};
-            translationUnitDb.parseOneFile(translationUnitArguments.filename(), arguments);
+            translationUnitDb.parseOneFile(
+               translationUnitArguments.filename(), arguments, indexRequest.indexeverything());
             projectDb.mergeFrom(translationUnitDb);
          }
 

@@ -729,7 +729,8 @@ public:
       static TranslationUnit parse(const std::string&              fileName,
                                    const std::vector<const char*>& arguments,
                                    StringTable&                    symbolTable,
-                                   StringTable&                    fileNameTable);
+                                   StringTable&                    fileNameTable,
+                                   const std::string&              filterPath);
 
       void addCursor(const Cursor&    cursor,
                      StringTable::Key symbolNameKey,
@@ -804,7 +805,8 @@ public:
       void updateIndices();
    };
 
-   const TranslationUnit& parseOneFile(const std::string& fileName, std::vector<const char*> arguments);
+   const TranslationUnit&
+   parseOneFile(const std::string& fileName, std::vector<const char*> arguments, bool includeEverything = false);
 
 private:
    const TranslationUnit& addTranslationUnit(const std::string& fileName, const TranslationUnit& translationUnit);

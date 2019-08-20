@@ -294,6 +294,7 @@ struct TranslationUnitAccumulator
    ftags::ProjectDb::TranslationUnit& translationUnit;
    ftags::StringTable&                symbolTable;
    ftags::StringTable&                fileNameTable;
+   std::string                        filterPath;
 
    void processCursor(CXCursor clangCursor);
 };
@@ -354,6 +355,9 @@ void TranslationUnitAccumulator::processCursor(CXCursor clangCursor)
       return;
    }
 
+   // TODO: check if the cursor is defined in a file below filterPath and if not
+   // bail out early
+
    cursor.attributes.isFromMainFile = getCursorLocation(clangCursor, cursor.location);
 
    if (clang_isCursorDefinition(clangCursor))
@@ -389,12 +393,13 @@ CXChildVisitResult visitTranslationUnit(CXCursor cursor, CXCursor /* parent */, 
 
 ftags::ProjectDb::TranslationUnit ftags::ProjectDb::TranslationUnit::parse(const std::string&              fileName,
                                                                            const std::vector<const char*>& arguments,
-                                                                           StringTable& symbolTable,
-                                                                           StringTable& fileNameTable)
+                                                                           StringTable&       symbolTable,
+                                                                           StringTable&       fileNameTable,
+                                                                           const std::string& filterPath)
 {
    ftags::ProjectDb::TranslationUnit translationUnit;
 
-   TranslationUnitAccumulator accumulator{translationUnit, symbolTable, fileNameTable};
+   TranslationUnitAccumulator accumulator{translationUnit, symbolTable, fileNameTable, filterPath};
 
    auto clangIndex = std::unique_ptr<void, CXIndexDestroyer>(clang_createIndex(/* excludeDeclarationsFromPCH = */ 0,
                                                                                /* displayDiagnostics         = */ 0));

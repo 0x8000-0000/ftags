@@ -36,15 +36,17 @@
 
 namespace
 {
-bool        showHelp = false;
+bool        showHelp        = false;
+bool        indexEverything = false;
 std::string projectName;
 std::string dirName;
 int         groupSize = 5;
 
-auto cli = clara::Help(showHelp) |
-           clara::Opt(groupSize, "group")["--group"]("How many translation units to parse at once") |
-           clara::Opt(projectName, "project")["-p"]["--project"]("Project name") |
-           clara::Arg(dirName, "dir")("Path to directory containing compile_commands.json");
+auto cli =
+   clara::Help(showHelp) | clara::Opt(groupSize, "group")["--group"]("How many translation units to parse at once") |
+   clara::Opt(projectName, "project")["-p"]["--project"]("Project name") |
+   clara::Opt(indexEverything, "everything")["-e"]["--everything"]("Index all reachable sources and headers") |
+   clara::Arg(dirName, "dir")("Path to directory containing compile_commands.json");
 
 } // anonymous namespace
 
@@ -123,6 +125,7 @@ int main(int argc, char* argv[])
       ftags::IndexRequest indexRequest{};
       indexRequest.set_projectname(projectName);
       indexRequest.set_directoryname(dirName);
+      indexRequest.set_indexeverything(indexEverything);
 
       for (unsigned ii = 0; ii < compilationCount; ii++)
       {

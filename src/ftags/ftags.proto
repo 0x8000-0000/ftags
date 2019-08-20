@@ -83,5 +83,6 @@ message IndexRequest
    string projectName = 1;
    string directoryName = 2;
    repeated TranslationUnitArguments translationUnit = 3;
+   bool indexEverything = 4;
    bool shutdownAfter = 5;
 }
