@@ -235,6 +235,11 @@ static void getSymbolType(CXCursor clangCursor, ftags::Attributes& attributes)
       attributes.isReference  = true;
       break;
 
+#if 0
+      /*
+       * do not index literals
+       */
+
    case CXCursor_IntegerLiteral:
       symbolType = ftags::SymbolType::IntegerLiteral;
       break;
@@ -250,6 +255,7 @@ static void getSymbolType(CXCursor clangCursor, ftags::Attributes& attributes)
    case CXCursor_FloatingLiteral:
       symbolType = ftags::SymbolType::FloatingLiteral;
       break;
+#endif
 
    case CXCursor_DeclRefExpr:
       symbolType               = ftags::SymbolType::DeclarationReferenceExpression;
