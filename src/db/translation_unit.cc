@@ -68,7 +68,7 @@ void ftags::ProjectDb::TranslationUnit::addCursor(const ftags::Cursor&    cursor
    newRecord.attributes    = cursor.attributes;
 
    newRecord.setLocationFileKey(fileNameKey);
-   newRecord.setLocationAddress(cursor.location.line, cursor.location.endLine, cursor.location.column);
+   newRecord.setLocationAddress(cursor.location.line, cursor.location.column);
 
    if (newRecord.location.fileNameKey != m_currentRecordSpanFileKey)
    {
@@ -80,7 +80,7 @@ void ftags::ProjectDb::TranslationUnit::addCursor(const ftags::Cursor&    cursor
    }
 
    newRecord.setDefinitionFileKey(referencedFileNameKey);
-   newRecord.setDefinitionAddress(cursor.definition.line, cursor.definition.endLine, cursor.definition.column);
+   newRecord.setDefinitionAddress(cursor.definition.line, cursor.definition.column);
 
    m_recordSpans.back()->addRecord(newRecord);
 }

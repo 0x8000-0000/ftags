@@ -301,11 +301,9 @@ struct TranslationUnitAccumulator
 bool getCursorLocation(CXCursor clangCursor, ftags::Cursor::Location& cursorLocation)
 {
    CXStringWrapper fileName;
-   unsigned int    line   = 0;
-   unsigned int    column = 0;
 
    CXSourceLocation location = clang_getCursorLocation(clangCursor);
-   clang_getPresumedLocation(location, fileName.get(), &line, &column);
+   clang_getPresumedLocation(location, fileName.get(), &cursorLocation.line, &cursorLocation.column);
 
 #ifdef USE_CANONICAL_PATHS
    const char*           fileNameAsRawCString = fileName.c_str();
@@ -329,9 +327,6 @@ bool getCursorLocation(CXCursor clangCursor, ftags::Cursor::Location& cursorLoca
 #else
    cursorLocation.fileName = fileName.c_str();
 #endif
-
-   cursorLocation.line   = static_cast<int>(line);
-   cursorLocation.column = static_cast<int>(column);
 
    return clang_Location_isFromMainFile(location);
 }

@@ -56,12 +56,12 @@ ftags::Cursor ftags::CursorSet::inflateRecord(const ftags::Record& record) const
    cursor.symbolName = m_symbolTable.getString(record.symbolNameKey);
 
    cursor.location.fileName = m_fileNameTable.getString(record.location.fileNameKey);
-   cursor.location.line     = static_cast<int>(record.location.startLine);
-   cursor.location.column   = record.location.startColumn;
+   cursor.location.line     = record.location.line;
+   cursor.location.column   = record.location.column;
 
    cursor.definition.fileName = m_fileNameTable.getString(record.definition.fileNameKey);
-   cursor.definition.line     = static_cast<int>(record.definition.startLine);
-   cursor.definition.column   = record.definition.startColumn;
+   cursor.definition.line     = record.definition.line;
+   cursor.definition.column   = record.definition.column;
 
    cursor.attributes = record.attributes;
 

@@ -45,14 +45,14 @@ public:
 
       if (leftRecord.location.fileNameKey == rightRecord.location.fileNameKey)
       {
-         if (leftRecord.location.startLine < rightRecord.location.startLine)
+         if (leftRecord.location.line < rightRecord.location.line)
          {
             return true;
          }
 
-         if (leftRecord.location.startLine == rightRecord.location.startLine)
+         if (leftRecord.location.line == rightRecord.location.line)
          {
-            if (leftRecord.location.startColumn < rightRecord.location.startColumn)
+            if (leftRecord.location.column < rightRecord.location.column)
             {
                return true;
             }
@@ -76,8 +76,8 @@ void ftags::RecordSpan::dumpRecords(std::ostream&             os,
       const char* symbolName = symbolTable.getString(record.symbolNameKey);
       const char* fileName   = fileNameTable.getString(record.location.fileNameKey);
       std::string symbolType = record.attributes.getRecordType();
-      os << "    " << symbolName << "    " << symbolType << "   " << fileName << ':' << record.location.startLine
-         << ':' << record.location.startColumn << std::endl;
+      os << "    " << symbolName << "    " << symbolType << "   " << fileName << ':' << record.location.line << ':'
+         << record.location.column << std::endl;
    });
 }
 

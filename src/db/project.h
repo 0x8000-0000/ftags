@@ -169,10 +169,7 @@ struct Attributes
 
    uint32_t isNamespaceRef : 1;
 
-   uint32_t locationLineSpan : 8;
-   uint32_t definitionLineSpan : 8;
-
-   uint32_t freeBits : 6;
+   uint32_t freeBits : 22;
 
    std::string getRecordType() const;
 
@@ -185,11 +182,9 @@ struct Cursor
 {
    struct Location
    {
-      const char* fileName;
-      int         line;
-      int         column;
-      int         endLine;
-      int         endColumn;
+      const char*  fileName;
+      unsigned int line;
+      unsigned int column;
    };
 
    char*       symbolNamespace;
@@ -211,8 +206,8 @@ struct Record
    struct Location
    {
       FileNameKey fileNameKey;
-      uint32_t    startLine : 20;
-      uint32_t    startColumn : 12;
+      uint32_t    line : 20;
+      uint32_t    column : 12;
    };
 
    SymbolNameKey    symbolNameKey;
@@ -241,18 +236,16 @@ struct Record
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wconversion"
 
-   void setLocationAddress(int startLine, int endLine, int startColumn)
+   void setLocationAddress(unsigned int line, unsigned int column)
    {
-      location.startLine          = static_cast<uint32_t>(startLine);
-      location.startColumn        = static_cast<uint32_t>(startColumn);
-      attributes.locationLineSpan = static_cast<uint32_t>(endLine - startLine);
+      location.line   = static_cast<uint32_t>(line);
+      location.column = static_cast<uint32_t>(column);
    }
 
-   void setDefinitionAddress(int startLine, int endLine, int startColumn)
+   void setDefinitionAddress(unsigned int line, unsigned int column)
    {
-      definition.startLine          = static_cast<uint32_t>(startLine);
-      definition.startColumn        = static_cast<uint32_t>(startColumn);
-      attributes.definitionLineSpan = static_cast<uint32_t>(endLine - startLine);
+      definition.line   = static_cast<uint32_t>(line);
+      definition.column = static_cast<uint32_t>(column);
    }
 #pragma GCC diagnostic pop
 };

@@ -62,14 +62,14 @@ bool compareRecordsByLocation(const ftags::Record& leftRecord, const ftags::Reco
 
    if (leftRecord.location.fileNameKey == rightRecord.location.fileNameKey)
    {
-      if (leftRecord.location.startLine < rightRecord.location.startLine)
+      if (leftRecord.location.line < rightRecord.location.line)
       {
          return true;
       }
 
-      if (leftRecord.location.startLine == rightRecord.location.startLine)
+      if (leftRecord.location.line == rightRecord.location.line)
       {
-         if (leftRecord.location.startColumn < rightRecord.location.startColumn)
+         if (leftRecord.location.column < rightRecord.location.column)
          {
             return true;
          }
