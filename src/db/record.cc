@@ -122,6 +122,15 @@ void ftags::RecordSpan::updateIndices()
    std::sort(m_recordsInSymbolKeyOrder.begin(), m_recordsInSymbolKeyOrder.end(), OrderRecordsBySymbolKey(m_records));
 }
 
+void ftags::RecordSpan::addRecords(const RecordSpan& other)
+{
+   m_records = other.m_records;
+
+   updateIndices();
+
+   m_hash = SpookyHash::Hash64(m_records.data(), m_records.size() * sizeof(Record), k_hashSeed);
+}
+
 void ftags::RecordSpan::addRecords(const RecordSpan&               other,
                                    const ftags::FlatMap<Key, Key>& symbolKeyMapping,
                                    const ftags::FlatMap<Key, Key>& fileNameKeyMapping)

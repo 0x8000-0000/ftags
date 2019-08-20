@@ -341,6 +341,8 @@ public:
       m_records.push_back(record);
    }
 
+   void addRecords(const RecordSpan& other);
+
    void addRecords(const RecordSpan&               other,
                    const ftags::FlatMap<Key, Key>& symbolKeyMapping,
                    const ftags::FlatMap<Key, Key>& fileNameKeyMapping);
@@ -674,6 +676,8 @@ public:
    public:
       using Key = ftags::StringTable::Key;
 
+      void copyRecords(const TranslationUnit& other, RecordSpanCache& spanCache);
+
       void copyRecords(const TranslationUnit& other,
                        RecordSpanCache&       spanCache,
                        const KeyMap&          symbolKeyMapping,
@@ -810,11 +814,9 @@ public:
    const TranslationUnit& parseOneFile(const std::string& fileName, std::vector<const char*> arguments);
 
 private:
-   const TranslationUnit& addTranslationUnit(const std::string&     fileName,
-                                             const TranslationUnit& translationUnit,
-                                             const StringTable&     symbolTable,
-                                             const StringTable&     fileNameTable);
-   void                   updateIndices();
+   const TranslationUnit& addTranslationUnit(const std::string& fileName, const TranslationUnit& translationUnit);
+
+   void updateIndices();
 
    template <typename F>
    std::vector<const Record*> filterRecordsWithSymbol(const std::string& symbolName, F selectRecord) const

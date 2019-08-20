@@ -24,22 +24,19 @@
 const ftags::ProjectDb::TranslationUnit& ftags::ProjectDb::parseOneFile(const std::string&       fileName,
                                                                         std::vector<const char*> arguments)
 {
-   ftags::StringTable symbolTable;
-   ftags::StringTable fileNameTable;
-
    spdlog::debug("Parsing {}", fileName);
 
    try
    {
       ftags::ProjectDb::TranslationUnit translationUnit =
-         ftags::ProjectDb::TranslationUnit::parse(fileName, arguments, symbolTable, fileNameTable);
+         ftags::ProjectDb::TranslationUnit::parse(fileName, arguments, m_symbolTable, m_fileNameTable);
 
       spdlog::info("Loaded {:n} records from {}, {:n} from main file",
                    translationUnit.getRecordCount(),
                    fileName,
                    translationUnit.getRecords(true).size());
 
-      return addTranslationUnit(fileName, translationUnit, symbolTable, fileNameTable);
+      return addTranslationUnit(fileName, translationUnit);
    }
    catch (const std::runtime_error& re)
    {

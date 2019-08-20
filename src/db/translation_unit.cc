@@ -22,6 +22,22 @@ void ftags::ProjectDb::TranslationUnit::updateIndices()
       m_recordSpans.begin(), m_recordSpans.end(), [](std::shared_ptr<RecordSpan>& rs) { rs->updateIndices(); });
 }
 
+void ftags::ProjectDb::TranslationUnit::copyRecords(const TranslationUnit& original, RecordSpanCache& spanCache)
+{
+   /*
+    * copy the original records
+    */
+   m_recordSpans.reserve(original.m_recordSpans.size());
+
+   for (const std::shared_ptr<RecordSpan>& other : original.m_recordSpans)
+   {
+      std::shared_ptr<RecordSpan> newSpan = std::make_shared<RecordSpan>();
+      newSpan->addRecords(*other);
+      std::shared_ptr<RecordSpan> sharedSpan = spanCache.add(newSpan);
+      m_recordSpans.push_back(sharedSpan);
+   }
+}
+
 void ftags::ProjectDb::TranslationUnit::copyRecords(const TranslationUnit& original,
                                                     RecordSpanCache&       spanCache,
                                                     const KeyMap&          symbolKeyMapping,
@@ -32,17 +48,6 @@ void ftags::ProjectDb::TranslationUnit::copyRecords(const TranslationUnit& origi
     */
    m_recordSpans.reserve(original.m_recordSpans.size());
 
-#if 0
-   std::for_each(
-      original.m_recordSpans.cbegin(),
-      original.m_recordSpans.cend(),
-      [symbolKeyMapping, fileNameKeyMapping, spanCache, this](const std::shared_ptr<RecordSpan>& recordSpan) {
-         std::shared_ptr<RecordSpan> newSpan = std::make_shared<RecordSpan>(m_symbolTable, m_fileNameTable);
-         newSpan->addRecords(*recordSpan, symbolKeyMapping, fileNameKeyMapping);
-         std::shared_ptr<RecordSpan> sharedSpan = spanCache.add(newSpan);
-         m_recordSpans.push_back(sharedSpan);
-      });
-#else
    for (const std::shared_ptr<RecordSpan>& other : original.m_recordSpans)
    {
       std::shared_ptr<RecordSpan> newSpan = std::make_shared<RecordSpan>();
@@ -50,7 +55,6 @@ void ftags::ProjectDb::TranslationUnit::copyRecords(const TranslationUnit& origi
       std::shared_ptr<RecordSpan> sharedSpan = spanCache.add(newSpan);
       m_recordSpans.push_back(sharedSpan);
    }
-#endif
 }
 
 void ftags::ProjectDb::TranslationUnit::addCursor(const ftags::Cursor&    cursor,

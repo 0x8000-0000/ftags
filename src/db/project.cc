@@ -101,9 +101,7 @@ ftags::Cursor ftags::ProjectDb::inflateRecord(const ftags::Record* record) const
 }
 
 const ftags::ProjectDb::TranslationUnit& ftags::ProjectDb::addTranslationUnit(const std::string&     fullPath,
-                                                                              const TranslationUnit& translationUnit,
-                                                                              const StringTable&     symbolTable,
-                                                                              const StringTable&     fileNameTable)
+                                                                              const TranslationUnit& translationUnit)
 {
    /*
     * add the new translation unit to database
@@ -115,13 +113,7 @@ const ftags::ProjectDb::TranslationUnit& ftags::ProjectDb::addTranslationUnit(co
     */
    m_translationUnits.emplace_back();
 
-   /*
-    * merge the other symbols into this database
-    */
-   KeyMap symbolKeyMapping   = m_symbolTable.mergeStringTable(symbolTable);
-   KeyMap fileNameKeyMapping = m_fileNameTable.mergeStringTable(fileNameTable);
-
-   m_translationUnits.back().copyRecords(translationUnit, m_recordSpanCache, symbolKeyMapping, fileNameKeyMapping);
+   m_translationUnits.back().copyRecords(translationUnit, m_recordSpanCache);
 
    /*
     * register the name of the translation unit
