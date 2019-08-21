@@ -74,7 +74,10 @@ void ftags::RecordSpan::dumpRecords(std::ostream&             os,
                                     const ftags::StringTable& symbolTable,
                                     const ftags::StringTable& fileNameTable) const
 {
-   std::for_each(m_records.cbegin(), m_records.cend(), [&os, symbolTable, fileNameTable](const Record& record) {
+   for (std::size_t ii = 0; ii < m_size; ii++)
+   {
+      const Record& record = m_records[ii];
+
       std::string namespaceName;
       if (record.namespaceKey)
       {
@@ -91,7 +94,7 @@ void ftags::RecordSpan::dumpRecords(std::ostream&             os,
                         record.location.line,
                         record.location.column)
          << std::endl;
-   });
+   }
 }
 
 void ftags::ProjectDb::TranslationUnit::dumpRecords(std::ostream&             os,

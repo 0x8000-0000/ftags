@@ -16,6 +16,11 @@
 
 #include <project.h>
 
+void ftags::ProjectDb::TranslationUnit::beginParsingUnit(StringTable::Key fileNameKey)
+{
+   m_fileNameKey = fileNameKey;
+}
+
 void ftags::ProjectDb::TranslationUnit::finalizeParsingUnit(RecordSpanCache& recordSpanCache)
 {
    flushCurrentSpan(recordSpanCache);
@@ -24,7 +29,7 @@ void ftags::ProjectDb::TranslationUnit::finalizeParsingUnit(RecordSpanCache& rec
       m_recordSpans.begin(), m_recordSpans.end(), [](std::shared_ptr<RecordSpan>& rs) { rs->updateIndices(); });
 }
 
-void ftags::ProjectDb::TranslationUnit::copyRecords(const TranslationUnit& original, RecordSpanCache& spanCache)
+void ftags::ProjectDb::TranslationUnit::copyRecords(const TranslationUnit& original, RecordSpanCache& recordSpanCache)
 {
    /*
     * copy the original records
@@ -33,15 +38,25 @@ void ftags::ProjectDb::TranslationUnit::copyRecords(const TranslationUnit& origi
 
    for (const std::shared_ptr<RecordSpan>& other : original.m_recordSpans)
    {
-      std::shared_ptr<RecordSpan> newSpan = spanCache.makeEmptySpan(other->getRecordCount());
-      newSpan->addRecords(*other);
-      std::shared_ptr<RecordSpan> sharedSpan = spanCache.add(newSpan);
-      m_recordSpans.push_back(sharedSpan);
+      std::shared_ptr<RecordSpan> ourCopy = recordSpanCache.get(other->getHash());
+
+      if (ourCopy)
+      {
+         m_recordSpans.push_back(ourCopy);
+      }
+      else
+      {
+         std::shared_ptr<RecordSpan> newSpan = recordSpanCache.makeEmptySpan(other->getRecordCount());
+         newSpan->copyRecords(*other);
+         std::shared_ptr<RecordSpan> sharedSpan = recordSpanCache.add(newSpan);
+         assert(newSpan == sharedSpan);
+         m_recordSpans.push_back(sharedSpan);
+      }
    }
 }
 
 void ftags::ProjectDb::TranslationUnit::copyRecords(const TranslationUnit& original,
-                                                    RecordSpanCache&       spanCache,
+                                                    RecordSpanCache&       recordSpanCache,
                                                     const KeyMap&          symbolKeyMapping,
                                                     const KeyMap&          fileNameKeyMapping)
 {
@@ -50,22 +65,23 @@ void ftags::ProjectDb::TranslationUnit::copyRecords(const TranslationUnit& origi
     */
    m_recordSpans.reserve(original.m_recordSpans.size());
 
+   std::vector<Record> tempRecords;
+
    for (const std::shared_ptr<RecordSpan>& other : original.m_recordSpans)
    {
-      std::shared_ptr<RecordSpan> newSpan = spanCache.makeEmptySpan(other->getRecordCount());
-      newSpan->addRecords(*other, symbolKeyMapping, fileNameKeyMapping);
-      std::shared_ptr<RecordSpan> sharedSpan = spanCache.add(newSpan);
-      m_recordSpans.push_back(sharedSpan);
+      other->copyRecordsOut(tempRecords);
+
+      RecordSpan::filterRecords(tempRecords, symbolKeyMapping, fileNameKeyMapping);
+
+      m_recordSpans.push_back(recordSpanCache.getSpan(tempRecords));
    }
 }
 
 void ftags::ProjectDb::TranslationUnit::flushCurrentSpan(RecordSpanCache& recordSpanCache)
 {
-   m_recordSpans.push_back(recordSpanCache.makeEmptySpan(m_currentSpan.size()));
+   m_recordSpans.push_back(recordSpanCache.getSpan(m_currentSpan));
 
-   m_recordSpans.back()->addRecords(std::move(m_currentSpan));
-
-   m_currentSpan = std::vector<Record>();
+   m_currentSpan.clear();
 }
 
 void ftags::ProjectDb::TranslationUnit::addCursor(const ftags::Cursor&    cursor,
@@ -127,7 +143,7 @@ std::size_t ftags::ProjectDb::TranslationUnit::computeSerializedSize() const
 {
    std::vector<uint64_t> recordSpanHashes(/* size = */ m_recordSpans.size());
 
-   return sizeof(ftags::SerializedObjectHeader) +
+   return sizeof(ftags::SerializedObjectHeader) + sizeof(StringTable::Key) +
           ftags::Serializer<std::vector<uint64_t>>::computeSerializedSize(recordSpanHashes);
 }
 
@@ -135,6 +151,9 @@ void ftags::ProjectDb::TranslationUnit::serialize(ftags::BufferInsertor& inserto
 {
    ftags::SerializedObjectHeader header{"ftags::TranslationUnit"};
    insertor << header;
+
+   assert(m_fileNameKey);
+   insertor << m_fileNameKey;
 
    std::vector<uint64_t> recordSpanHashes;
    recordSpanHashes.reserve(m_recordSpans.size());
@@ -147,13 +166,17 @@ void ftags::ProjectDb::TranslationUnit::serialize(ftags::BufferInsertor& inserto
    ftags::Serializer<std::vector<uint64_t>>::serialize(recordSpanHashes, insertor);
 }
 
-ftags::ProjectDb::TranslationUnit ftags::ProjectDb::TranslationUnit::deserialize(ftags::BufferExtractor& extractor,
-                                                                                 const RecordSpanCache&  spanCache)
+ftags::ProjectDb::TranslationUnit
+ftags::ProjectDb::TranslationUnit::deserialize(ftags::BufferExtractor& extractor,
+                                               const RecordSpanCache&  recordSpanCache)
 {
    ftags::ProjectDb::TranslationUnit retval;
 
    ftags::SerializedObjectHeader header = {};
    extractor >> header;
+
+   extractor >> retval.m_fileNameKey;
+   assert(retval.m_fileNameKey);
 
    std::vector<uint64_t> recordSpanHashes = ftags::Serializer<std::vector<uint64_t>>::deserialize(extractor);
 
@@ -161,15 +184,8 @@ ftags::ProjectDb::TranslationUnit ftags::ProjectDb::TranslationUnit::deserialize
 
    for (const uint64_t spanHash : recordSpanHashes)
    {
-      std::vector<std::shared_ptr<RecordSpan>> spans = spanCache.get(spanHash);
-      if (spans.size() == 1)
-      {
-         retval.m_recordSpans.push_back(spans[0]);
-      }
-      else
-      {
-         assert(false);
-      }
+      std::shared_ptr<RecordSpan> span = recordSpanCache.get(spanHash);
+      retval.m_recordSpans.push_back(span);
    }
 
    return retval;

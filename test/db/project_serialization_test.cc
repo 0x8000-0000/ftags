@@ -142,7 +142,7 @@ TEST(ProjectSerializationTest, DeserializedProjectDbEqualsInput)
    ftags::BufferExtractor extractor{buffer};
    ftags::ProjectDb       restoredTagsDb = ftags::ProjectDb::deserialize(extractor);
 
-   ASSERT_EQ(tagsDb, restoredTagsDb);
+   ASSERT_TRUE(tagsDb.operator==(restoredTagsDb));
 }
 
 TEST(ProjectSerializationTest, FindVariablesInDeserializedProjectDb)

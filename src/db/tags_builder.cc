@@ -441,6 +441,9 @@ ftags::ProjectDb::TranslationUnit ftags::ProjectDb::TranslationUnit::parse(const
 
    TranslationUnitAccumulator accumulator{translationUnit, symbolTable, fileNameTable, recordSpanCache, filterPath};
 
+   StringTable::Key fileKey = fileNameTable.getKey(fileName.c_str());
+   translationUnit.beginParsingUnit(fileKey);
+
    auto clangIndex = std::unique_ptr<void, CXIndexDestroyer>(clang_createIndex(/* excludeDeclarationsFromPCH = */ 0,
                                                                                /* displayDiagnostics         = */ 0));
 

@@ -32,54 +32,86 @@ bool ftags::ProjectDb::operator==(const ftags::ProjectDb& other) const
       return true;
    }
 
-   if ((m_symbolTable == other.m_symbolTable) && (m_fileNameTable == other.m_fileNameTable))
+   if (m_translationUnits.size() != other.m_translationUnits.size())
    {
-      if (m_translationUnits.size() == other.m_translationUnits.size())
+      return false;
+   }
+
+   std::map<std::string, std::vector<const Record*>> thisTranslationUnits;
+   std::map<std::string, std::vector<const Record*>> otherTranslationUnits;
+
+   for (const auto& translationUnit : m_translationUnits)
+   {
+      const char* translationUnitName = m_fileNameTable.getString(translationUnit.getFileNameKey());
+
+      const std::vector<const Record*> records = translationUnit.getRecords(false);
+
+      thisTranslationUnits.emplace(std::string(translationUnitName), records);
+   }
+
+   for (const auto& translationUnit : other.m_translationUnits)
+   {
+      const char* translationUnitName = other.m_fileNameTable.getString(translationUnit.getFileNameKey());
+
+      const std::vector<const Record*> records = translationUnit.getRecords(false);
+
+      otherTranslationUnits.emplace(std::string(translationUnitName), records);
+   }
+
+   if (thisTranslationUnits.size() != otherTranslationUnits.size())
+   {
+      return false;
+   }
+
+   auto thisIter  = thisTranslationUnits.cbegin();
+   auto otherIter = otherTranslationUnits.cbegin();
+
+   while ((thisIter != thisTranslationUnits.cend()) && (otherIter != otherTranslationUnits.cend()))
+   {
+      if (thisIter->first == otherIter->first) // filenames match
       {
-         std::multiset<std::size_t> myTranslationHashes;
-         std::multiset<std::size_t> otherTranslationHashes;
-
-         for (const auto& translationUnit : m_translationUnits)
+         if (thisIter->second.size() == otherIter->second.size()) // record counts match
          {
-            const std::vector<const Record*> records = translationUnit.getRecords(false);
+            const CursorSet thisCursorSet(thisIter->second, m_symbolTable, m_fileNameTable);
+            const CursorSet otherCursorSet(otherIter->second, other.m_symbolTable, other.m_fileNameTable);
 
-            const CursorSet cursor(records, m_symbolTable, m_fileNameTable);
+            assert(thisCursorSet.size() == otherCursorSet.size());
 
-            const std::size_t cursorHash = cursor.computeHash();
+            auto thisCursorIter  = thisCursorSet.begin();
+            auto otherCursorIter = thisCursorSet.begin();
 
-            myTranslationHashes.insert(cursorHash);
-         }
-
-         for (const auto& translationUnit : other.m_translationUnits)
-         {
-            const std::vector<const Record*> records = translationUnit.getRecords(false);
-
-            const CursorSet cursor(records, other.m_symbolTable, other.m_fileNameTable);
-
-            const std::size_t cursorHash = cursor.computeHash();
-
-            otherTranslationHashes.insert(cursorHash);
-         }
-
-         if (myTranslationHashes.size() == otherTranslationHashes.size())
-         {
-            auto myIter    = myTranslationHashes.cbegin();
-            auto otherIter = otherTranslationHashes.cbegin();
-
-            while ((myIter != myTranslationHashes.cend()) && (otherIter != otherTranslationHashes.cend()))
+            while ((thisCursorIter != thisCursorSet.end()) && (otherCursorIter != otherCursorSet.end()))
             {
-               if (*myIter == *otherIter)
-               {
-                  ++myIter;
-                  ++otherIter;
-               }
-               else
+               Cursor thisCursor  = thisCursorSet.inflateRecord(*thisCursorIter);
+               Cursor otherCursor = otherCursorSet.inflateRecord(*otherCursorIter);
+
+               if (strcmp(thisCursor.symbolName, otherCursor.symbolName) != 0)
                {
                   return false;
                }
+
+               if (strcmp(thisCursor.location.fileName, otherCursor.location.fileName) != 0)
+               {
+                  return false;
+               }
+
+               if (thisCursor.attributes.type != otherCursor.attributes.type)
+               {
+                  return false;
+               }
+
+               ++thisCursorIter;
+               ++otherCursorIter;
             }
          }
       }
+      else
+      {
+         return false;
+      }
+
+      ++thisIter;
+      ++otherIter;
    }
 
    return true;
@@ -108,10 +140,12 @@ const ftags::ProjectDb::TranslationUnit& ftags::ProjectDb::addTranslationUnit(co
     */
    const TranslationUnitStore::size_type translationUnitPos = m_translationUnits.size();
 
+   const StringTable::Key translationUnitFileKey = m_fileNameTable.getKey(fullPath.data());
+
    /*
     * clone the records using the project's symbol table
     */
-   m_translationUnits.emplace_back();
+   m_translationUnits.emplace_back(translationUnitFileKey);
 
    m_translationUnits.back().copyRecords(translationUnit, m_recordSpanCache);
 
@@ -182,8 +216,8 @@ std::vector<const ftags::Record*> ftags::ProjectDb::findSymbol(const std::string
 
 std::vector<const ftags::Record*> ftags::ProjectDb::dumpTranslationUnit(const std::string& fileName) const
 {
-   const StringTable::Key        fileKey            = m_fileNameTable.getKey(fileName.data());
-   const auto                    translationUnitPos = m_fileIndex.at(fileKey);
+   const StringTable::Key                   fileKey            = m_fileNameTable.getKey(fileName.data());
+   const auto                               translationUnitPos = m_fileIndex.at(fileKey);
    const ftags::ProjectDb::TranslationUnit& translationUnit    = m_translationUnits.at(translationUnitPos);
 
    return translationUnit.getRecords(true);
@@ -283,7 +317,10 @@ void ftags::ProjectDb::mergeFrom(const ProjectDb& other)
       /*
        * register the name of the translation unit
        */
-      m_fileIndex[fileNameKeyMapping.lookup(otherTranslationUnit.getFileNameKey())->first] = translationUnitPos;
+      assert(otherTranslationUnit.getFileNameKey());
+      auto iter = fileNameKeyMapping.lookup(otherTranslationUnit.getFileNameKey());
+      assert(iter != fileNameKeyMapping.none());
+      m_fileIndex[iter->first] = translationUnitPos;
    }
 }
 
