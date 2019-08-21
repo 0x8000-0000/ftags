@@ -456,7 +456,7 @@ private:
 
    using index_type = std::multimap<StringTable::Key, std::weak_ptr<RecordSpan>>;
 
-   using RecordStore = ftags::Store<Record, uint32_t, 20>;
+   using RecordStore = ftags::Store<Record, uint32_t, 24>;
 
    RecordStore m_store;
 
