@@ -22,7 +22,6 @@
 
 #include <functional>
 #include <memory>
-#include <shared_mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -66,21 +65,13 @@ public:
 class StringTable
 {
 public:
-   StringTable(bool enableConcurrentAccess = false) : m_useSafeConcurrentAccess{enableConcurrentAccess}
+   StringTable() = default;
+
+   StringTable(const StringTable& other) : m_store{other.m_store}, m_index{other.m_index}
    {
    }
 
-   StringTable(const StringTable& other) :
-      m_store{other.m_store},
-      m_index{other.m_index},
-      m_useSafeConcurrentAccess{other.m_useSafeConcurrentAccess}
-   {
-   }
-
-   StringTable(StringTable&& other) :
-      m_store{std::move(other.m_store)},
-      m_index{std::move(other.m_index)},
-      m_useSafeConcurrentAccess{other.m_useSafeConcurrentAccess}
+   StringTable(StringTable&& other) : m_store{std::move(other.m_store)}, m_index{std::move(other.m_index)}
    {
    }
 
@@ -173,9 +164,6 @@ private:
     * Lookup table; can be reconstructed from the store above.
     */
    std::unordered_map<const char*, Key, CharPointerHashingFunctor, CharPointerCompareFunctor> m_index;
-
-   const bool                m_useSafeConcurrentAccess;
-   mutable std::shared_mutex m_mutex;
 };
 
 } // namespace ftags

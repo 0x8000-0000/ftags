@@ -24,17 +24,7 @@
 
 const char* ftags::StringTable::getString(Key stringKey) const noexcept
 {
-   if (m_useSafeConcurrentAccess)
-   {
-      m_mutex.lock_shared();
-   }
-
    auto location = m_store.get(stringKey);
-
-   if (m_useSafeConcurrentAccess)
-   {
-      m_mutex.unlock_shared();
-   }
 
    if (location.first == location.second)
    {
@@ -48,17 +38,7 @@ const char* ftags::StringTable::getString(Key stringKey) const noexcept
 
 ftags::StringTable::Key ftags::StringTable::getKey(const char* inputString) const noexcept
 {
-   if (m_useSafeConcurrentAccess)
-   {
-      m_mutex.lock_shared();
-   }
-
    auto iter = m_index.find(inputString);
-
-   if (m_useSafeConcurrentAccess)
-   {
-      m_mutex.unlock_shared();
-   }
 
    if (m_index.end() == iter)
    {
@@ -72,34 +52,14 @@ ftags::StringTable::Key ftags::StringTable::getKey(const char* inputString) cons
 
 ftags::StringTable::Key ftags::StringTable::addKey(const char* inputString)
 {
-   if (m_useSafeConcurrentAccess)
-   {
-      m_mutex.lock_shared();
-   }
-
    const Key currentPosition{getKey(inputString)};
-
-   if (m_useSafeConcurrentAccess)
-   {
-      m_mutex.unlock_shared();
-   }
 
    if (currentPosition != 0)
    {
       return currentPosition;
    }
 
-   if (m_useSafeConcurrentAccess)
-   {
-      m_mutex.lock();
-   }
-
    Key key = insertString(inputString);
-
-   if (m_useSafeConcurrentAccess)
-   {
-      m_mutex.unlock();
-   }
 
    return key;
 }
@@ -121,17 +81,7 @@ ftags::StringTable::Key ftags::StringTable::insertString(const char* aString)
 
 void ftags::StringTable::removeKey(const char* inputString)
 {
-   if (m_useSafeConcurrentAccess)
-   {
-      m_mutex.lock_shared();
-   }
-
    auto iter = m_index.find(inputString);
-
-   if (m_useSafeConcurrentAccess)
-   {
-      m_mutex.unlock_shared();
-   }
 
    if (m_index.end() == iter)
    {
@@ -139,11 +89,6 @@ void ftags::StringTable::removeKey(const char* inputString)
    }
 
    const auto inputLength{static_cast<uint32_t>(strlen(inputString))};
-
-   if (m_useSafeConcurrentAccess)
-   {
-      m_mutex.lock();
-   }
 
 #ifndef NDEBUG
    auto buffer = m_store.get(iter->second).first;
@@ -154,23 +99,14 @@ void ftags::StringTable::removeKey(const char* inputString)
    m_store.deallocate(iter->second, inputLength + 1);
 
    m_index.erase(iter);
-
-   if (m_useSafeConcurrentAccess)
-   {
-      m_mutex.unlock();
-   }
 }
 
-ftags::FlatMap<ftags::StringTable::Key, ftags::StringTable::Key> ftags::StringTable::mergeStringTable(const StringTable& other)
+ftags::FlatMap<ftags::StringTable::Key, ftags::StringTable::Key>
+ftags::StringTable::mergeStringTable(const StringTable& other)
 {
    ftags::FlatMapAccumulator<ftags::StringTable::Key, ftags::StringTable::Key> accumulator(other.m_index.size());
 
-   if (m_useSafeConcurrentAccess)
-   {
-      m_mutex.lock();
-   }
-
-   for (const auto& pair: other.m_index)
+   for (const auto& pair : other.m_index)
    {
       auto iter = m_index.find(pair.first);
       if (iter == m_index.end())
@@ -181,11 +117,6 @@ ftags::FlatMap<ftags::StringTable::Key, ftags::StringTable::Key> ftags::StringTa
       {
          accumulator.add(pair.second, iter->second);
       }
-   }
-
-   if (m_useSafeConcurrentAccess)
-   {
-      m_mutex.unlock();
    }
 
    return accumulator.getMap();
