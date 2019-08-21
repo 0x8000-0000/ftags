@@ -158,11 +158,9 @@ int main()
                arguments.push_back(translationUnitArguments.argument(ii).c_str());
             }
 
-            ftags::ProjectDb translationUnitDb{/* name = */ indexRequest.projectname(),
-                                               /* rootDirectory = */ indexRequest.directoryname()};
-            translationUnitDb.parseOneFile(
-               translationUnitArguments.filename(), arguments, indexRequest.indexeverything());
-            projectDb.mergeFrom(translationUnitDb);
+            projectDb.parseOneFile(translationUnitArguments.filename(), arguments, indexRequest.indexeverything());
+
+            assert(projectDb.isValid());
          }
 
          ftags::Command command{};
