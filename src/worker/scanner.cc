@@ -67,8 +67,8 @@ int main(int argc, char* argv[])
       exit(0);
    }
 
-   std::filesystem::path projectPath{dirName};
    {
+      std::filesystem::path projectPath{dirName};
       std::filesystem::path compilationDatabaseFile = projectPath / "compile_commands.json";
       if (std::filesystem::exists(compilationDatabaseFile))
       {
