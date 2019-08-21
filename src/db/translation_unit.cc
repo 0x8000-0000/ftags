@@ -36,22 +36,13 @@ void ftags::ProjectDb::TranslationUnit::copyRecords(const TranslationUnit& origi
     */
    m_recordSpans.reserve(original.m_recordSpans.size());
 
+   std::vector<Record> tempRecords;
+
    for (const std::shared_ptr<RecordSpan>& other : original.m_recordSpans)
    {
-      std::shared_ptr<RecordSpan> ourCopy = recordSpanCache.get(other->getHash());
+      other->copyRecordsOut(tempRecords);
 
-      if (ourCopy)
-      {
-         m_recordSpans.push_back(ourCopy);
-      }
-      else
-      {
-         std::shared_ptr<RecordSpan> newSpan = recordSpanCache.makeEmptySpan(other->getRecordCount());
-         newSpan->copyRecords(*other);
-         std::shared_ptr<RecordSpan> sharedSpan = recordSpanCache.add(newSpan);
-         assert(newSpan == sharedSpan);
-         m_recordSpans.push_back(sharedSpan);
-      }
+      m_recordSpans.push_back(recordSpanCache.getSpan(tempRecords));
    }
 }
 

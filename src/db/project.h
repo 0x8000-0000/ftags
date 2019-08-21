@@ -470,16 +470,16 @@ private:
 
    void indexRecordSpan(std::shared_ptr<ftags::RecordSpan> original);
 
-public:
-   std::pair<index_type::const_iterator, index_type::const_iterator> getSpansForSymbol(StringTable::Key key) const
-   {
-      return m_symbolIndex.equal_range(key);
-   }
-
    std::shared_ptr<RecordSpan> makeEmptySpan(std::size_t size)
    {
       auto alloc = m_store.allocate(static_cast<uint32_t>(size));
       return std::make_shared<RecordSpan>(size, &*alloc.iterator, alloc.key);
+   }
+
+public:
+   std::pair<index_type::const_iterator, index_type::const_iterator> getSpansForSymbol(StringTable::Key key) const
+   {
+      return m_symbolIndex.equal_range(key);
    }
 
    std::shared_ptr<RecordSpan> getSpan(std::size_t size, uint32_t key)
