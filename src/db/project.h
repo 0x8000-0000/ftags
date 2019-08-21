@@ -518,6 +518,19 @@ public:
 
    std::size_t getRecordCount() const;
 
+   template <typename F>
+   void forEachRecord(F func) const
+   {
+      std::for_each(m_cache.cbegin(), m_cache.cend(), [func](const cache_type::value_type& elem) {
+         std::shared_ptr<RecordSpan> recordSpan = elem.second.lock();
+
+         if (recordSpan)
+         {
+            recordSpan->forEachRecord(func);
+         }
+      });
+   }
+
    /*
     * Serialization interface
     */

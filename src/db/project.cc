@@ -297,6 +297,8 @@ ftags::ProjectDb ftags::ProjectDb::deserialize(ftags::BufferExtractor& extractor
       projectDb.m_translationUnits.push_back(TranslationUnit::deserialize(extractor, projectDb.m_recordSpanCache));
    }
 
+   assert(projectDb.isValid());
+
    return projectDb;
 }
 
@@ -312,16 +314,17 @@ void ftags::ProjectDb::mergeFrom(const ProjectDb& other)
    {
       const TranslationUnitStore::size_type translationUnitPos = m_translationUnits.size();
 
-      m_translationUnits.emplace_back();
+      assert(otherTranslationUnit.getFileNameKey());
+      const auto iter = fileNameKeyMapping.lookup(otherTranslationUnit.getFileNameKey());
+      assert(iter != fileNameKeyMapping.none());
+
+      m_translationUnits.emplace_back(iter->first);
       m_translationUnits.back().copyRecords(
          otherTranslationUnit, m_recordSpanCache, symbolKeyMapping, fileNameKeyMapping);
 
       /*
        * register the name of the translation unit
        */
-      assert(otherTranslationUnit.getFileNameKey());
-      auto iter = fileNameKeyMapping.lookup(otherTranslationUnit.getFileNameKey());
-      assert(iter != fileNameKeyMapping.none());
       m_fileIndex[iter->first] = translationUnitPos;
    }
 }
@@ -361,6 +364,76 @@ bool ftags::ProjectDb::isValid() const
          return false;
       }
    }
+
+   for (const auto& iter : m_fileIndex)
+   {
+      if (iter.first != m_translationUnits[iter.second].getFileNameKey())
+      {
+         return false;
+      }
+   }
+
+   struct SymbolCount
+   {
+      const StringTable& symbolTable;
+      const StringTable& fileNameTable;
+
+      uint64_t invalidSymbols;
+      uint64_t invalidFileNames;
+
+      uint64_t missingSymbols;
+      uint64_t missingFiles;
+   } counts{m_symbolTable, m_fileNameTable, 0u, 0u, 0u, 0u};
+
+   m_recordSpanCache.forEachRecord([&counts](const Record* record) {
+      if (record->symbolNameKey == 0)
+      {
+         counts.invalidSymbols++;
+      }
+      else
+      {
+         if (counts.symbolTable.getString(record->symbolNameKey) == nullptr)
+         {
+            counts.missingSymbols++;
+         }
+      }
+
+      if (record->location.fileNameKey == 0)
+      {
+         counts.invalidFileNames++;
+      }
+      else
+      {
+         if (counts.fileNameTable.getString(record->location.fileNameKey) == nullptr)
+         {
+            counts.missingFiles++;
+         }
+      }
+   });
+
+   if (counts.invalidFileNames != 0)
+   {
+      return false;
+   }
+
+   if (counts.missingFiles != 0)
+   {
+      return false;
+   }
+
+   if (counts.invalidSymbols != 0)
+   {
+      return false;
+   }
+
+   if (counts.missingSymbols != 0)
+   {
+      return false;
+   }
+
+   /*
+    * it's all good
+    */
 
    return true;
 }
