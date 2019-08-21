@@ -151,6 +151,13 @@ void dispatchUpdateTranslationUnit(zmq::socket_t& socket, ftags::ProjectDb* proj
 
    ftags::ProjectDb updatedTranslationUnit = ftags::ProjectDb::deserialize(extractor);
 
+   spdlog::info("Data contains {} records for {} translation units",
+                updatedTranslationUnit.getRecordCount(),
+                updatedTranslationUnit.getTranslationUnitCount());
+   spdlog::info("Data contains {} symbols extracted from {} files",
+                updatedTranslationUnit.getSymbolCount(),
+                updatedTranslationUnit.getFilesCount());
+
    projectDb->updateFrom(fileName, updatedTranslationUnit);
 
    ftags::Status status{};
