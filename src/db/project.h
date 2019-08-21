@@ -678,6 +678,23 @@ public:
 
    std::vector<std::string> getStatisticsRemarks() const;
 
+   bool isValid() const;
+
+   std::size_t getTranslationUnitCount() const
+   {
+      return m_translationUnits.size();
+   }
+
+   std::size_t getSymbolCount() const
+   {
+      return m_symbolTable.getSize();
+   }
+
+   std::size_t getFilesCount() const
+   {
+      return m_fileNameTable.getSize();
+   }
+
    /*
     * Serialization interface
     */
@@ -814,6 +831,8 @@ public:
       void dumpRecords(std::ostream&             os,
                        const ftags::StringTable& symbolTable,
                        const ftags::StringTable& fileNameTable) const;
+
+      bool isValid() const;
 
       /*
        * Serialization interface

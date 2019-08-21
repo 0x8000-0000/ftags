@@ -140,7 +140,7 @@ const ftags::ProjectDb::TranslationUnit& ftags::ProjectDb::addTranslationUnit(co
     */
    const TranslationUnitStore::size_type translationUnitPos = m_translationUnits.size();
 
-   const StringTable::Key translationUnitFileKey = m_fileNameTable.getKey(fullPath.data());
+   const StringTable::Key translationUnitFileKey = m_fileNameTable.addKey(fullPath.data());
 
    /*
     * clone the records using the project's symbol table
@@ -158,6 +158,8 @@ const ftags::ProjectDb::TranslationUnit& ftags::ProjectDb::addTranslationUnit(co
    assert(translationUnit.getRecordCount() == m_translationUnits.back().getRecordCount());
 
    assert(translationUnit.getRecords(true).size() == m_translationUnits.back().getRecords(true).size());
+
+   assert(m_translationUnits.back().isValid());
 
    return m_translationUnits.back();
 }
@@ -343,4 +345,22 @@ std::vector<std::string> ftags::ProjectDb::getStatisticsRemarks() const
    remarks.emplace_back(fmt::format("Indexed {:n} distinct files", m_fileNameTable.getSize()));
 
    return remarks;
+}
+
+bool ftags::ProjectDb::isValid() const
+{
+   if (m_fileNameTable.getSize() < m_translationUnits.size())
+   {
+      return false;
+   }
+
+   for (const auto& translationUnit : m_translationUnits)
+   {
+      if (!translationUnit.isValid())
+      {
+         return false;
+      }
+   }
+
+   return true;
 }

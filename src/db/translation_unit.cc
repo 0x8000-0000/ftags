@@ -190,3 +190,13 @@ ftags::ProjectDb::TranslationUnit::deserialize(ftags::BufferExtractor& extractor
 
    return retval;
 }
+
+bool ftags::ProjectDb::TranslationUnit::isValid() const
+{
+   if (0 == m_fileNameKey)
+   {
+      return false;
+   }
+
+   return true;
+}
