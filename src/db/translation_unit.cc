@@ -16,8 +16,10 @@
 
 #include <project.h>
 
-void ftags::ProjectDb::TranslationUnit::updateIndices()
+void ftags::ProjectDb::TranslationUnit::finalizeParsingUnit(RecordSpanCache& recordSpanCache)
 {
+   flushCurrentSpan(recordSpanCache);
+
    std::for_each(
       m_recordSpans.begin(), m_recordSpans.end(), [](std::shared_ptr<RecordSpan>& rs) { rs->updateIndices(); });
 }
@@ -57,6 +59,15 @@ void ftags::ProjectDb::TranslationUnit::copyRecords(const TranslationUnit& origi
    }
 }
 
+void ftags::ProjectDb::TranslationUnit::flushCurrentSpan(RecordSpanCache& recordSpanCache)
+{
+   m_recordSpans.push_back(recordSpanCache.makeEmptySpan(m_currentSpan.size()));
+
+   m_recordSpans.back()->addRecords(std::move(m_currentSpan));
+
+   m_currentSpan = std::vector<Record>();
+}
+
 void ftags::ProjectDb::TranslationUnit::addCursor(const ftags::Cursor&    cursor,
                                                   ftags::StringTable::Key symbolNameKey,
                                                   ftags::StringTable::Key fileNameKey,
@@ -65,9 +76,9 @@ void ftags::ProjectDb::TranslationUnit::addCursor(const ftags::Cursor&    cursor
 {
    if (cursor.attributes.type == ftags::SymbolType::DeclarationReferenceExpression)
    {
-      assert(!m_recordSpans.empty());
+      assert(!m_currentSpan.empty());
 
-      ftags::Record& oldRecord = m_recordSpans.back()->getLastRecord();
+      ftags::Record& oldRecord = m_currentSpan.back();
 
       if (oldRecord.attributes.type == ftags::SymbolType::FunctionCallExpression)
       {
@@ -81,16 +92,26 @@ void ftags::ProjectDb::TranslationUnit::addCursor(const ftags::Cursor&    cursor
 
    if (cursor.attributes.type == ftags::SymbolType::NamespaceReference)
    {
-      assert(!m_recordSpans.empty());
+      assert(!m_currentSpan.empty());
 
-      ftags::Record& oldRecord = m_recordSpans.back()->getLastRecord();
+      ftags::Record& oldRecord = m_currentSpan.back();
 
       oldRecord.namespaceKey = symbolNameKey;
 
       return;
    }
 
-   ftags::Record newRecord = {};
+   if (fileNameKey != m_currentRecordSpanFileKey)
+   {
+      /*
+       * Open a new span because the file name key is different
+       */
+      flushCurrentSpan(recordSpanCache);
+
+      m_currentRecordSpanFileKey = fileNameKey;
+   }
+
+   ftags::Record& newRecord = m_currentSpan.emplace_back();
 
    newRecord.symbolNameKey = symbolNameKey;
    newRecord.attributes    = cursor.attributes;
@@ -98,19 +119,8 @@ void ftags::ProjectDb::TranslationUnit::addCursor(const ftags::Cursor&    cursor
    newRecord.setLocationFileKey(fileNameKey);
    newRecord.setLocationAddress(cursor.location.line, cursor.location.column);
 
-   if (newRecord.location.fileNameKey != m_currentRecordSpanFileKey)
-   {
-      /*
-       * Open a new span because the file name key is different
-       */
-      m_recordSpans.push_back(recordSpanCache.makeEmptySpan(0));
-      m_currentRecordSpanFileKey = newRecord.location.fileNameKey;
-   }
-
    newRecord.setDefinitionFileKey(referencedFileNameKey);
    newRecord.setDefinitionAddress(cursor.definition.line, cursor.definition.column);
-
-   m_recordSpans.back()->addRecord(newRecord);
 }
 
 std::size_t ftags::ProjectDb::TranslationUnit::computeSerializedSize() const

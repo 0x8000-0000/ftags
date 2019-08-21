@@ -131,6 +131,15 @@ void ftags::RecordSpan::addRecords(const RecordSpan& other)
    m_hash = SpookyHash::Hash64(m_records.data(), m_records.size() * sizeof(Record), k_hashSeed);
 }
 
+void ftags::RecordSpan::addRecords(std::vector<ftags::Record>&& otherRecords)
+{
+   m_records = otherRecords;
+
+   updateIndices();
+
+   m_hash = SpookyHash::Hash64(m_records.data(), m_records.size() * sizeof(Record), k_hashSeed);
+}
+
 void ftags::RecordSpan::addRecords(const RecordSpan&               other,
                                    const ftags::FlatMap<Key, Key>& symbolKeyMapping,
                                    const ftags::FlatMap<Key, Key>& fileNameKeyMapping)
@@ -341,8 +350,8 @@ ftags::RecordSpanCache ftags::RecordSpanCache::deserialize(ftags::BufferExtracto
 
    for (size_t ii = 0; ii < cacheSize; ii++)
    {
-      std::shared_ptr<RecordSpan> newSpan = std::make_shared<RecordSpan>(0);
-      *newSpan                            = RecordSpan::deserialize(extractor);
+      std::shared_ptr<RecordSpan> newSpan = retval.makeEmptySpan(0);
+      newSpan->addRecords(RecordSpan::deserialize(extractor));
       hardReferences.push_back(newSpan);
 
       retval.m_cache.emplace(newSpan->getHash(), newSpan);

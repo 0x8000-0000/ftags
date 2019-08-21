@@ -338,6 +338,8 @@ public:
       return m_records.back();
    }
 
+   void addRecords(std::vector<Record>&& other);
+
    void addRecords(const RecordSpan& other);
 
    void addRecords(const RecordSpan&               other,
@@ -810,7 +812,10 @@ public:
 
       Key m_currentRecordSpanFileKey = 0;
 
-      void updateIndices();
+      std::vector<Record> m_currentSpan;
+      void                flushCurrentSpan(RecordSpanCache& recordSpanCache);
+
+      void finalizeParsingUnit(RecordSpanCache& recordSpanCache);
    };
 
    const TranslationUnit&

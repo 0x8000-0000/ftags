@@ -495,7 +495,7 @@ ftags::ProjectDb::TranslationUnit ftags::ProjectDb::TranslationUnit::parse(const
       throw std::runtime_error("Failed to parse input");
    }
 
-   translationUnit.updateIndices();
+   translationUnit.finalizeParsingUnit(recordSpanCache);
 
    return translationUnit;
 }
