@@ -39,6 +39,11 @@ if (SANITIZE_ADDRESS)
    target_link_options (project_options INTERFACE -fsanitize=address)
 endif ()
 
+if (SANITIZE_UNDEFINED)
+   target_compile_options (project_options INTERFACE -fsanitize=undefined)
+   target_link_options (project_options INTERFACE -fsanitize=undefined)
+endif ()
+
 if (SANITIZE_THREAD)
    target_compile_options (project_options INTERFACE -fsanitize=thread)
    target_link_options (project_options INTERFACE -fsanitize=thread)
