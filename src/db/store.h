@@ -49,6 +49,9 @@ public:
    using const_iterator  = typename std::vector<T>::const_iterator;
    using block_size_type = uint32_t;
 
+   using key_type = K;
+   using Key = K;
+
    static constexpr block_size_type FirstKeyValue = 4;
 
    struct Allocation
