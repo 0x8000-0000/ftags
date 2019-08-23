@@ -18,6 +18,7 @@
 #define DB_PROJECT_H_INCLUDED
 
 #include <record.h>
+#include <record_span.h>
 
 #include <serialization.h>
 #include <string_table.h>
@@ -71,203 +72,10 @@ struct Cursor
    Location definition;
 };
 
-class RecordSpanCache;
-
-/** Contains all the symbols in a C++ translation unit that are adjacent in
- * a physical file.
- *
- * For example, an include file that does not include any other files would
- * define a record span. If a file includes another file, that creates at
- * least three record spans, one before the include, one for the included file
- * and one after the include.
- */
-class RecordSpan
-{
-public:
-   class HashingFunctor
-   {
-   public:
-      size_t operator()(const std::weak_ptr<RecordSpan>& weakVal) const
-      {
-         std::shared_ptr<RecordSpan> val = weakVal.lock();
-         if (!val)
-         {
-            return 0;
-         }
-         else
-         {
-            return val->getHash();
-         }
-      }
-   };
-
-   class CompareFunctor
-   {
-   public:
-      bool operator()(const std::weak_ptr<RecordSpan>& weakLeftVal,
-                      const std::weak_ptr<RecordSpan>& weakRightVal) const
-      {
-         std::shared_ptr<RecordSpan> leftVal  = weakLeftVal.lock();
-         std::shared_ptr<RecordSpan> rightVal = weakRightVal.lock();
-
-         if (!leftVal)
-         {
-            if (!rightVal)
-            {
-               return true;
-            }
-            else
-            {
-               return false;
-            }
-         }
-         else
-         {
-            if (!rightVal)
-            {
-               return false;
-            }
-            else
-            {
-               return leftVal->operator==(*rightVal);
-            }
-         }
-      }
-   };
-
-   using Key = ftags::StringTable::Key;
-
-   RecordSpan(std::size_t size, Record* recordBase, uint32_t key) : m_size{size}, m_records{recordBase}, m_key{key}
-   {
-   }
-
-   /*
-    * Statistics
-    */
-   std::vector<Record>::size_type getRecordCount() const
-   {
-      return m_size;
-   }
-
-   void copyRecords(const std::vector<Record>& other);
-
-   void copyRecords(const RecordSpan& other);
-
-   void copyRecordsOut(std::vector<Record>& newCopy);
-
-#if 0
-   void copyRecords(const RecordSpan&               other,
-                    const ftags::FlatMap<Key, Key>& symbolKeyMapping,
-                    const ftags::FlatMap<Key, Key>& fileNameKeyMapping);
-#endif
-
-   static void filterRecords(std::vector<Record>&            records,
-                             const ftags::FlatMap<Key, Key>& symbolKeyMapping,
-                             const ftags::FlatMap<Key, Key>& fileNameKeyMapping);
-
-   bool operator==(const RecordSpan& other) const
-   {
-      // return std::equal(m_records.cbegin(), m_records.cend(), other.m_records.cbegin());
-      if (m_size == other.m_size)
-      {
-         return 0 == memcmp(m_records, other.m_records, sizeof(Record) * m_size);
-      }
-      else
-      {
-         return false;
-      }
-   }
-
-   template <typename F>
-   void forEachRecord(F func) const
-   {
-      for (std::size_t ii = 0; ii < m_size; ii++)
-      {
-         func(&m_records[ii]);
-      }
-   }
-
-   struct RecordSymbolComparator
-   {
-      RecordSymbolComparator(const Record* records) : m_records{records}
-      {
-      }
-
-      bool operator()(std::vector<Record>::size_type recordPos, Key symbolNameKey)
-      {
-         return m_records[recordPos].symbolNameKey < symbolNameKey;
-      }
-
-      bool operator()(Key symbolNameKey, std::vector<Record>::size_type recordPos)
-      {
-         return symbolNameKey < m_records[recordPos].symbolNameKey;
-      }
-
-      const Record* m_records;
-   };
-
-   template <typename F>
-   void forEachRecordWithSymbol(Key symbolNameKey, F func) const
-   {
-      const auto keyRange = std::equal_range(m_recordsInSymbolKeyOrder.cbegin(),
-                                             m_recordsInSymbolKeyOrder.cend(),
-                                             symbolNameKey,
-                                             RecordSymbolComparator(m_records));
-
-      for (auto iter = keyRange.first; iter != keyRange.second; ++iter)
-      {
-         func(&m_records[*iter]);
-      }
-   }
-
-   void updateIndices();
-
-   /*
-    * Serialization interface
-    */
-   std::size_t computeSerializedSize() const;
-
-   void serialize(ftags::BufferInsertor& insertor) const;
-
-   static std::shared_ptr<RecordSpan> deserialize(ftags::BufferExtractor& extractor,
-                                                  RecordSpanCache&        recordSpanCache);
-
-   /*
-    * Debugging
-    */
-   void dumpRecords(std::ostream&             os,
-                    const ftags::StringTable& symbolTable,
-                    const ftags::StringTable& fileNameTable) const;
-
-   using hash_type = std::size_t;
-
-   hash_type getHash() const
-   {
-      return m_hash;
-   }
-
-   static hash_type computeHash(const std::vector<Record>& records);
-
-private:
-   // persistent data
-   std::size_t m_size;
-
-   Record* m_records;
-
-   uint32_t m_key;
-
-   // 128 bit hash of the record span
-   std::size_t m_hash = 0;
-
-   std::vector<std::size_t> m_recordsInSymbolKeyOrder;
-
-   static constexpr uint64_t k_hashSeed = 0x0accedd62cf0b9bf;
-};
-
 class RecordSpanCache
 {
 private:
-   using cache_type = std::unordered_map<RecordSpan::hash_type, std::weak_ptr<RecordSpan>>;
+   using cache_type = std::unordered_map<RecordSpan::Hash, std::weak_ptr<RecordSpan>>;
 
    using value_type = cache_type::value_type;
 
@@ -291,8 +99,7 @@ private:
 
    std::shared_ptr<RecordSpan> makeEmptySpan(std::size_t size)
    {
-      auto alloc = m_store.allocate(static_cast<uint32_t>(size));
-      return std::make_shared<RecordSpan>(size, &*alloc.iterator, alloc.key);
+      return std::make_shared<RecordSpan>(size, m_store);
    }
 
 public:
@@ -304,14 +111,14 @@ public:
    std::shared_ptr<RecordSpan> getSpan(std::size_t size, uint32_t key)
    {
       auto alloc = m_store.get(key);
-      return std::make_shared<RecordSpan>(size, &*alloc.first, key);
+      return std::make_shared<RecordSpan>(key, size, &*alloc.first);
    }
 
    std::shared_ptr<RecordSpan> getSpan(const std::vector<Record>& records);
 
    std::shared_ptr<RecordSpan> add(std::shared_ptr<RecordSpan> newSpan);
 
-   std::shared_ptr<RecordSpan> get(RecordSpan::hash_type spanHash) const
+   std::shared_ptr<RecordSpan> get(RecordSpan::Hash spanHash) const
    {
       cache_type::const_iterator iter = m_cache.find(spanHash);
 
@@ -568,7 +375,7 @@ public:
                                 m_recordSpans.cend(),
                                 0u,
                                 [](std::vector<Record>::size_type acc, const std::shared_ptr<RecordSpan>& elem) {
-                                   return acc + elem->getRecordCount();
+                                   return acc + elem->getSize();
                                 });
       }
 

@@ -16,7 +16,6 @@
 
 #include <project.h>
 
-#include <SpookyV2.h>
 
 namespace
 {
@@ -115,130 +114,9 @@ void filterDuplicates(std::vector<const ftags::Record*> records)
 
 } // anonymous namespace
 
-void ftags::RecordSpan::updateIndices()
-{
-   m_recordsInSymbolKeyOrder.resize(m_size);
-   std::iota(m_recordsInSymbolKeyOrder.begin(), m_recordsInSymbolKeyOrder.end(), 0);
-   std::sort(m_recordsInSymbolKeyOrder.begin(), m_recordsInSymbolKeyOrder.end(), OrderRecordsBySymbolKey(m_records));
-}
 
-void ftags::RecordSpan::copyRecords(const RecordSpan& other)
-{
-   assert(m_size == other.m_size);
-   memcpy(m_records, other.m_records, m_size * sizeof(Record));
-
-   updateIndices();
-
-#ifndef NDEBUG
-   m_hash = SpookyHash::Hash64(m_records, m_size * sizeof(Record), k_hashSeed);
-   assert(m_hash == other.m_hash);
-#else
-   m_hash = other.m_hash;
-#endif
-}
-
-void ftags::RecordSpan::copyRecords(const std::vector<Record>& other)
-{
-   assert(m_size == other.size());
-   memcpy(m_records, other.data(), m_size * sizeof(Record));
-
-   updateIndices();
-
-   m_hash = SpookyHash::Hash64(m_records, m_size * sizeof(Record), k_hashSeed);
-}
-
-void ftags::RecordSpan::copyRecordsOut(std::vector<Record>& newCopy)
-{
-   newCopy.resize(m_size);
-   memcpy(newCopy.data(), m_records, m_size * sizeof(Record));
-}
-
-void ftags::RecordSpan::filterRecords(std::vector<Record>&            records,
-                                      const ftags::FlatMap<Key, Key>& symbolKeyMapping,
-                                      const ftags::FlatMap<Key, Key>& fileNameKeyMapping)
-{
-   for (Record& record : records)
-   {
-      {
-         auto fileNameIter = fileNameKeyMapping.lookup(record.location.fileNameKey);
-         assert(fileNameIter != fileNameKeyMapping.none());
-         record.setLocationFileKey(fileNameIter->second);
-      }
-
-      {
-         auto fileNameIter = fileNameKeyMapping.lookup(record.definition.fileNameKey);
-         assert(fileNameIter != fileNameKeyMapping.none());
-         record.setDefinitionFileKey(fileNameIter->second);
-      }
-
-      {
-         auto symbolNameIter = symbolKeyMapping.lookup(record.symbolNameKey);
-         assert(symbolNameIter != symbolKeyMapping.none());
-         record.symbolNameKey = symbolNameIter->second;
-      }
-   }
-}
 
 #if 0
-void ftags::RecordSpan::copyRecords(const RecordSpan&               other,
-                                    const ftags::FlatMap<Key, Key>& symbolKeyMapping,
-                                    const ftags::FlatMap<Key, Key>& fileNameKeyMapping)
-{
-   assert(m_size == other.m_size);
-   memcpy(m_records, other.m_records, m_size * sizeof(Record));
-
-   for (std::size_t ii = 0; ii < m_size; ii++)
-   {
-      Record& record = m_records[ii];
-      {
-         auto fileNameIter = fileNameKeyMapping.lookup(record.location.fileNameKey);
-         assert(fileNameIter != fileNameKeyMapping.none());
-         record.setLocationFileKey(fileNameIter->second);
-      }
-
-      {
-         auto fileNameIter = fileNameKeyMapping.lookup(record.definition.fileNameKey);
-         assert(fileNameIter != fileNameKeyMapping.none());
-         record.setDefinitionFileKey(fileNameIter->second);
-      }
-
-      {
-         auto symbolNameIter = symbolKeyMapping.lookup(record.symbolNameKey);
-         assert(symbolNameIter != symbolKeyMapping.none());
-         record.symbolNameKey = symbolNameIter->second;
-      }
-   }
-
-   updateIndices();
-
-   m_hash = SpookyHash::Hash64(m_records, m_size * sizeof(Record), k_hashSeed);
-}
-#endif
-
-ftags::RecordSpan::hash_type ftags::RecordSpan::computeHash(const std::vector<Record>& records)
-{
-   return SpookyHash::Hash64(records.data(), records.size() * sizeof(Record), k_hashSeed);
-}
-
-std::shared_ptr<ftags::RecordSpan> ftags::RecordSpanCache::getSpan(const std::vector<Record>& records)
-{
-   const RecordSpan::hash_type spanHash = RecordSpan::computeHash(records);
-
-   cache_type::const_iterator iter = m_cache.find(spanHash);
-   if (iter != m_cache.end())
-   {
-      return iter->second.lock();
-   }
-   else
-   {
-      std::shared_ptr<RecordSpan> newSpan = makeEmptySpan(records.size());
-      newSpan->copyRecords(records);
-      m_cache.emplace(newSpan->getHash(), newSpan);
-      indexRecordSpan(newSpan);
-      return newSpan;
-   }
-}
-
 std::shared_ptr<ftags::RecordSpan> ftags::RecordSpanCache::add(std::shared_ptr<ftags::RecordSpan> original)
 {
    m_spansObserved++;
@@ -270,6 +148,7 @@ std::shared_ptr<ftags::RecordSpan> ftags::RecordSpanCache::add(std::shared_ptr<f
 
    return original;
 }
+#endif
 
 void ftags::RecordSpanCache::indexRecordSpan(std::shared_ptr<ftags::RecordSpan> original)
 {
@@ -295,7 +174,7 @@ std::size_t ftags::RecordSpanCache::getRecordCount() const
       std::shared_ptr<RecordSpan> val = iter->second.lock();
       if (val)
       {
-         recordCount += val->getRecordCount();
+         recordCount += val->getSize();
       }
    }
    return recordCount;
@@ -336,51 +215,6 @@ ftags::Serializer<std::vector<ftags::Record>>::deserialize(ftags::BufferExtracto
 
    std::vector<ftags::Record> retval(/* size = */ vecSize);
    extractor >> retval;
-
-   return retval;
-}
-
-std::size_t ftags::RecordSpan::computeSerializedSize() const
-{
-   return sizeof(ftags::SerializedObjectHeader) + sizeof(std::size_t) + sizeof(uint32_t) + sizeof(std::size_t);
-}
-
-void ftags::RecordSpan::serialize(ftags::BufferInsertor& insertor) const
-{
-   ftags::SerializedObjectHeader header{"ftags::RecordSpan"};
-   insertor << header;
-
-   insertor << m_size;
-   insertor << m_key;
-   insertor << m_hash;
-
-#ifndef NDEBUG
-   const std::size_t hash = SpookyHash::Hash64(m_records, m_size * sizeof(Record), k_hashSeed);
-#endif
-   assert(m_hash == hash);
-}
-
-std::shared_ptr<ftags::RecordSpan> ftags::RecordSpan::deserialize(ftags::BufferExtractor& extractor,
-                                                                  RecordSpanCache&        recordSpanCache)
-{
-   ftags::SerializedObjectHeader header;
-   extractor >> header;
-
-   std::size_t size = 0;
-   uint32_t    key  = 0;
-   std::size_t hash = 0;
-
-   extractor >> size;
-   extractor >> key;
-   extractor >> hash;
-
-   std::shared_ptr<ftags::RecordSpan> retval = recordSpanCache.getSpan(size, key);
-
-   retval->m_hash = SpookyHash::Hash64(retval->m_records, retval->m_size * sizeof(Record), k_hashSeed);
-
-   assert(hash == retval->m_hash);
-
-   retval->updateIndices();
 
    return retval;
 }
@@ -437,7 +271,9 @@ ftags::RecordSpanCache ftags::RecordSpanCache::deserialize(ftags::BufferExtracto
 
    for (size_t ii = 0; ii < cacheSize; ii++)
    {
-      std::shared_ptr<RecordSpan> newSpan = RecordSpan::deserialize(extractor, retval);
+      RecordSpan recordSpan = RecordSpan::deserialize(extractor, retval.m_store);
+
+      std::shared_ptr<RecordSpan> newSpan = std::make_shared<RecordSpan>(std::move(recordSpan));
       hardReferences.push_back(newSpan);
 
       retval.m_cache.emplace(newSpan->getHash(), newSpan);
@@ -446,4 +282,23 @@ ftags::RecordSpanCache ftags::RecordSpanCache::deserialize(ftags::BufferExtracto
    }
 
    return retval;
+}
+
+std::shared_ptr<ftags::RecordSpan> ftags::RecordSpanCache::getSpan(const std::vector<Record>& records)
+{
+   const RecordSpan::Hash spanHash = RecordSpan::computeHash(records);
+
+   cache_type::const_iterator iter = m_cache.find(spanHash);
+   if (iter != m_cache.end())
+   {
+      return iter->second.lock();
+   }
+   else
+   {
+      std::shared_ptr<RecordSpan> newSpan = makeEmptySpan(records.size());
+      newSpan->copyRecordsFrom(records);
+      m_cache.emplace(newSpan->getHash(), newSpan);
+      indexRecordSpan(newSpan);
+      return newSpan;
+   }
 }

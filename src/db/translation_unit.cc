@@ -25,8 +25,10 @@ void ftags::ProjectDb::TranslationUnit::finalizeParsingUnit(RecordSpanCache& rec
 {
    flushCurrentSpan(recordSpanCache);
 
+#if 0
    std::for_each(
       m_recordSpans.begin(), m_recordSpans.end(), [](std::shared_ptr<RecordSpan>& rs) { rs->updateIndices(); });
+#endif
 }
 
 void ftags::ProjectDb::TranslationUnit::copyRecords(const TranslationUnit& original, RecordSpanCache& recordSpanCache)
@@ -40,7 +42,7 @@ void ftags::ProjectDb::TranslationUnit::copyRecords(const TranslationUnit& origi
 
    for (const std::shared_ptr<RecordSpan>& other : original.m_recordSpans)
    {
-      other->copyRecordsOut(tempRecords);
+      other->copyRecordsTo(tempRecords);
 
       m_recordSpans.push_back(recordSpanCache.getSpan(tempRecords));
    }
@@ -60,7 +62,7 @@ void ftags::ProjectDb::TranslationUnit::copyRecords(const TranslationUnit& origi
 
    for (const std::shared_ptr<RecordSpan>& other : original.m_recordSpans)
    {
-      other->copyRecordsOut(tempRecords);
+      other->copyRecordsTo(tempRecords);
 
       RecordSpan::filterRecords(tempRecords, symbolKeyMapping, fileNameKeyMapping);
 
