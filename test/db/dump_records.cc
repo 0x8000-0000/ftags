@@ -23,11 +23,13 @@
 #include <iostream>
 #include <vector>
 
-void dumpTranslationUnit(const ftags::ProjectDb::TranslationUnit& translationUnit, const std::string& fileName)
+void dumpTranslationUnit(const ftags::ProjectDb&                  projectDb,
+                         const ftags::ProjectDb::TranslationUnit& translationUnit,
+                         const std::string&                       fileName)
 {
    std::ofstream out(fileName);
 
-   std::vector<const ftags::Record*> records = translationUnit.getRecords(true);
+   std::vector<const ftags::Record*> records = projectDb.getTranslationUnitRecords(translationUnit, true);
    for (const ftags::Record* record : records)
    {
       out << record->location.line << ':' << record->location.column << "  " << record->attributes.getRecordFlavor()
@@ -78,7 +80,7 @@ int main(int argc, char* argv[])
 
    if (!dumpFileName.empty())
    {
-      dumpTranslationUnit(translationUnit, dumpFileName);
+      dumpTranslationUnit(tagsDb, translationUnit, dumpFileName);
    }
 
    if (dumpToConsole)

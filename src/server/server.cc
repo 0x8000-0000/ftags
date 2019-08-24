@@ -158,11 +158,11 @@ void dispatchUpdateTranslationUnit(zmq::socket_t& socket, ftags::ProjectDb* proj
                 updatedTranslationUnit.getSymbolCount(),
                 updatedTranslationUnit.getFilesCount());
 
-   assert(projectDb->isValid());
+   projectDb->assertValid();
 
    projectDb->updateFrom(fileName, updatedTranslationUnit);
 
-   assert(projectDb->isValid());
+   projectDb->assertValid();
 
    ftags::Status status{};
    status.set_timestamp(getTimeStamp());

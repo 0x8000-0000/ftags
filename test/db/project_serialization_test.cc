@@ -21,41 +21,6 @@
 
 #include <filesystem>
 
-TEST(ProjectSerializationTest, RecordVector)
-{
-   std::vector<ftags::Record> input;
-
-   ftags::Record one   = {};
-   ftags::Record two   = {};
-   ftags::Record three = {};
-
-   one.symbolNameKey   = 1;
-   two.symbolNameKey   = 2;
-   three.symbolNameKey = 3;
-
-   input.push_back(one);
-   input.push_back(two);
-   input.push_back(three);
-
-   using Serializer = ftags::Serializer<std::vector<ftags::Record>>;
-
-   const size_t           inputSerializedSize = Serializer::computeSerializedSize(input);
-   std::vector<std::byte> buffer(/* size = */ inputSerializedSize);
-
-   ftags::BufferInsertor insertor{buffer};
-
-   Serializer::serialize(input, insertor);
-   insertor.assertEmpty();
-
-   ftags::BufferExtractor           extractor{buffer};
-   const std::vector<ftags::Record> output = Serializer::deserialize(extractor);
-   extractor.assertEmpty();
-
-   ASSERT_EQ(1, output[0].symbolNameKey);
-   ASSERT_EQ(2, output[1].symbolNameKey);
-   ASSERT_EQ(3, output[2].symbolNameKey);
-}
-
 TEST(ProjectSerializationTest, CursorSet)
 {
    std::vector<const ftags::Record*> input;
@@ -127,11 +92,15 @@ TEST(ProjectSerializationTest, DeserializedProjectDbEqualsInput)
       tagsDb.parseOneFile(libPath, arguments);
    }
 
+   tagsDb.assertValid();
+
    {
       const auto testPath = path / "test" / "db" / "data" / "multi-module" / "test.cc";
       ASSERT_TRUE(std::filesystem::exists(testPath));
       tagsDb.parseOneFile(testPath, arguments);
    }
+
+   tagsDb.assertValid();
 
    std::vector<std::byte> buffer(/* size = */ tagsDb.computeSerializedSize());
 

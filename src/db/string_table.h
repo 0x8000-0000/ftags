@@ -67,23 +67,13 @@ class StringTable
 public:
    StringTable() = default;
 
-   StringTable(const StringTable& other) : m_store{other.m_store}, m_index{other.m_index}
-   {
-   }
+   StringTable(const StringTable& other) = delete;
 
    StringTable(StringTable&& other) : m_store{std::move(other.m_store)}, m_index{std::move(other.m_index)}
    {
    }
 
-   StringTable& operator=(const StringTable& other)
-   {
-      if (this != &other)
-      {
-         m_store = other.m_store;
-         m_index = other.m_index;
-      }
-      return *this;
-   }
+   StringTable& operator=(const StringTable& other) = delete;
 
    StringTable& operator=(StringTable&& other)
    {

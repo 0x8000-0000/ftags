@@ -98,16 +98,15 @@ void ftags::RecordSpan::dumpRecords(std::ostream&             os,
 }
 
 void ftags::ProjectDb::TranslationUnit::dumpRecords(std::ostream&             os,
+                                                    const RecordSpanManager&  recordSpanManager,
                                                     const ftags::StringTable& symbolTable,
                                                     const ftags::StringTable& fileNameTable) const
 {
-   os << " Found " << getRecordCount() << " records." << std::endl;
+   os << " Found " << getRecordCount(recordSpanManager) << " records." << std::endl;
 
-   std::for_each(m_recordSpans.cbegin(),
-                 m_recordSpans.cend(),
-                 [&os, symbolTable, fileNameTable](const std::shared_ptr<RecordSpan>& rs) {
-                    rs->dumpRecords(os, symbolTable, fileNameTable);
-                 });
+   forEachRecordSpan([&os, &symbolTable, &fileNameTable](
+                        const RecordSpan& recordSpan) { recordSpan.dumpRecords(os, symbolTable, fileNameTable); },
+                     recordSpanManager);
 }
 
 void ftags::ProjectDb::dumpRecords(std::ostream& os) const
@@ -124,14 +123,16 @@ void ftags::ProjectDb::dumpRecords(std::ostream& os) const
          {
             os << "File: unnamed" << std::endl;
          }
-         translationUnit.dumpRecords(os, m_symbolTable, m_fileNameTable);
+         translationUnit.dumpRecords(os, m_recordSpanManager, m_symbolTable, m_fileNameTable);
       });
 }
 
 void ftags::ProjectDb::dumpStats(std::ostream& os) const
 {
    os << "ProjectDb stats: ";
-   os << "Cache utilization: " << m_recordSpanCache.getActiveSpanCount() << " live spans out of "
-      << m_recordSpanCache.getTotalSpanCount();
+#if 0
+   os << "Cache utilization: " << m_recordSpanManager.getActiveSpanCount() << " live spans out of "
+      << m_recordSpanManager.getRecordCount();
+#endif
    os << std::endl;
 }

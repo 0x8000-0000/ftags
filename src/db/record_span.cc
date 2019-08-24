@@ -20,6 +20,8 @@
 
 #include <numeric>
 
+#include <cassert>
+
 namespace
 {
 
@@ -57,19 +59,34 @@ private:
 
 } // anonymous namespace
 
-void ftags::RecordSpan::updateIndices()
+void ftags::RecordSpan::restoreRecordPointer(Record::Store& recordStore)
 {
-   m_recordsInSymbolKeyOrder.resize(m_size);
-   std::iota(m_recordsInSymbolKeyOrder.begin(), m_recordsInSymbolKeyOrder.end(), 0);
-   std::sort(m_recordsInSymbolKeyOrder.begin(), m_recordsInSymbolKeyOrder.end(), OrderRecordsBySymbolKey(m_records));
+   assert(m_key != 0);
+   auto [recordIter, rangeEnd] = recordStore.get(m_key);
+   m_records                   = &*recordIter;
 }
 
-void ftags::RecordSpan::copyRecordsFrom(const RecordSpan& other)
+void ftags::RecordSpan::updateIndices(SymbolIndexStore& symbolIndexStore)
+{
+   /* can't assert m_symbolIndexKey is 0 here because it might be stale
+    * info after a deserialize
+    */
+   auto symbolIndexIter = symbolIndexStore.allocate(m_size);
+   m_symbolIndexKey     = symbolIndexIter.key;
+
+   auto recordsInSymbolKeyOrderBegin = &*symbolIndexIter.iterator;
+   auto recordsInSymbolKeyOrderEnd   = recordsInSymbolKeyOrderBegin + m_size;
+
+   std::iota(recordsInSymbolKeyOrderBegin, recordsInSymbolKeyOrderEnd, 0);
+   std::sort(recordsInSymbolKeyOrderBegin, recordsInSymbolKeyOrderEnd, OrderRecordsBySymbolKey(m_records));
+}
+
+void ftags::RecordSpan::copyRecordsFrom(const RecordSpan& other, SymbolIndexStore& symbolIndexStore)
 {
    assert(m_size == other.m_size);
    memcpy(m_records, other.m_records, m_size * sizeof(Record));
 
-   updateIndices();
+   updateIndices(symbolIndexStore);
 
 #ifndef NDEBUG
    m_hash = SpookyHash::Hash64(m_records, m_size * sizeof(Record), k_hashSeed);
@@ -79,17 +96,27 @@ void ftags::RecordSpan::copyRecordsFrom(const RecordSpan& other)
 #endif
 }
 
-void ftags::RecordSpan::copyRecordsFrom(const std::vector<Record>& other)
+void ftags::RecordSpan::moveRecordsFrom(RecordSpan& other)
+{
+   m_key            = other.m_key;
+   m_size           = other.m_size;
+   m_records        = other.m_records;
+   m_referenceCount = other.m_referenceCount;
+   m_hash           = other.m_hash;
+   m_symbolIndexKey = other.m_symbolIndexKey;
+}
+
+void ftags::RecordSpan::copyRecordsFrom(const std::vector<Record>& other, SymbolIndexStore& symbolIndexStore)
 {
    assert(m_size == other.size());
    memcpy(m_records, other.data(), m_size * sizeof(Record));
 
-   updateIndices();
+   updateIndices(symbolIndexStore);
 
    m_hash = SpookyHash::Hash64(m_records, m_size * sizeof(Record), k_hashSeed);
 }
 
-void ftags::RecordSpan::copyRecordsTo(std::vector<Record>& newCopy)
+void ftags::RecordSpan::copyRecordsTo(std::vector<Record>& newCopy) const
 {
    newCopy.resize(m_size);
    memcpy(newCopy.data(), m_records, m_size * sizeof(Record));
@@ -127,6 +154,7 @@ ftags::RecordSpan::Hash ftags::RecordSpan::computeHash(const std::vector<Record>
    return SpookyHash::Hash64(records.data(), records.size() * sizeof(Record), k_hashSeed);
 }
 
+#if 0
 std::size_t ftags::RecordSpan::computeSerializedSize() const
 {
    return sizeof(ftags::SerializedObjectHeader) + sizeof(std::size_t) + sizeof(uint32_t) + sizeof(std::size_t);
@@ -147,7 +175,9 @@ void ftags::RecordSpan::serialize(ftags::BufferInsertor& insertor) const
    assert(m_hash == hash);
 }
 
-ftags::RecordSpan ftags::RecordSpan::deserialize(ftags::BufferExtractor& extractor, ftags::Record::Store& recordStore)
+ftags::RecordSpan ftags::RecordSpan::deserialize(ftags::BufferExtractor& extractor,
+                                                 ftags::Record::Store&   recordStore,
+                                                 SymbolIndexStore&       symbolIndexStore)
 {
    ftags::SerializedObjectHeader header;
    extractor >> header;
@@ -168,7 +198,54 @@ ftags::RecordSpan ftags::RecordSpan::deserialize(ftags::BufferExtractor& extract
 
    assert(hash == retval.m_hash);
 
-   retval.updateIndices();
+   retval.updateIndices(symbolIndexStore);
 
    return retval;
 }
+#endif
+
+bool ftags::RecordSpan::isEqualTo(const std::vector<ftags::Record>& records) const
+{
+   if (m_size == records.size())
+   {
+      return 0 == memcmp(m_records, records.data(), m_size * sizeof(Record));
+   }
+   else
+   {
+      return false;
+   }
+}
+
+void ftags::RecordSpan::setRecordsFrom(const std::vector<ftags::Record>& other,
+                                       Record::Store&                    store,
+                                       SymbolIndexStore&                 symbolIndexStore)
+{
+   assert(m_key == 0);
+   assert(m_size == 0);
+
+   assert(other.size() != 0);
+
+   m_size     = static_cast<uint32_t>(other.size());
+   auto alloc = store.allocate(m_size);
+   m_key      = alloc.key;
+   m_records  = &*alloc.iterator;
+
+   copyRecordsFrom(other, symbolIndexStore);
+}
+
+#if (!defined(NDEBUG)) && (defined(ENABLE_THOROUGH_VALIDITY_CHECKS))
+void ftags::RecordSpan::assertValid() const
+{
+   if (m_key == 0)
+   {
+      assert(m_size == 0);
+      assert(m_records == nullptr);
+      assert(m_hash == 0);
+   }
+   else
+   {
+      assert(m_size != 0);
+      assert(m_records != nullptr);
+   }
+}
+#endif

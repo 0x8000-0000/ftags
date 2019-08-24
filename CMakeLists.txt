@@ -26,7 +26,8 @@ add_library (project_options INTERFACE)
 target_compile_features (project_options INTERFACE cxx_std_17)
 
 if (StrictChecking)
-target_compile_options (project_options INTERFACE -DFTAGS_STRICT_CHECKING)
+target_compile_options (project_options INTERFACE
+   -DFTAGS_STRICT_CHECKING -DENABLE_THOROUGH_VALIDITY_CHECKS)
 endif ()
 
 if (Profile)

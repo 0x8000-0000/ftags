@@ -19,6 +19,7 @@
 
 #include <record.h>
 #include <record_span.h>
+#include <record_span_manager.h>
 
 #include <serialization.h>
 #include <string_table.h>
@@ -38,7 +39,6 @@
 namespace ftags
 {
 
-
 enum class Relation : uint8_t
 {
    Association, // generic association
@@ -51,7 +51,6 @@ enum class Relation : uint8_t
    Overloads, // as in 'A' and 'B' are overloads
 
 };
-
 
 struct Cursor
 {
@@ -70,102 +69,6 @@ struct Cursor
 
    Location location;
    Location definition;
-};
-
-class RecordSpanCache
-{
-private:
-   using cache_type = std::unordered_map<RecordSpan::Hash, std::weak_ptr<RecordSpan>>;
-
-   using value_type = cache_type::value_type;
-
-   using iterator_type = cache_type::iterator;
-
-   using index_type = std::multimap<StringTable::Key, std::weak_ptr<RecordSpan>>;
-
-   using RecordStore = ftags::Store<Record, uint32_t, 24>;
-
-   RecordStore m_store;
-
-   cache_type m_cache;
-
-   std::size_t m_spansObserved = 0;
-
-   /** Maps from a symbol key to a bag of translation units containing the symbol.
-    */
-   index_type m_symbolIndex;
-
-   void indexRecordSpan(std::shared_ptr<ftags::RecordSpan> original);
-
-   std::shared_ptr<RecordSpan> makeEmptySpan(std::size_t size)
-   {
-      return std::make_shared<RecordSpan>(size, m_store);
-   }
-
-public:
-   std::pair<index_type::const_iterator, index_type::const_iterator> getSpansForSymbol(StringTable::Key key) const
-   {
-      return m_symbolIndex.equal_range(key);
-   }
-
-   std::shared_ptr<RecordSpan> getSpan(std::size_t size, uint32_t key)
-   {
-      auto alloc = m_store.get(key);
-      return std::make_shared<RecordSpan>(key, size, &*alloc.first);
-   }
-
-   std::shared_ptr<RecordSpan> getSpan(const std::vector<Record>& records);
-
-   std::shared_ptr<RecordSpan> add(std::shared_ptr<RecordSpan> newSpan);
-
-   std::shared_ptr<RecordSpan> get(RecordSpan::Hash spanHash) const
-   {
-      cache_type::const_iterator iter = m_cache.find(spanHash);
-
-      if (iter != m_cache.end())
-      {
-         return iter->second.lock();
-      }
-      else
-      {
-         return std::shared_ptr<RecordSpan>(nullptr);
-      }
-   }
-
-   std::size_t getActiveSpanCount() const
-   {
-      return m_cache.size();
-   }
-
-   std::size_t getTotalSpanCount() const
-   {
-      return m_spansObserved;
-   }
-
-   std::size_t getRecordCount() const;
-
-   template <typename F>
-   void forEachRecord(F func) const
-   {
-      std::for_each(m_cache.cbegin(), m_cache.cend(), [func](const cache_type::value_type& elem) {
-         std::shared_ptr<RecordSpan> recordSpan = elem.second.lock();
-
-         if (recordSpan)
-         {
-            recordSpan->forEachRecord(func);
-         }
-      });
-   }
-
-   /*
-    * Serialization interface
-    */
-   std::size_t computeSerializedSize() const;
-
-   void serialize(ftags::BufferInsertor& insertor) const;
-
-   static RecordSpanCache deserialize(ftags::BufferExtractor&                   extractor,
-                                      std::vector<std::shared_ptr<RecordSpan>>& hardReferences);
 };
 
 using KeyMap = ftags::FlatMap<ftags::StringTable::Key, ftags::StringTable::Key>;
@@ -221,6 +124,21 @@ public:
     * Construction and maintenance
     */
    ProjectDb(std::string_view name, std::string_view rootDirectory) : m_name{name}, m_root{rootDirectory}
+   {
+   }
+
+   ProjectDb(const ProjectDb& other) = delete;
+   const ProjectDb& operator=(const ProjectDb& other) = delete;
+
+   ProjectDb(ProjectDb&& other) :
+      m_name{std::move(other.m_name)},
+      m_root{std::move(other.m_root)},
+      m_translationUnits{std::move(other.m_translationUnits)},
+      m_symbolTable{std::move(other.m_symbolTable)},
+      m_namespaceTable{std::move(other.m_namespaceTable)},
+      m_fileNameTable{std::move(other.m_fileNameTable)},
+      m_recordSpanManager{std::move(other.m_recordSpanManager)},
+      m_fileIndex{std::move(other.m_fileIndex)}
    {
    }
 
@@ -312,12 +230,18 @@ public:
 
    std::size_t getRecordCount() const
    {
-      return m_recordSpanCache.getRecordCount();
+      return m_recordSpanManager.getRecordCount();
    }
 
    std::vector<std::string> getStatisticsRemarks() const;
 
-   bool isValid() const;
+   void assertValid() const
+#if defined(NDEBUG) || (!defined(ENABLE_THOROUGH_VALIDITY_CHECKS))
+   {
+   }
+#else
+      ;
+#endif
 
    std::size_t getTranslationUnitCount() const
    {
@@ -350,12 +274,15 @@ public:
    public:
       using Key = ftags::StringTable::Key;
 
-      void copyRecords(const TranslationUnit& other, RecordSpanCache& recordSpanCache);
+      void copyRecords(const TranslationUnit&   other,
+                       const RecordSpanManager& otherRecordSpanManager,
+                       RecordSpanManager&       recordSpanManager);
 
-      void copyRecords(const TranslationUnit& other,
-                       RecordSpanCache&       recordSpanCache,
-                       const KeyMap&          symbolKeyMapping,
-                       const KeyMap&          fileNameKeyMapping);
+      void copyRecords(const TranslationUnit&   other,
+                       const RecordSpanManager& otherRecordSpanManager,
+                       RecordSpanManager&       recordSpanManager,
+                       const KeyMap&            symbolKeyMapping,
+                       const KeyMap&            fileNameKeyMapping);
 
       TranslationUnit(Key fileNameKey = 0) : m_fileNameKey{fileNameKey}
       {
@@ -369,29 +296,32 @@ public:
       /*
        * Statistics
        */
-      std::vector<Record>::size_type getRecordCount() const
+      std::vector<Record>::size_type getRecordCount(const RecordSpanManager& recordSpanManager) const
       {
          return std::accumulate(m_recordSpans.cbegin(),
                                 m_recordSpans.cend(),
                                 0u,
-                                [](std::vector<Record>::size_type acc, const std::shared_ptr<RecordSpan>& elem) {
-                                   return acc + elem->getSize();
+                                [&recordSpanManager](std::vector<Record>::size_type acc, RecordSpan::Store::Key key) {
+                                   const RecordSpan& recordSpan = recordSpanManager.getSpan(key);
+                                   return acc + recordSpan.getSize();
                                 });
       }
 
       /*
        * General queries
        */
-      std::vector<const Record*> getRecords(bool isFromMainFile) const
+      std::vector<const Record*> getRecords(bool isFromMainFile, const RecordSpanManager& recordSpanManager) const
       {
          std::vector<const ftags::Record*> records;
 
-         forEachRecord([&records, isFromMainFile](const ftags::Record* record) {
-            if (record->attributes.isFromMainFile == isFromMainFile)
-            {
-               records.push_back(record);
-            }
-         });
+         forEachRecord(
+            [&records, isFromMainFile](const ftags::Record* record) {
+               if (record->attributes.isFromMainFile == isFromMainFile)
+               {
+                  records.push_back(record);
+               }
+            },
+            recordSpanManager);
 
          return records;
       }
@@ -415,24 +345,36 @@ public:
                                    const std::vector<const char*>& arguments,
                                    StringTable&                    symbolTable,
                                    StringTable&                    fileNameTable,
-                                   ftags::RecordSpanCache&         recordSpanCache,
+                                   RecordSpanManager&              recordSpanManager,
                                    const std::string&              filterPath);
 
-      void addCursor(const Cursor&           cursor,
-                     StringTable::Key        symbolNameKey,
-                     StringTable::Key        fileNameKey,
-                     StringTable::Key        referencedFileNameKey,
-                     ftags::RecordSpanCache& spanCache);
+      void addCursor(const Cursor&             cursor,
+                     StringTable::Key          symbolNameKey,
+                     StringTable::Key          fileNameKey,
+                     StringTable::Key          referencedFileNameKey,
+                     ftags::RecordSpanManager& recordSpanManager);
 
       /*
        * Query helper
        */
       template <typename F>
-      void forEachRecord(F func) const
+      void forEachRecordSpan(F func, const RecordSpanManager& recordSpanManager) const
       {
-         std::for_each(m_recordSpans.cbegin(), m_recordSpans.cend(), [func](const std::shared_ptr<RecordSpan>& elem) {
-            elem->forEachRecord(func);
-         });
+         std::for_each(
+            m_recordSpans.cbegin(), m_recordSpans.cend(), [func, &recordSpanManager](RecordSpan::Store::Key key) {
+               const RecordSpan& recordSpan = recordSpanManager.getSpan(key);
+               func(recordSpan);
+            });
+      }
+
+      template <typename F>
+      void forEachRecord(F func, const RecordSpanManager& recordSpanManager) const
+      {
+         std::for_each(
+            m_recordSpans.cbegin(), m_recordSpans.cend(), [func, &recordSpanManager](RecordSpan::Store::Key key) {
+               const RecordSpan& recordSpan = recordSpanManager.getSpan(key);
+               recordSpan.forEachRecord(func);
+            });
       }
 
       struct RecordSymbolComparator
@@ -468,10 +410,17 @@ public:
        * Debugging
        */
       void dumpRecords(std::ostream&             os,
+                       const RecordSpanManager&  recordSpanManager,
                        const ftags::StringTable& symbolTable,
                        const ftags::StringTable& fileNameTable) const;
 
-      bool isValid() const;
+      void assertValid() const
+#if defined(NDEBUG) || (!defined(ENABLE_THOROUGH_VALIDITY_CHECKS))
+      {
+      }
+#else
+         ;
+#endif
 
       /*
        * Serialization interface
@@ -480,29 +429,37 @@ public:
 
       void serialize(ftags::BufferInsertor& insertor) const;
 
-      static TranslationUnit deserialize(ftags::BufferExtractor& extractor, const RecordSpanCache& spanCache);
+      static TranslationUnit deserialize(ftags::BufferExtractor& extractor);
 
    private:
       // key of the file name of the main translation unit
       Key m_fileNameKey = 0;
 
       // persistent data
-      std::vector<std::shared_ptr<RecordSpan>> m_recordSpans;
+      std::vector<RecordSpan::Store::Key> m_recordSpans;
 
       Key m_currentRecordSpanFileKey = 0;
 
       std::vector<Record> m_currentSpan;
-      void                flushCurrentSpan(RecordSpanCache& recordSpanCache);
+      void                flushCurrentSpan(RecordSpanManager& recordSpanManager);
 
       void beginParsingUnit(StringTable::Key fileNameKey);
-      void finalizeParsingUnit(RecordSpanCache& recordSpanCache);
+      void finalizeParsingUnit(RecordSpanManager& recordSpanManager);
    };
 
    const TranslationUnit&
    parseOneFile(const std::string& fileName, std::vector<const char*> arguments, bool includeEverything = true);
 
+   std::vector<const Record*> getTranslationUnitRecords(const TranslationUnit& translationUnit,
+                                                        bool                   isFromMainFile) const
+   {
+      return translationUnit.getRecords(isFromMainFile, m_recordSpanManager);
+   }
+
 private:
-   const TranslationUnit& addTranslationUnit(const std::string& fileName, const TranslationUnit& translationUnit);
+   const TranslationUnit& addTranslationUnit(const std::string&       fileName,
+                                             const TranslationUnit&   translationUnit,
+                                             const RecordSpanManager& otherRecordSpanManager);
 
    void updateIndices();
 
@@ -514,21 +471,7 @@ private:
       const auto key = m_symbolTable.getKey(symbolName.data());
       if (key)
       {
-         const auto range = m_recordSpanCache.getSpansForSymbol(key);
-         for (auto iter = range.first; iter != range.second; ++iter)
-         {
-            std::shared_ptr<RecordSpan> recordSpan = iter->second.lock();
-
-            if (recordSpan)
-            {
-               recordSpan->forEachRecordWithSymbol(key, [&results, selectRecord](const Record* record) {
-                  if (selectRecord(record))
-                  {
-                     results.push_back(record);
-                  }
-               });
-            }
-         }
+         results = m_recordSpanManager.filterRecordsWithSymbol(key, selectRecord);
       }
 
       return results;
@@ -544,11 +487,11 @@ private:
    StringTable m_namespaceTable;
    StringTable m_fileNameTable;
 
+   RecordSpanManager m_recordSpanManager;
+
    /** Maps from a file name key to a position in the translation units vector.
     */
    std::map<StringTable::Key, std::vector<TranslationUnit>::size_type> m_fileIndex;
-
-   RecordSpanCache m_recordSpanCache;
 };
 
 void parseProject(const char* parentDirectory, ftags::ProjectDb& projectDb);

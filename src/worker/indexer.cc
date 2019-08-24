@@ -160,7 +160,7 @@ int main()
 
             projectDb.parseOneFile(translationUnitArguments.filename(), arguments, indexRequest.indexeverything());
 
-            assert(projectDb.isValid());
+            projectDb.assertValid();
          }
 
          ftags::Command command{};

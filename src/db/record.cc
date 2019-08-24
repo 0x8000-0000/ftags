@@ -14,8 +14,7 @@
    limitations under the License.
 */
 
-#include <project.h>
-
+#include <record.h>
 
 namespace
 {
@@ -114,72 +113,6 @@ void filterDuplicates(std::vector<const ftags::Record*> records)
 
 } // anonymous namespace
 
-
-
-#if 0
-std::shared_ptr<ftags::RecordSpan> ftags::RecordSpanCache::add(std::shared_ptr<ftags::RecordSpan> original)
-{
-   m_spansObserved++;
-
-   auto range = m_cache.equal_range(original->getHash());
-
-   for (auto iter = range.first; iter != range.second; ++iter)
-   {
-      auto elem = iter->second;
-
-      std::shared_ptr<RecordSpan> val = elem.lock();
-
-      if (!val)
-      {
-         continue;
-      }
-      else
-      {
-         if (val->operator==(*original))
-         {
-            return val;
-         }
-      }
-   }
-
-   m_cache.emplace(original->getHash(), original);
-
-   indexRecordSpan(original);
-
-   return original;
-}
-#endif
-
-void ftags::RecordSpanCache::indexRecordSpan(std::shared_ptr<ftags::RecordSpan> original)
-{
-   /*
-    * gather all unique symbols in this record span
-    */
-   std::set<ftags::StringTable::Key> symbolKeys;
-   original->forEachRecord([&symbolKeys](const Record* record) { symbolKeys.insert(record->symbolNameKey); });
-
-   /*
-    * add a mapping from this symbol to this record span
-    */
-   std::for_each(symbolKeys.cbegin(), symbolKeys.cend(), [this, original](ftags::StringTable::Key symbolKey) {
-      m_symbolIndex.emplace(symbolKey, original);
-   });
-}
-
-std::size_t ftags::RecordSpanCache::getRecordCount() const
-{
-   std::size_t recordCount = 0;
-   for (auto iter = m_cache.begin(); iter != m_cache.end(); ++iter)
-   {
-      std::shared_ptr<RecordSpan> val = iter->second.lock();
-      if (val)
-      {
-         recordCount += val->getSize();
-      }
-   }
-   return recordCount;
-}
-
 /*
  * Record serialization
  */
@@ -217,6 +150,69 @@ ftags::Serializer<std::vector<ftags::Record>>::deserialize(ftags::BufferExtracto
    extractor >> retval;
 
    return retval;
+}
+
+#if 0
+std::shared_ptr<ftags::RecordSpan> ftags::RecordSpanCache::add(std::shared_ptr<ftags::RecordSpan> original)
+{
+   m_spansObserved++;
+
+   auto range = m_cache.equal_range(original->getHash());
+
+   for (auto iter = range.first; iter != range.second; ++iter)
+   {
+      auto elem = iter->second;
+
+      std::shared_ptr<RecordSpan> val = elem.lock();
+
+      if (!val)
+      {
+         continue;
+      }
+      else
+      {
+         if (val->operator==(*original))
+         {
+            return val;
+         }
+      }
+   }
+
+   m_cache.emplace(original->getHash(), original);
+
+   indexRecordSpan(original);
+
+   return original;
+}
+
+void ftags::RecordSpanCache::indexRecordSpan(std::shared_ptr<ftags::RecordSpan> original)
+{
+   /*
+    * gather all unique symbols in this record span
+    */
+   std::set<ftags::StringTable::Key> symbolKeys;
+   original->forEachRecord([&symbolKeys](const Record* record) { symbolKeys.insert(record->symbolNameKey); });
+
+   /*
+    * add a mapping from this symbol to this record span
+    */
+   std::for_each(symbolKeys.cbegin(), symbolKeys.cend(), [this, original](ftags::StringTable::Key symbolKey) {
+      m_symbolIndex.emplace(symbolKey, original);
+   });
+}
+
+std::size_t ftags::RecordSpanCache::getRecordCount() const
+{
+   std::size_t recordCount = 0;
+   for (auto iter = m_cache.begin(); iter != m_cache.end(); ++iter)
+   {
+      std::shared_ptr<RecordSpan> val = iter->second.lock();
+      if (val)
+      {
+         recordCount += val->getSize();
+      }
+   }
+   return recordCount;
 }
 
 std::size_t ftags::RecordSpanCache::computeSerializedSize() const
@@ -302,3 +298,4 @@ std::shared_ptr<ftags::RecordSpan> ftags::RecordSpanCache::getSpan(const std::ve
       return newSpan;
    }
 }
+#endif

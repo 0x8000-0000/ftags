@@ -44,7 +44,7 @@ bool ftags::ProjectDb::operator==(const ftags::ProjectDb& other) const
    {
       const char* translationUnitName = m_fileNameTable.getString(translationUnit.getFileNameKey());
 
-      const std::vector<const Record*> records = translationUnit.getRecords(false);
+      const std::vector<const Record*> records = translationUnit.getRecords(false, m_recordSpanManager);
 
       thisTranslationUnits.emplace(std::string(translationUnitName), records);
    }
@@ -53,7 +53,7 @@ bool ftags::ProjectDb::operator==(const ftags::ProjectDb& other) const
    {
       const char* translationUnitName = other.m_fileNameTable.getString(translationUnit.getFileNameKey());
 
-      const std::vector<const Record*> records = translationUnit.getRecords(false);
+      const std::vector<const Record*> records = translationUnit.getRecords(false, other.m_recordSpanManager);
 
       otherTranslationUnits.emplace(std::string(translationUnitName), records);
    }
@@ -132,8 +132,11 @@ ftags::Cursor ftags::ProjectDb::inflateRecord(const ftags::Record* record) const
    return cursor;
 }
 
-const ftags::ProjectDb::TranslationUnit& ftags::ProjectDb::addTranslationUnit(const std::string&     fullPath,
-                                                                              const TranslationUnit& translationUnit)
+#if 0
+const ftags::ProjectDb::TranslationUnit&
+ftags::ProjectDb::addTranslationUnit(const std::string&       fullPath,
+                                     const TranslationUnit&   translationUnit,
+                                     const RecordSpanManager& otherRecordSpanManager)
 {
    /*
     * add the new translation unit to database
@@ -147,7 +150,7 @@ const ftags::ProjectDb::TranslationUnit& ftags::ProjectDb::addTranslationUnit(co
     */
    m_translationUnits.emplace_back(translationUnitFileKey);
 
-   m_translationUnits.back().copyRecords(translationUnit, m_recordSpanCache);
+   m_translationUnits.back().copyRecords(translationUnit, otherRecordSpanManager, m_recordSpanManager);
 
    /*
     * register the name of the translation unit
@@ -155,14 +158,15 @@ const ftags::ProjectDb::TranslationUnit& ftags::ProjectDb::addTranslationUnit(co
    const auto fileKey   = m_fileNameTable.addKey(fullPath.data());
    m_fileIndex[fileKey] = translationUnitPos;
 
-   assert(translationUnit.getRecordCount() == m_translationUnits.back().getRecordCount());
+   assert(translationUnit.getRecordCount(otherRecordSpanManager) == m_translationUnits.back().getRecordCount(m_recordSpanManager));
 
-   assert(translationUnit.getRecords(true).size() == m_translationUnits.back().getRecords(true).size());
+   assert(translationUnit.getRecords(true, otherRecordSpanManager).size() == m_translationUnits.back().getRecords(true, m_recordSpanManager).size());
 
    assert(m_translationUnits.back().isValid());
 
    return m_translationUnits.back();
 }
+#endif
 
 bool ftags::ProjectDb::isFileIndexed(const std::string& fileName) const
 {
@@ -181,12 +185,14 @@ std::vector<const ftags::Record*> ftags::ProjectDb::getFunctions() const
 
    for (const auto& translationUnit : m_translationUnits)
    {
-      translationUnit.forEachRecord([&functions](const Record* record) {
-         if (record->attributes.type == SymbolType::FunctionDeclaration)
-         {
-            functions.push_back(record);
-         }
-      });
+      translationUnit.forEachRecord(
+         [&functions](const Record* record) {
+            if (record->attributes.type == SymbolType::FunctionDeclaration)
+            {
+               functions.push_back(record);
+            }
+         },
+         m_recordSpanManager);
    }
 
    return functions;
@@ -222,7 +228,7 @@ std::vector<const ftags::Record*> ftags::ProjectDb::dumpTranslationUnit(const st
    const auto                               translationUnitPos = m_fileIndex.at(fileKey);
    const ftags::ProjectDb::TranslationUnit& translationUnit    = m_translationUnits.at(translationUnitPos);
 
-   return translationUnit.getRecords(true);
+   return translationUnit.getRecords(true, m_recordSpanManager);
 }
 
 ftags::CursorSet ftags::ProjectDb::inflateRecords(const std::vector<const Record*>& records) const
@@ -245,7 +251,7 @@ std::size_t ftags::ProjectDb::computeSerializedSize() const
    return sizeof(ftags::SerializedObjectHeader) + ftags::Serializer<std::string>::computeSerializedSize(m_name) +
           ftags::Serializer<std::string>::computeSerializedSize(m_root) + m_fileNameTable.computeSerializedSize() +
           m_symbolTable.computeSerializedSize() + m_namespaceTable.computeSerializedSize() +
-          m_recordSpanCache.computeSerializedSize() + sizeof(uint64_t) + translationUnitSize;
+          m_recordSpanManager.computeSerializedSize() + sizeof(uint64_t) + translationUnitSize;
 }
 
 void ftags::ProjectDb::serialize(ftags::BufferInsertor& insertor) const
@@ -259,8 +265,7 @@ void ftags::ProjectDb::serialize(ftags::BufferInsertor& insertor) const
    m_fileNameTable.serialize(insertor);
    m_symbolTable.serialize(insertor);
    m_namespaceTable.serialize(insertor);
-
-   m_recordSpanCache.serialize(insertor);
+   m_recordSpanManager.serialize(insertor);
 
    const uint64_t translationUnitCount = m_translationUnits.size();
    insertor << translationUnitCount;
@@ -280,13 +285,10 @@ ftags::ProjectDb ftags::ProjectDb::deserialize(ftags::BufferExtractor& extractor
 
    ftags::ProjectDb projectDb(name, root);
 
-   projectDb.m_fileNameTable  = StringTable::deserialize(extractor);
-   projectDb.m_symbolTable    = StringTable::deserialize(extractor);
-   projectDb.m_namespaceTable = StringTable::deserialize(extractor);
-
-   std::vector<std::shared_ptr<RecordSpan>> hardReferences;
-
-   projectDb.m_recordSpanCache = RecordSpanCache::deserialize(extractor, hardReferences);
+   projectDb.m_fileNameTable     = StringTable::deserialize(extractor);
+   projectDb.m_symbolTable       = StringTable::deserialize(extractor);
+   projectDb.m_namespaceTable    = StringTable::deserialize(extractor);
+   projectDb.m_recordSpanManager = RecordSpanManager::deserialize(extractor);
 
    uint64_t translationUnitCount = 0;
    extractor >> translationUnitCount;
@@ -294,10 +296,11 @@ ftags::ProjectDb ftags::ProjectDb::deserialize(ftags::BufferExtractor& extractor
 
    for (size_t ii = 0; ii < translationUnitCount; ii++)
    {
-      projectDb.m_translationUnits.push_back(TranslationUnit::deserialize(extractor, projectDb.m_recordSpanCache));
+      projectDb.m_translationUnits.push_back(TranslationUnit::deserialize(extractor));
+      projectDb.m_fileIndex[projectDb.m_translationUnits.back().getFileNameKey()] = ii;
    }
 
-   assert(projectDb.isValid());
+   projectDb.assertValid();
 
    return projectDb;
 }
@@ -320,7 +323,7 @@ void ftags::ProjectDb::mergeFrom(const ProjectDb& other)
 
       m_translationUnits.emplace_back(iter->first);
       m_translationUnits.back().copyRecords(
-         otherTranslationUnit, m_recordSpanCache, symbolKeyMapping, fileNameKeyMapping);
+         otherTranslationUnit, other.m_recordSpanManager, m_recordSpanManager, symbolKeyMapping, fileNameKeyMapping);
 
       /*
        * register the name of the translation unit
@@ -350,27 +353,23 @@ std::vector<std::string> ftags::ProjectDb::getStatisticsRemarks() const
    return remarks;
 }
 
-bool ftags::ProjectDb::isValid() const
+#if (!defined(NDEBUG)) && (defined(ENABLE_THOROUGH_VALIDITY_CHECKS))
+void ftags::ProjectDb::assertValid() const
 {
-   if (m_fileNameTable.getSize() < m_translationUnits.size())
-   {
-      return false;
-   }
+   m_recordSpanManager.assertValid();
+
+   assert(m_fileNameTable.getSize() >= m_translationUnits.size());
+
+   assert(m_recordSpanManager.getSymbolCount() == m_symbolTable.getSize());
 
    for (const auto& translationUnit : m_translationUnits)
    {
-      if (!translationUnit.isValid())
-      {
-         return false;
-      }
+      translationUnit.assertValid();
    }
 
    for (const auto& iter : m_fileIndex)
    {
-      if (iter.first != m_translationUnits[iter.second].getFileNameKey())
-      {
-         return false;
-      }
+      assert(iter.first == m_translationUnits[iter.second].getFileNameKey());
    }
 
    struct SymbolCount
@@ -385,7 +384,7 @@ bool ftags::ProjectDb::isValid() const
       uint64_t missingFiles;
    } counts{m_symbolTable, m_fileNameTable, 0u, 0u, 0u, 0u};
 
-   m_recordSpanCache.forEachRecord([&counts](const Record* record) {
+   m_recordSpanManager.forEachRecord([&counts](const Record* record) {
       if (record->symbolNameKey == 0)
       {
          counts.invalidSymbols++;
@@ -411,29 +410,16 @@ bool ftags::ProjectDb::isValid() const
       }
    });
 
-   if (counts.invalidFileNames != 0)
-   {
-      return false;
-   }
+   assert(counts.invalidFileNames == 0);
 
-   if (counts.missingFiles != 0)
-   {
-      return false;
-   }
+   assert(counts.missingFiles == 0);
 
-   if (counts.invalidSymbols != 0)
-   {
-      return false;
-   }
+   assert(counts.invalidSymbols == 0);
 
-   if (counts.missingSymbols != 0)
-   {
-      return false;
-   }
+   assert(counts.missingSymbols == 0);
 
    /*
     * it's all good
     */
-
-   return true;
 }
+#endif

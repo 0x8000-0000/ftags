@@ -60,8 +60,11 @@ private:
    };
 
 public:
-   using Store = ftags::Store<RecordSpan, uint32_t, 20>;
-   using Hash  = std::uint64_t;
+   using Store            = ftags::Store<RecordSpan, uint32_t, 20>;
+   using Hash             = std::uint64_t;
+   using SymbolIndexStore = ftags::Store<uint32_t, uint32_t, 20>;
+
+   RecordSpan() = default;
 
    RecordSpan(ftags::Record::Store::Key key, std::uint32_t size, ftags::Record* recordBase) :
       m_key{key},
@@ -70,20 +73,23 @@ public:
    {
    }
 
-   RecordSpan(std::uint32_t size, ftags::Record::Store& store) : m_size{size}
+   RecordSpan(std::size_t size, ftags::Record::Store& store) : m_size{static_cast<uint32_t>(size)}
    {
-      auto alloc = store.allocate(size);
+      auto alloc = store.allocate(m_size);
       m_key      = alloc.key;
       m_records  = &*alloc.iterator;
    }
 
-   RecordSpan(RecordSpan&& other) :
-      m_key{other.m_key},
-      m_size{other.m_size},
-      m_records{other.m_records},
-      m_hash{other.m_hash},
-      m_recordsInSymbolKeyOrder(other.m_recordsInSymbolKeyOrder)
+   void addRef()
    {
+      m_referenceCount++;
+   }
+
+   int release()
+   {
+      assert(m_referenceCount);
+      m_referenceCount--;
+      return m_referenceCount;
    }
 
    ftags::Record::Store::Key getKey() const
@@ -103,11 +109,17 @@ public:
 
    static Hash computeHash(const std::vector<Record>& records);
 
-   void copyRecordsFrom(const std::vector<ftags::Record>& other);
+   void copyRecordsFrom(const std::vector<Record>& other, SymbolIndexStore& symbolIndexStore);
 
-   void copyRecordsFrom(const RecordSpan& other);
+   void setRecordsFrom(const std::vector<Record>& other, Record::Store& store, SymbolIndexStore& symbolIndexStore);
 
-   void copyRecordsTo(std::vector<Record>& newCopy);
+   void moveRecordsFrom(RecordSpan& other);
+
+   void copyRecordsFrom(const RecordSpan& other, SymbolIndexStore& symbolIndexStore);
+
+   void copyRecordsTo(std::vector<Record>& newCopy) const;
+
+   bool isEqualTo(const std::vector<ftags::Record>& records) const;
 
    static void
    filterRecords(std::vector<Record>&                                                    records,
@@ -124,14 +136,18 @@ public:
    }
 
    template <typename F>
-   void forEachRecordWithSymbol(ftags::StringTable::Key symbolNameKey, F func) const
+   void forEachRecordWithSymbol(ftags::StringTable::Key symbolNameKey,
+                                F                       func,
+                                const SymbolIndexStore& symbolIndexStore) const
    {
+      const auto symbolIndexIter              = symbolIndexStore.get(m_symbolIndexKey);
+      const auto recordsInSymbolKeyOrderBegin = &*symbolIndexIter.first;
+      const auto recordsInSymbolKeyOrderEnd   = recordsInSymbolKeyOrderBegin + m_size;
+
       const RecordSymbolComparator::KeyWrapper keyWrapper{symbolNameKey};
 
-      const auto keyRange = std::equal_range(m_recordsInSymbolKeyOrder.cbegin(),
-                                             m_recordsInSymbolKeyOrder.cend(),
-                                             keyWrapper,
-                                             RecordSymbolComparator(m_records));
+      const auto keyRange = std::equal_range(
+         recordsInSymbolKeyOrderBegin, recordsInSymbolKeyOrderEnd, keyWrapper, RecordSymbolComparator(m_records));
 
       for (auto iter = keyRange.first; iter != keyRange.second; ++iter)
       {
@@ -146,6 +162,9 @@ public:
                     const ftags::StringTable& symbolTable,
                     const ftags::StringTable& fileNameTable) const;
 
+#if 0
+   // handled in bulk by RecordSpanManager
+
    /*
     * Serialization interface
     */
@@ -153,7 +172,22 @@ public:
 
    void serialize(ftags::BufferInsertor& insertor) const;
 
-   static RecordSpan deserialize(ftags::BufferExtractor& extractor, ftags::Record::Store& recordStore);
+   static RecordSpan deserialize(ftags::BufferExtractor& extractor,
+                                 ftags::Record::Store&   recordStore,
+                                 SymbolIndexStore&       symbolIndexStore);
+#endif
+
+   void restoreRecordPointer(Record::Store& recordStore);
+
+   void updateIndices(SymbolIndexStore& symbolIndexStore);
+
+   void assertValid() const
+#if defined(NDEBUG) || (!defined(ENABLE_THOROUGH_VALIDITY_CHECKS))
+   {
+   }
+#else
+      ;
+#endif
 
 private:
    // persistent data
@@ -165,14 +199,12 @@ private:
 
    int m_referenceCount = 0;
 
-   // 128 bit hash of the record span
+   // 64-bit hash of the record span
    Hash m_hash = 0;
 
-   std::vector<uint32_t> m_recordsInSymbolKeyOrder;
+   SymbolIndexStore::Key m_symbolIndexKey = 0;
 
    static constexpr uint64_t k_hashSeed = 0x0accedd62cf0b9bf;
-
-   void updateIndices();
 };
 
 } // namespace ftags

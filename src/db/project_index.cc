@@ -34,14 +34,20 @@ const ftags::ProjectDb::TranslationUnit& ftags::ProjectDb::parseOneFile(const st
       }
 
       ftags::ProjectDb::TranslationUnit translationUnit = ftags::ProjectDb::TranslationUnit::parse(
-         fileName, arguments, m_symbolTable, m_fileNameTable, m_recordSpanCache, filterPath);
+         fileName, arguments, m_symbolTable, m_fileNameTable, m_recordSpanManager, filterPath);
 
       spdlog::debug("Loaded {:n} records from {}, {:n} from main file",
-                    translationUnit.getRecordCount(),
+                    translationUnit.getRecordCount(m_recordSpanManager),
                     fileName,
-                    translationUnit.getRecords(true).size());
+                    translationUnit.getRecords(true, m_recordSpanManager).size());
 
-      return addTranslationUnit(fileName, translationUnit);
+      const TranslationUnitStore::size_type translationUnitPos = m_translationUnits.size();
+
+      m_translationUnits.push_back(translationUnit);
+
+      m_fileIndex[translationUnit.getFileNameKey()] = translationUnitPos;
+
+      return m_translationUnits.back();
    }
    catch (const std::runtime_error& re)
    {
