@@ -34,6 +34,8 @@ TEST(StoreMapTest, FirstAllocationReturnsKey1)
    const auto blockOne = store.allocate(8);
 
    ASSERT_EQ(blockOne.key, store.FirstKeyValue);
+
+   ASSERT_EQ(8, store.countUsedBlocks());
 }
 
 TEST(StoreMapTest, BlockIsRecycled)
@@ -53,6 +55,8 @@ TEST(StoreMapTest, BlockIsRecycled)
    std::fill_n(blockTwo.iterator, blockSize, 2);
 
    ASSERT_EQ(blockTwo.key, store.FirstKeyValue);
+
+   ASSERT_EQ(8, store.countUsedBlocks());
 }
 
 TEST(StoreMapTest, DeletedBlocksAreCoalesced1)
@@ -67,13 +71,19 @@ TEST(StoreMapTest, DeletedBlocksAreCoalesced1)
    const auto blockTwo = store.allocate(blockSize);
    std::fill_n(blockTwo.iterator, blockSize, 2);
 
+   ASSERT_EQ(16, store.countUsedBlocks());
+
    store.deallocate(blockOne.key, blockSize);
    store.deallocate(blockTwo.key, blockSize);
+
+   ASSERT_EQ(0, store.countUsedBlocks());
 
    const auto blockThree = store.allocate(blockSize);
    std::fill_n(blockThree.iterator, blockSize, 3);
 
    ASSERT_EQ(blockThree.key, store.FirstKeyValue);
+
+   ASSERT_EQ(8, store.countUsedBlocks());
 }
 
 TEST(StoreMapTest, DeletedBlocksAreCoalesced2)

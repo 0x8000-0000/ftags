@@ -50,7 +50,7 @@ public:
    using block_size_type = uint32_t;
 
    using key_type = K;
-   using Key = K;
+   using Key      = K;
 
    static constexpr block_size_type FirstKeyValue = 4;
 
@@ -123,9 +123,48 @@ public:
       block_size_type size;
    };
 
-   AllocatedSequence getFirstAllocatedSequence();
+   AllocatedSequence getFirstAllocatedSequence() const;
    bool              isValidAllocatedSequence(const AllocatedSequence& allocatedSequence) const;
-   bool              getNextAllocatedSequence(AllocatedSequence& allocatedSequence);
+   bool              getNextAllocatedSequence(AllocatedSequence& allocatedSequence) const;
+
+   template <typename F>
+   void forEachAllocatedSequence(F func)
+   {
+      AllocatedSequence allocation = getFirstAllocatedSequence();
+
+      if (isValidAllocatedSequence(allocation))
+      {
+         do
+         {
+            auto pair = get(allocation.key);
+            func(allocation.key, &*pair.first, allocation.size);
+         } while (getNextAllocatedSequence(allocation));
+      }
+   }
+
+   template <typename F>
+   void forEachAllocatedSequence(F func) const
+   {
+      AllocatedSequence allocation = getFirstAllocatedSequence();
+
+      if (isValidAllocatedSequence(allocation))
+      {
+         do
+         {
+            auto pair = get(allocation.key);
+            func(allocation.key, &*pair.first, allocation.size);
+         } while (getNextAllocatedSequence(allocation));
+      }
+   }
+
+   std::size_t countUsedBlocks() const
+   {
+      std::size_t count = 0;
+
+      forEachAllocatedSequence([&count](Key /* key */, const T* /* ptr */, std::size_t size) { count += size; });
+
+      return count;
+   }
 
    /** Runs a self-check
     */
@@ -598,7 +637,8 @@ Store<T, K, SegmentSizeBits> Store<T, K, SegmentSizeBits>::deserialize(ftags::Bu
 }
 
 template <typename T, typename K, unsigned SegmentSizeBits>
-typename Store<T, K, SegmentSizeBits>::AllocatedSequence Store<T, K, SegmentSizeBits>::getFirstAllocatedSequence()
+typename Store<T, K, SegmentSizeBits>::AllocatedSequence
+Store<T, K, SegmentSizeBits>::getFirstAllocatedSequence() const
 {
    const auto nextFreeBlock{m_freeBlocksIndex.upper_bound(FirstKeyValue - 1)};
 
@@ -637,7 +677,7 @@ bool Store<T, K, SegmentSizeBits>::isValidAllocatedSequence(
 
 template <typename T, typename K, unsigned SegmentSizeBits>
 bool Store<T, K, SegmentSizeBits>::getNextAllocatedSequence(
-   Store<T, K, SegmentSizeBits>::AllocatedSequence& allocatedSequence)
+   Store<T, K, SegmentSizeBits>::AllocatedSequence& allocatedSequence) const
 {
    if (allocatedSequence.key == 0)
    {
