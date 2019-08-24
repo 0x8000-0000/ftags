@@ -83,6 +83,63 @@ ftags::Serializer<std::map<uint32_t, uint32_t>>::deserialize(ftags::BufferExtrac
 }
 
 /*
+ * std::multimap<uint32_t, uint32_t>
+ */
+
+template <>
+std::size_t ftags::Serializer<std::multimap<uint32_t, uint32_t>>::computeSerializedSize(
+   const std::multimap<uint32_t, uint32_t>& val)
+{
+   using map_uu = std::multimap<uint32_t, uint32_t>;
+
+   static_assert(sizeof(map_uu::key_type) == sizeof(uint32_t));
+   static_assert(sizeof(map_uu::mapped_type) == sizeof(uint32_t));
+
+   return sizeof(ftags::SerializedObjectHeader) + sizeof(map_uu::size_type) +
+          val.size() * (sizeof(map_uu::key_type) + sizeof(map_uu::mapped_type));
+}
+
+template <>
+void ftags::Serializer<std::multimap<uint32_t, uint32_t>>::serialize(const std::multimap<uint32_t, uint32_t>& val,
+                                                                     ftags::BufferInsertor& insertor)
+{
+   ftags::SerializedObjectHeader header = {};
+   insertor << header;
+
+   insertor << val.size();
+
+   for (const auto& iter : val)
+   {
+      insertor << iter.first << iter.second;
+   }
+}
+
+template <>
+std::multimap<uint32_t, uint32_t>
+ftags::Serializer<std::multimap<uint32_t, uint32_t>>::deserialize(ftags::BufferExtractor& extractor)
+{
+   std::multimap<uint32_t, uint32_t> retval;
+
+   ftags::SerializedObjectHeader header = {};
+   extractor >> header;
+
+   std::multimap<uint32_t, uint32_t>::size_type mapSize = 0;
+   extractor >> mapSize;
+
+   for (std::multimap<uint32_t, uint32_t>::size_type ii = 0; ii < mapSize; ii++)
+   {
+      uint32_t key   = 0;
+      uint32_t value = 0;
+
+      extractor >> key >> value;
+
+      retval.emplace(key, value);
+   }
+
+   return retval;
+}
+
+/*
  * std::vector<char>
  */
 
