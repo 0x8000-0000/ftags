@@ -170,7 +170,7 @@ public:
       assert(size <= m_size);
       m_size -= size;
 #endif
-      std::memcpy(value.data(), m_buffer, size);
+      std::memcpy(static_cast<void*>(value.data()), m_buffer, size);
       m_buffer += size;
 
       return *this;
@@ -195,7 +195,7 @@ public:
       assert(byteSize <= m_size);
       m_size -= byteSize;
 #endif
-      std::memcpy(value.data(), m_buffer, byteSize);
+      std::memcpy(static_cast<void*>(value.data()), m_buffer, byteSize);
       m_buffer += byteSize;
 
       return *this;
