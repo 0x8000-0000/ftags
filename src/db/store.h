@@ -60,10 +60,7 @@ public:
       typename std::vector<T>::iterator iterator;
    };
 
-   Store()
-   {
-      addSegment();
-   }
+   Store() = default;
 
    Store(const Store& other) = delete;
    const Store& operator=(const Store& other) = delete;
@@ -576,12 +573,21 @@ std::size_t Store<T, K, SegmentSizeBits>::computeSerializedSize() const
 {
    const std::size_t segmentCount = m_segment.size();
 
-   return sizeof(ftags::SerializedObjectHeader) +           // header
-          sizeof(uint64_t) +                                // number of segments
-          sizeof(uint64_t) +                                // size (used) of last segment
-          (segmentCount - 1) * MaxSegmentSize * sizeof(T) + // full segments
-          computeSpaceUsedInLastSegment() * sizeof(T) +     // last segment
-          ftags::Serializer<std::map<K, block_size_type>>::computeSerializedSize(m_freeBlocksIndex);
+   if (segmentCount)
+   {
+      return sizeof(ftags::SerializedObjectHeader) +           // header
+             sizeof(uint64_t) +                                // number of segments
+             sizeof(uint64_t) +                                // size (used) of last segment
+             (segmentCount - 1) * MaxSegmentSize * sizeof(T) + // full segments
+             computeSpaceUsedInLastSegment() * sizeof(T) +     // last segment
+             ftags::Serializer<std::map<K, block_size_type>>::computeSerializedSize(m_freeBlocksIndex);
+   }
+   else
+   {
+      return sizeof(ftags::SerializedObjectHeader) + // header
+             sizeof(uint64_t) +                      // number of segments
+             sizeof(uint64_t);                       // size (used) of last segment
+   }
 }
 
 template <typename T, typename K, unsigned SegmentSizeBits>
@@ -593,17 +599,25 @@ void Store<T, K, SegmentSizeBits>::serialize(ftags::BufferInsertor& insertor) co
    const uint64_t segmentCount = m_segment.size();
    insertor << segmentCount;
 
-   const uint64_t spaceUsedInLastSegment = computeSpaceUsedInLastSegment();
-   insertor << spaceUsedInLastSegment;
-
-   for (uint64_t ii = 0; ii < (segmentCount - 1); ii++)
+   if (segmentCount)
    {
-      insertor << m_segment[ii];
+      const uint64_t spaceUsedInLastSegment = computeSpaceUsedInLastSegment();
+      insertor << spaceUsedInLastSegment;
+
+      for (uint64_t ii = 0; ii < (segmentCount - 1); ii++)
+      {
+         insertor << m_segment[ii];
+      }
+
+      insertor.serialize(m_segment[segmentCount - 1], spaceUsedInLastSegment);
+
+      ftags::Serializer<std::map<K, block_size_type>>::serialize(m_freeBlocksIndex, insertor);
    }
-
-   insertor.serialize(m_segment[segmentCount - 1], spaceUsedInLastSegment);
-
-   ftags::Serializer<std::map<K, block_size_type>>::serialize(m_freeBlocksIndex, insertor);
+   else
+   {
+      const uint64_t spaceUsedInLastSegment = 0;
+      insertor << spaceUsedInLastSegment;
+   }
 }
 
 template <typename T, typename K, unsigned SegmentSizeBits>
@@ -620,35 +634,41 @@ Store<T, K, SegmentSizeBits> Store<T, K, SegmentSizeBits>::deserialize(ftags::Bu
    uint64_t spaceUsedInLastSegment = 0;
    extractor >> spaceUsedInLastSegment;
 
-   /*
-    * retval already has a segment allocated
-    */
-
-   for (uint64_t ii = 0; ii < (segmentCount - 1); ii++)
+   if (segmentCount)
    {
-      auto& segment = retval.m_segment.back();
 
-      extractor >> segment;
+      retval.addSegment();
 
-      retval.m_segment.emplace_back(std::vector<T>(/* size = */ MaxSegmentSize));
+      for (uint64_t ii = 0; ii < (segmentCount - 1); ii++)
+      {
+         auto& segment = retval.m_segment.back();
+
+         extractor >> segment;
+
+         retval.m_segment.emplace_back(std::vector<T>(/* size = */ MaxSegmentSize));
+      }
+
+      {
+         auto& segment = retval.m_segment.back();
+         extractor.deserialize(segment, spaceUsedInLastSegment);
+      }
+
+      assert(retval.m_freeBlocksIndex.size() == 1);
+      assert(retval.m_freeBlocks.size() == 1);
+
+      retval.m_freeBlocks.clear();
+
+      retval.m_freeBlocksIndex = ftags::Serializer<std::map<K, block_size_type>>::deserialize(extractor);
+
+      // reconstruct free blocks index from free block
+      for (const auto& iter : retval.m_freeBlocksIndex)
+      {
+         retval.m_freeBlocks.insert({iter.second, iter.first});
+      }
    }
-
+   else
    {
-      auto& segment = retval.m_segment.back();
-      extractor.deserialize(segment, spaceUsedInLastSegment);
-   }
-
-   assert(retval.m_freeBlocksIndex.size() == 1);
-   assert(retval.m_freeBlocks.size() == 1);
-
-   retval.m_freeBlocks.clear();
-
-   retval.m_freeBlocksIndex = ftags::Serializer<std::map<K, block_size_type>>::deserialize(extractor);
-
-   // reconstruct free blocks index from free block
-   for (const auto& iter : retval.m_freeBlocksIndex)
-   {
-      retval.m_freeBlocks.insert({iter.second, iter.first});
+      assert(spaceUsedInLastSegment == 0);
    }
 
    return retval;
@@ -658,29 +678,32 @@ template <typename T, typename K, unsigned SegmentSizeBits>
 typename Store<T, K, SegmentSizeBits>::AllocatedSequence
 Store<T, K, SegmentSizeBits>::getFirstAllocatedSequence() const
 {
-   const auto nextFreeBlock{m_freeBlocksIndex.upper_bound(FirstKeyValue - 1)};
-
    Store<T, K, SegmentSizeBits>::AllocatedSequence allocatedSequence = {};
 
-   if (nextFreeBlock->first != FirstKeyValue)
+   if (m_segment.size())
    {
-      allocatedSequence.key  = FirstKeyValue;
-      allocatedSequence.size = nextFreeBlock->first - FirstKeyValue;
-   }
-   else
-   {
-      // TODO: test crossing of segments
-      allocatedSequence.key = nextFreeBlock->first + nextFreeBlock->second;
+      const auto nextFreeBlock{m_freeBlocksIndex.upper_bound(FirstKeyValue - 1)};
 
-      const auto subsequentFreeBlock{m_freeBlocksIndex.upper_bound(allocatedSequence.key)};
-
-      if (subsequentFreeBlock == m_freeBlocksIndex.end())
+      if (nextFreeBlock->first != FirstKeyValue)
       {
-         allocatedSequence.key  = 0;
-         allocatedSequence.size = 0;
+         allocatedSequence.key  = FirstKeyValue;
+         allocatedSequence.size = nextFreeBlock->first - FirstKeyValue;
       }
+      else
+      {
+         // TODO: test crossing of segments
+         allocatedSequence.key = nextFreeBlock->first + nextFreeBlock->second;
 
-      allocatedSequence.size = subsequentFreeBlock->first - allocatedSequence.key;
+         const auto subsequentFreeBlock{m_freeBlocksIndex.upper_bound(allocatedSequence.key)};
+
+         if (subsequentFreeBlock == m_freeBlocksIndex.end())
+         {
+            allocatedSequence.key  = 0;
+            allocatedSequence.size = 0;
+         }
+
+         allocatedSequence.size = subsequentFreeBlock->first - allocatedSequence.key;
+      }
    }
 
    return allocatedSequence;
