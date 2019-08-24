@@ -65,6 +65,24 @@ public:
       addSegment();
    }
 
+   Store(const Store& other) = delete;
+   const Store& operator=(const Store& other) = delete;
+
+   Store(Store&& other) :
+      m_segment{std::move(other.m_segment)},
+      m_freeBlocks{std::move(other.m_freeBlocks)},
+      m_freeBlocksIndex{std::move(other.m_freeBlocksIndex)}
+   {
+   }
+
+   Store& operator=(Store&& other)
+   {
+      m_segment         = std::move(other.m_segment);
+      m_freeBlocks      = std::move(other.m_freeBlocks);
+      m_freeBlocksIndex = std::move(other.m_freeBlocksIndex);
+      return *this;
+   }
+
    /** Allocates some units of T
     *
     * @param size is the number of units of T
