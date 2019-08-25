@@ -129,6 +129,16 @@ struct action<str_parameter>
 };
 
 template <>
+struct action<ns_sep>
+{
+   template <typename Input>
+   static void apply(const Input& in, ftags::query::Query& query)
+   {
+      query.inGlobalNamespace = true;
+   }
+};
+
+template <>
 struct action<namespace_qual>
 {
    template <typename Input>

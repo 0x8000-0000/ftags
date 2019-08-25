@@ -28,6 +28,7 @@ struct Query
 {
    enum Verb : uint8_t
    {
+      Unknown,
       Find,
       List,
       Identify,
@@ -56,9 +57,11 @@ struct Query
       Override,
    };
 
-   enum Verb      verb;
-   enum Type      type;
-   enum Qualifier qualifier;
+   enum Verb      verb      = Unknown;
+   enum Type      type      = Symbol;
+   enum Qualifier qualifier = Any;
+
+   bool inGlobalNamespace = false;
 
    std::string symbolName;
    std::vector<std::string> nameSpace;
