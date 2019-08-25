@@ -57,12 +57,15 @@ endif ()
 add_library (project_warnings INTERFACE)
 
 target_compile_options (project_warnings INTERFACE -Wall -Wextra -Werror
-   -Wconversion -Wunused) # -pedantic -Wshadow
+   -Wunused
+   # disabled by PEGTL -Wconversion
+   # disabled by spdlog/fmt -pedantic -Wshadow
+   )
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
    target_compile_options (project_warnings INTERFACE
       -Waggressive-loop-optimizations -Warray-bounds -Wbool-operation
-      -Wcast-align -Wconversion -Wdelete-incomplete
+      -Wcast-align -Wdelete-incomplete
       -Wdelete-non-virtual-dtor -Wduplicated-cond
       -Wempty-body -Wendif-labels -Wfloat-conversion -Wformat=1
       -Wformat-overflow=1 -Wformat-truncation -Wimplicit-fallthrough=3
@@ -75,7 +78,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
       -Wsign-conversion -Wsizeof-pointer-memaccess -Wstrict-overflow=1
       -Wstringop-overflow -Wswitch-unreachable -Wuninitialized -Wunused
       -Wunused-label
-      #-Wfloat-equal
+      # disabled by fmt -Wfloat-equal
    )
 else ()
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
