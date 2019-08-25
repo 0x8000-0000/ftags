@@ -23,6 +23,8 @@ Proposed syntax for the command line queries
 
    find (all)? derived class|struct from foo
 
-   find override for namespace::class::method
+   find override for namespace::class::${method}
 
-   list dependencies of translation-unit
+   list dependencies of ${translation-unit}
+
+   list translation units depending on ${file-path}
