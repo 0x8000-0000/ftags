@@ -38,8 +38,11 @@ struct key : pegtl::seq<Key, pegtl::not_at<pegtl::identifier_other>>
 
 // clang-format off
 struct str_find : TAO_PEGTL_STRING("find") {};
+struct str_identify: TAO_PEGTL_STRING("identify") {};
+struct str_list: TAO_PEGTL_STRING("list") {};
 
-struct str_namespace: TAO_PEGTL_STRING("parameter") {};
+struct str_at: TAO_PEGTL_STRING("at") {};
+struct str_of: TAO_PEGTL_STRING("of") {};
 
 struct str_symbol : TAO_PEGTL_STRING("symbol") {};
 struct str_function : TAO_PEGTL_STRING("function") {};
@@ -49,9 +52,16 @@ struct str_method: TAO_PEGTL_STRING("method") {};
 struct str_attribute: TAO_PEGTL_STRING("attribute") {};
 struct str_parameter: TAO_PEGTL_STRING("parameter") {};
 
+struct str_callers: TAO_PEGTL_STRING("callers of") {};
+struct str_containers: TAO_PEGTL_STRING("containers of") {};
+
 struct str_type : pegtl::sor<str_symbol, str_function, str_parameter, str_class, str_struct, str_attribute, str_method> {};
 
 struct key_find: key<str_find> {};
+struct key_identify: key<str_identify> {};
+struct key_list: key<str_list> {};
+
+struct key_symbol: key<str_symbol> {};
 struct key_type: key<str_type> {};
 
 struct namespace_qual : pegtl::seq<pegtl::identifier, pegtl::one<':'>, pegtl::one<':'>>
@@ -62,20 +72,70 @@ struct symbol_name : pegtl::seq<pegtl::identifier>
 {
 };
 
+struct path_element : pegtl::star<pegtl::sor<pegtl::alnum, pegtl::one<'.', '-', '_'>>>
+{
+};
+
 // clang-format on
-struct grammar : pegtl::must<key_find,
-                             sep,
-                             pegtl::opt<pegtl::seq<key_type, sep>>,
-                             pegtl::opt<ns_sep>,
-                             pegtl::star<namespace_qual>,
-                             symbol_name,
-                             pegtl::eof>
+
+struct find_symbol : pegtl::seq<key_find,
+                                sep,
+                                pegtl::opt<pegtl::seq<key_type, sep>>,
+                                pegtl::opt<ns_sep>,
+                                pegtl::star<namespace_qual>,
+                                symbol_name>
+{
+};
+
+struct path;
+
+struct path : pegtl::sor<pegtl::one<'/'>, path_element, pegtl::seq<path, pegtl::one<'/'>, path_element>>
+{
+};
+
+struct line_number : pegtl::plus<pegtl::digit>
+{
+};
+
+struct column_number : pegtl::plus<pegtl::digit>
+{
+};
+
+struct location : pegtl::seq<path, pegtl::one<':'>, line_number, pegtl::one<':'>, column_number, pegtl::eof>
+{
+};
+
+struct identify_symbol : pegtl::seq<key_identify, sep, key_symbol, sep, str_at, sep, location>
+{
+};
+
+struct grammar : pegtl::must<pegtl::sor<find_symbol, identify_symbol>>
 {
 };
 
 template <typename Rule>
 struct action
 {
+};
+
+template <>
+struct action<key_find>
+{
+   template <typename Input>
+   static void apply(const Input& /* in */, ftags::query::Query& query)
+   {
+      query.verb = ftags::query::Query::Verb::Find;
+   }
+};
+
+template <>
+struct action<key_identify>
+{
+   template <typename Input>
+   static void apply(const Input& /* in */, ftags::query::Query& query)
+   {
+      query.verb = ftags::query::Query::Verb::Identify;
+   }
 };
 
 template <>
@@ -155,6 +215,36 @@ struct action<symbol_name>
    static void apply(const Input& in, ftags::query::Query& query)
    {
       query.symbolName = in.string();
+   }
+};
+
+template <>
+struct action<path>
+{
+   template <typename Input>
+   static void apply(const Input& in, ftags::query::Query& query)
+   {
+      query.filePath = in.string();
+   }
+};
+
+template <>
+struct action<line_number>
+{
+   template <typename Input>
+   static void apply(const Input& in, ftags::query::Query& query)
+   {
+      query.lineNumber = static_cast<unsigned>(std::stoul(in.string()));
+   }
+};
+
+template <>
+struct action<column_number>
+{
+   template <typename Input>
+   static void apply(const Input& in, ftags::query::Query& query)
+   {
+      query.columnNumber = static_cast<unsigned>(std::stoul(in.string()));
    }
 };
 

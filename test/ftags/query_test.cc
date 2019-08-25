@@ -62,6 +62,7 @@ TEST(QueryTest, FindFunctionInNamespace)
    ftags::query::Query query = ftags::query::Query::parse("find function test2::main");
 
    ASSERT_EQ("main", query.symbolName);
+   ASSERT_EQ(query.verb, ftags::query::Query::Verb::Find);
    ASSERT_EQ(query.type, ftags::query::Query::Type::Function);
    ASSERT_FALSE(query.inGlobalNamespace);
    ASSERT_EQ(1, query.nameSpace.size());
@@ -75,4 +76,34 @@ TEST(QueryTest, FindFunctionInGlobalNamespace)
    ASSERT_EQ(query.type, ftags::query::Query::Type::Function);
    ASSERT_TRUE(query.inGlobalNamespace);
    ASSERT_TRUE(query.nameSpace.empty());
+}
+
+TEST(QueryTest, IdentifySymbolInRelativePath)
+{
+   ftags::query::Query query = ftags::query::Query::parse("identify symbol at file.c:12:32");
+
+   ASSERT_EQ(query.verb, ftags::query::Query::Verb::Identify);
+   ASSERT_EQ("file.c", query.filePath);
+   ASSERT_EQ(12, query.lineNumber);
+   ASSERT_EQ(32, query.columnNumber);
+}
+
+TEST(QueryTest, IdentifySymbolInPathRelativeToThis)
+{
+   ftags::query::Query query = ftags::query::Query::parse("identify symbol at ../file.c:12:32");
+
+   ASSERT_EQ(query.verb, ftags::query::Query::Verb::Identify);
+   ASSERT_EQ("../file.c", query.filePath);
+   ASSERT_EQ(12, query.lineNumber);
+   ASSERT_EQ(32, query.columnNumber);
+}
+
+TEST(QueryTest, IdentifySymbolInAbsolutePath)
+{
+   ftags::query::Query query = ftags::query::Query::parse("identify symbol at /path/to/file.c:12:32");
+
+   ASSERT_EQ(query.verb, ftags::query::Query::Verb::Identify);
+   ASSERT_EQ("/path/to/file.c", query.filePath);
+   ASSERT_EQ(12, query.lineNumber);
+   ASSERT_EQ(32, query.columnNumber);
 }
