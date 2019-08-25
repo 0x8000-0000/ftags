@@ -18,11 +18,11 @@
 
 #include <ftags.pb.h>
 
+#include <fmt/format.h>
+
 #include <clara.hpp>
 
 #include <zmq.hpp>
-
-#include <spdlog/spdlog.h>
 
 #include <filesystem>
 #include <iostream>
@@ -30,12 +30,18 @@
 
 namespace
 {
+
+bool beVerbose = false;
+
 void dispatchFindAll(zmq::socket_t&     socket,
                      const std::string& projectName,
                      const std::string& dirName,
                      const std::string& symbolName)
 {
-   spdlog::info("Searching for symbol {}", symbolName);
+   if (beVerbose)
+   {
+      std::cout << fmt::format("Searching for symbol {}\n", symbolName);
+   }
 
    ftags::Command command{};
    command.set_source("client");
@@ -65,7 +71,10 @@ void dispatchFindAll(zmq::socket_t&     socket,
 
       ftags::BufferExtractor extractor(static_cast<std::byte*>(resultsMessage.data()), resultsMessage.size());
       const ftags::CursorSet output = ftags::CursorSet::deserialize(extractor);
-      spdlog::info("Received {} results", output.size());
+      if (beVerbose)
+      {
+         std::cout << fmt::format("Received {} results\n", output.size());
+      }
 
       for (auto iter = output.begin(); iter != output.end(); ++iter)
       {
@@ -109,7 +118,10 @@ void dispatchDumpTranslationUnit(zmq::socket_t&     socket,
       }
    }
 
-   spdlog::info("Dumping translation unit {}", canonicalFilePathAsString);
+   if (beVerbose)
+   {
+      std::cout << fmt::format("Dumping translation unit {}", canonicalFilePathAsString);
+   }
 
    ftags::Command command{};
    command.set_source("client");
@@ -139,7 +151,10 @@ void dispatchDumpTranslationUnit(zmq::socket_t&     socket,
 
       ftags::BufferExtractor extractor(static_cast<std::byte*>(resultsMessage.data()), resultsMessage.size());
       const ftags::CursorSet output = ftags::CursorSet::deserialize(extractor);
-      spdlog::info("Received {} results", output.size());
+      if (beVerbose)
+      {
+         std::cout << fmt::format("Received {} results\n", output.size());
+      }
 
       for (auto iter = output.begin(); iter != output.end(); ++iter)
       {
@@ -154,18 +169,20 @@ void dispatchDumpTranslationUnit(zmq::socket_t&     socket,
 
 bool showHelp = false;
 
-bool        findAll             = false;
-bool        findFunction        = false;
-bool        dumpTranslationUnit = false;
-bool        doQuit              = false;
-bool        doPing              = false;
-bool        queryStats          = false;
-std::string projectName;
-std::string symbolName;
-std::string fileName;
-std::string dirName;
+bool                     findAll             = false;
+bool                     findFunction        = false;
+bool                     dumpTranslationUnit = false;
+bool                     doQuit              = false;
+bool                     doPing              = false;
+bool                     queryStats          = false;
+std::string              projectName;
+std::string              symbolName;
+std::string              fileName;
+std::string              dirName;
+std::vector<std::string> query;
 
 auto cli = clara::Help(showHelp) | clara::Opt(doQuit)["-q"]["--quit"]("Shutdown server") |
+           clara::Opt(beVerbose)["-v"]["--verbose"]("Verbose stats") |
            clara::Opt(doPing)["-i"]["--ping"]("Ping server") |
            clara::Opt(queryStats)["-q"]["--stats"]("Query statistics from running server") |
            clara::Opt(projectName, "project")["-p"]["--project"]("Project name") |
@@ -174,7 +191,7 @@ auto cli = clara::Help(showHelp) | clara::Opt(doQuit)["-q"]["--quit"]("Shutdown 
            clara::Opt(findFunction)["-f"]["--function"]("Find function") |
            clara::Opt(dumpTranslationUnit)["--dump"]("Dump symbols for translation unit") |
            clara::Opt(symbolName, "symbol")["-s"]["--symbol"]("Symbol name") |
-           clara::Opt(fileName, "file")["--file"]("File name");
+           clara::Opt(fileName, "file")["--file"]("File name") | clara::Arg(query, "query");
 
 } // namespace
 
@@ -185,7 +202,7 @@ int main(int argc, char* argv[])
    auto result = cli.parse(clara::Args(argc, argv));
    if (!result)
    {
-      spdlog::error("Failed to parse command line options: {}", result.errorMessage());
+      std::cout << fmt::format("Failed to parse command line options: {}\n", result.errorMessage());
       exit(-1);
    }
 
@@ -207,6 +224,13 @@ int main(int argc, char* argv[])
       exit(0);
    }
 
+   std::cout << "Query:";
+   for (const auto& word : query)
+   {
+      std::cout << ' ' << word;
+   }
+   std::cout << std::endl;
+
    const char*       xdgRuntimeDir  = std::getenv("XDG_RUNTIME_DIR");
    const std::string socketLocation = fmt::format("ipc://{}/ftags_server", xdgRuntimeDir);
 
@@ -214,7 +238,10 @@ int main(int argc, char* argv[])
    zmq::context_t context(1);
    zmq::socket_t  socket(context, ZMQ_REQ);
 
-   spdlog::info("Connecting to ftags server...");
+   if (beVerbose)
+   {
+      std::cout << "Connecting to ftags server..." << std::endl;
+   }
    socket.connect(socketLocation);
 
    ftags::Command command{};
@@ -235,7 +262,10 @@ int main(int argc, char* argv[])
 
       status.ParseFromArray(reply.data(), static_cast<int>(reply.size()));
 
-      spdlog::info("Received timestamp {} with status {}.", status.timestamp(), status.type());
+      if (beVerbose)
+      {
+         std::cout << fmt::format("Received timestamp {} with status {}\n", status.timestamp(), status.type());
+      }
    }
    else if (findAll)
    {
@@ -273,7 +303,10 @@ int main(int argc, char* argv[])
 
       zmq::message_t request(quitCommand.size());
       memcpy(request.data(), quitCommand.data(), quitCommand.size());
-      spdlog::info("Sending Quit");
+      if (beVerbose)
+      {
+         std::cout << "Sending Quit\n";
+      }
       socket.send(request);
    }
 
