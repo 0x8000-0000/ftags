@@ -39,3 +39,19 @@ TEST(QueryTest, FindFunction)
    ASSERT_EQ("main", query.symbolName);
    ASSERT_EQ(query.type, ftags::query::Query::Type::Function);
 }
+
+TEST(QueryTest, FindAttribute)
+{
+   ftags::query::Query query = ftags::query::Query::parse("find attribute m_size");
+
+   ASSERT_EQ("m_size", query.symbolName);
+   ASSERT_EQ(query.type, ftags::query::Query::Type::Attribute);
+}
+
+TEST(QueryTest, FindMethod)
+{
+   ftags::query::Query query = ftags::query::Query::parse("find method size");
+
+   ASSERT_EQ("size", query.symbolName);
+   ASSERT_EQ(query.type, ftags::query::Query::Type::Method);
+}

@@ -38,8 +38,11 @@ struct str_symbol : TAO_PEGTL_STRING("symbol") {};
 struct str_function : TAO_PEGTL_STRING("function") {};
 struct str_class : TAO_PEGTL_STRING("class") {};
 struct str_struct : TAO_PEGTL_STRING("struct") {};
+struct str_method: TAO_PEGTL_STRING("method") {};
+struct str_attribute: TAO_PEGTL_STRING("attribute") {};
+struct str_parameter: TAO_PEGTL_STRING("parameter") {};
 
-struct str_type : pegtl::sor<str_symbol, str_class, str_function, str_struct> {};
+struct str_type : pegtl::sor<str_symbol, str_function, str_parameter, str_class, str_struct, str_attribute, str_method> {};
 
 struct key_find: key<str_find> {};
 struct key_type: key<str_type> {};
@@ -61,6 +64,46 @@ struct action<str_function>
    static void apply(const Input& in, ftags::query::Query& query)
    {
       query.type = ftags::query::Query::Type::Function;
+   }
+};
+
+template <>
+struct action<str_class>
+{
+   template <typename Input>
+   static void apply(const Input& in, ftags::query::Query& query)
+   {
+      query.type = ftags::query::Query::Type::Class;
+   }
+};
+
+template <>
+struct action<str_method>
+{
+   template <typename Input>
+   static void apply(const Input& in, ftags::query::Query& query)
+   {
+      query.type = ftags::query::Query::Type::Method;
+   }
+};
+
+template <>
+struct action<str_attribute>
+{
+   template <typename Input>
+   static void apply(const Input& in, ftags::query::Query& query)
+   {
+      query.type = ftags::query::Query::Type::Attribute;
+   }
+};
+
+template <>
+struct action<str_parameter>
+{
+   template <typename Input>
+   static void apply(const Input& in, ftags::query::Query& query)
+   {
+      query.type = ftags::query::Query::Type::Parameter;
    }
 };
 
