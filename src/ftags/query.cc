@@ -82,7 +82,7 @@ template <>
 struct action<str_function>
 {
    template <typename Input>
-   static void apply(const Input& in, ftags::query::Query& query)
+   static void apply(const Input& /* in */, ftags::query::Query& query)
    {
       query.type = ftags::query::Query::Type::Function;
    }
@@ -92,7 +92,7 @@ template <>
 struct action<str_class>
 {
    template <typename Input>
-   static void apply(const Input& in, ftags::query::Query& query)
+   static void apply(const Input& /* in */, ftags::query::Query& query)
    {
       query.type = ftags::query::Query::Type::Class;
    }
@@ -102,7 +102,7 @@ template <>
 struct action<str_method>
 {
    template <typename Input>
-   static void apply(const Input& in, ftags::query::Query& query)
+   static void apply(const Input& /* in */, ftags::query::Query& query)
    {
       query.type = ftags::query::Query::Type::Method;
    }
@@ -112,7 +112,7 @@ template <>
 struct action<str_attribute>
 {
    template <typename Input>
-   static void apply(const Input& in, ftags::query::Query& query)
+   static void apply(const Input& /* in */, ftags::query::Query& query)
    {
       query.type = ftags::query::Query::Type::Attribute;
    }
@@ -122,7 +122,7 @@ template <>
 struct action<str_parameter>
 {
    template <typename Input>
-   static void apply(const Input& in, ftags::query::Query& query)
+   static void apply(const Input& /* in */, ftags::query::Query& query)
    {
       query.type = ftags::query::Query::Type::Parameter;
    }
@@ -132,7 +132,7 @@ template <>
 struct action<ns_sep>
 {
    template <typename Input>
-   static void apply(const Input& in, ftags::query::Query& query)
+   static void apply(const Input& /* in */, ftags::query::Query& query)
    {
       query.inGlobalNamespace = true;
    }

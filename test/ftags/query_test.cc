@@ -38,7 +38,7 @@ TEST(QueryTest, FindFunction)
 
    ASSERT_EQ("main", query.symbolName);
    ASSERT_EQ(query.type, ftags::query::Query::Type::Function);
-   ASSERT_EQ(0, query.nameSpace.size());
+   ASSERT_TRUE(query.nameSpace.empty());
 }
 
 TEST(QueryTest, FindAttribute)
@@ -74,5 +74,5 @@ TEST(QueryTest, FindFunctionInGlobalNamespace)
    ASSERT_EQ("check", query.symbolName);
    ASSERT_EQ(query.type, ftags::query::Query::Type::Function);
    ASSERT_TRUE(query.inGlobalNamespace);
-   ASSERT_EQ(0, query.nameSpace.size());
+   ASSERT_TRUE(query.nameSpace.empty());
 }
