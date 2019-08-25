@@ -11,6 +11,8 @@ Proposed syntax for the command line queries
    ----------------------------
    find [symbol|function|class|structure|method|attribute]? [definition|declaration|reference]? (namespace::)*symbol
 
+   find instantiations of (class|struct) foo
+
    identify symbol at file:line:column
 
    find callers for (namespace::)*(class::)?foo
