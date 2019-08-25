@@ -87,11 +87,19 @@ struct find_symbol : pegtl::seq<key_find,
 {
 };
 
-struct path;
-
-struct path : pegtl::sor<pegtl::one<'/'>, path_element, pegtl::seq<path, pegtl::one<'/'>, path_element>>
+// clang-format off
+struct path_rootless : pegtl::seq<path_element, pegtl::star<pegtl::one<'/'>, path_element>>
 {
 };
+
+struct path_absolute : pegtl::seq<pegtl::one<'/'>, path_rootless>
+{
+};
+
+struct path : pegtl::sor<path_rootless, path_absolute>
+{
+};
+// clang-format on
 
 struct line_number : pegtl::plus<pegtl::digit>
 {
