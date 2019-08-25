@@ -44,6 +44,7 @@ struct Query
       Method,
       Attribute,
       Parameter,
+      Override,
    };
 
    enum Qualifier : uint8_t
@@ -54,7 +55,6 @@ struct Query
       Reference,
       Instantiation,
       Destruction,
-      Override,
    };
 
    enum Verb      verb      = Unknown;

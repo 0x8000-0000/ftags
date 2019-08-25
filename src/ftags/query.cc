@@ -52,14 +52,16 @@ struct str_method: TAO_PEGTL_STRING("method") {};
 struct str_attribute: TAO_PEGTL_STRING("attribute") {};
 struct str_parameter: TAO_PEGTL_STRING("parameter") {};
 
-struct str_callers: TAO_PEGTL_STRING("callers of") {};
-struct str_containers: TAO_PEGTL_STRING("containers of") {};
+struct str_callers: TAO_PEGTL_STRING("callers") {};
+struct str_containers: TAO_PEGTL_STRING("containers") {};
+struct str_override: TAO_PEGTL_STRING("override") {};
 
 struct str_type : pegtl::sor<str_symbol, str_function, str_parameter, str_class, str_struct, str_attribute, str_method> {};
 
 struct key_find: key<str_find> {};
 struct key_identify: key<str_identify> {};
 struct key_list: key<str_list> {};
+struct key_override: key<str_override> {};
 
 struct key_symbol: key<str_symbol> {};
 struct key_type: key<str_type> {};
@@ -83,7 +85,21 @@ struct find_symbol : pegtl::seq<key_find,
                                 pegtl::opt<pegtl::seq<key_type, sep>>,
                                 pegtl::opt<ns_sep>,
                                 pegtl::star<namespace_qual>,
-                                symbol_name>
+                                symbol_name,
+                                pegtl::eof>
+{
+};
+
+struct find_override : pegtl::seq<key_find,
+                                  sep,
+                                  key_override,
+                                  sep,
+                                  str_of,
+                                  sep,
+                                  pegtl::opt<ns_sep>,
+                                  pegtl::star<namespace_qual>,
+                                  symbol_name,
+                                  pegtl::eof>
 {
 };
 
@@ -109,15 +125,15 @@ struct column_number : pegtl::plus<pegtl::digit>
 {
 };
 
-struct location : pegtl::seq<path, pegtl::one<':'>, line_number, pegtl::one<':'>, column_number, pegtl::eof>
+struct location : pegtl::seq<path, pegtl::one<':'>, line_number, pegtl::one<':'>, column_number>
 {
 };
 
-struct identify_symbol : pegtl::seq<key_identify, sep, key_symbol, sep, str_at, sep, location>
+struct identify_symbol : pegtl::seq<key_identify, sep, key_symbol, sep, str_at, sep, location, pegtl::eof>
 {
 };
 
-struct grammar : pegtl::must<pegtl::sor<find_symbol, identify_symbol>>
+struct grammar : pegtl::must<pegtl::sor<find_symbol, find_override, identify_symbol>>
 {
 };
 
@@ -153,6 +169,16 @@ struct action<str_function>
    static void apply(const Input& /* in */, ftags::query::Query& query)
    {
       query.type = ftags::query::Query::Type::Function;
+   }
+};
+
+template <>
+struct action<str_override>
+{
+   template <typename Input>
+   static void apply(const Input& /* in */, ftags::query::Query& query)
+   {
+      query.type = ftags::query::Query::Type::Override;
    }
 };
 

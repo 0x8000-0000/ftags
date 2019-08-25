@@ -107,3 +107,14 @@ TEST(QueryTest, IdentifySymbolInAbsolutePath)
    ASSERT_EQ(12, query.lineNumber);
    ASSERT_EQ(32, query.columnNumber);
 }
+
+TEST(QueryTest, FindOverrideFor)
+{
+   ftags::query::Query query = ftags::query::Query::parse("find override of foo::Test::check");
+
+   ASSERT_EQ("check", query.symbolName);
+   ASSERT_EQ(query.verb, ftags::query::Query::Verb::Find);
+   ASSERT_EQ(query.type, ftags::query::Query::Type::Override);
+   ASSERT_FALSE(query.inGlobalNamespace);
+   ASSERT_EQ(2, query.nameSpace.size());
+}
