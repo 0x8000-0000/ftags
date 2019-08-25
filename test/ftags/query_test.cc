@@ -38,6 +38,7 @@ TEST(QueryTest, FindFunction)
 
    ASSERT_EQ("main", query.symbolName);
    ASSERT_EQ(query.type, ftags::query::Query::Type::Function);
+   ASSERT_EQ(0, query.nameSpace.size());
 }
 
 TEST(QueryTest, FindAttribute)
@@ -54,4 +55,13 @@ TEST(QueryTest, FindMethod)
 
    ASSERT_EQ("size", query.symbolName);
    ASSERT_EQ(query.type, ftags::query::Query::Type::Method);
+}
+
+TEST(QueryTest, FindFunctionInNamespace)
+{
+   ftags::query::Query query = ftags::query::Query::parse("find function test2::main");
+
+   ASSERT_EQ("main", query.symbolName);
+   ASSERT_EQ(query.type, ftags::query::Query::Type::Function);
+   ASSERT_EQ(1, query.nameSpace.size());
 }

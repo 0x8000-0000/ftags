@@ -61,7 +61,7 @@ struct Query
    enum Qualifier qualifier;
 
    std::string symbolName;
-   std::string nameSpace;
+   std::vector<std::string> nameSpace;
 
    std::string translationUnit;
    std::string pathFragment;

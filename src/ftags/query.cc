@@ -27,6 +27,10 @@ struct sep : pegtl::plus<pegtl::ascii::space>
 {
 };
 
+struct ns_sep : pegtl::rep<2, pegtl::one<':'>>
+{
+};
+
 template <typename Key>
 struct key : pegtl::seq<Key, pegtl::not_at<pegtl::identifier_other>>
 {
@@ -34,6 +38,9 @@ struct key : pegtl::seq<Key, pegtl::not_at<pegtl::identifier_other>>
 
 // clang-format off
 struct str_find : TAO_PEGTL_STRING("find") {};
+
+struct str_namespace: TAO_PEGTL_STRING("parameter") {};
+
 struct str_symbol : TAO_PEGTL_STRING("symbol") {};
 struct str_function : TAO_PEGTL_STRING("function") {};
 struct str_class : TAO_PEGTL_STRING("class") {};
@@ -47,8 +54,22 @@ struct str_type : pegtl::sor<str_symbol, str_function, str_parameter, str_class,
 struct key_find: key<str_find> {};
 struct key_type: key<str_type> {};
 
+struct namespace_qual : pegtl::seq<pegtl::identifier, pegtl::one<':'>, pegtl::one<':'>>
+{
+};
+
+struct symbol_name : pegtl::seq<pegtl::identifier>
+{
+};
+
 // clang-format on
-struct grammar : pegtl::must<key_find, sep, pegtl::opt<pegtl::seq<key_type, sep>>, pegtl::identifier, pegtl::eof>
+struct grammar : pegtl::must<key_find,
+                             sep,
+                             pegtl::opt<pegtl::seq<key_type, sep>>,
+                             pegtl::opt<ns_sep>,
+                             pegtl::star<namespace_qual>,
+                             symbol_name,
+                             pegtl::eof>
 {
 };
 
@@ -108,7 +129,17 @@ struct action<str_parameter>
 };
 
 template <>
-struct action<pegtl::identifier>
+struct action<namespace_qual>
+{
+   template <typename Input>
+   static void apply(const Input& in, ftags::query::Query& query)
+   {
+      query.nameSpace.push_back(in.string());
+   }
+};
+
+template <>
+struct action<symbol_name>
 {
    template <typename Input>
    static void apply(const Input& in, ftags::query::Query& query)
