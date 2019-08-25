@@ -23,19 +23,29 @@ namespace
 
 namespace pegtl = tao::pegtl;
 
-struct find : pegtl::string<'f', 'i', 'n', 'd'>
+struct sep : pegtl::plus<pegtl::ascii::space>
 {
 };
 
-struct separator : pegtl::star<pegtl::ascii::space>
+template <typename Key>
+struct key : pegtl::seq<Key, pegtl::not_at<pegtl::identifier_other>>
 {
 };
 
-struct symbol : pegtl::plus<pegtl::alpha>
-{
-};
+// clang-format off
+struct str_find : TAO_PEGTL_STRING("find") {};
+struct str_symbol : TAO_PEGTL_STRING("symbol") {};
+struct str_function : TAO_PEGTL_STRING("function") {};
+struct str_class : TAO_PEGTL_STRING("class") {};
+struct str_struct : TAO_PEGTL_STRING("struct") {};
 
-struct grammar : pegtl::must<find, separator, symbol, pegtl::eof>
+struct str_type : pegtl::sor<str_symbol, str_class, str_function, str_struct> {};
+
+struct key_find: key<str_find> {};
+struct key_type: key<str_type> {};
+
+// clang-format on
+struct grammar : pegtl::must<key_find, sep, pegtl::opt<pegtl::seq<key_type, sep>>, pegtl::identifier, pegtl::eof>
 {
 };
 
@@ -45,12 +55,22 @@ struct action
 };
 
 template <>
-struct action<symbol>
+struct action<str_function>
 {
    template <typename Input>
-   static void apply(const Input& in, std::string& v)
+   static void apply(const Input& in, ftags::query::Query& query)
    {
-      v = in.string();
+      query.type = ftags::query::Query::Type::Function;
+   }
+};
+
+template <>
+struct action<pegtl::identifier>
+{
+   template <typename Input>
+   static void apply(const Input& in, ftags::query::Query& query)
+   {
+      query.symbolName = in.string();
    }
 };
 
@@ -62,7 +82,7 @@ ftags::query::Query ftags::query::Query::parse(std::string_view input)
 
    pegtl::memory_input in(input.data(), input.size(), "");
 
-   pegtl::parse<grammar, action>(in, query.symbolName);
+   pegtl::parse<grammar, action>(in, query);
 
    return query;
 }

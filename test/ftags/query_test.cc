@@ -18,9 +18,24 @@
 
 #include <gtest/gtest.h>
 
-TEST(QueryTest, FindSimpleSymbol)
+TEST(QueryTest, FindImplicitSymbol)
 {
    ftags::query::Query query = ftags::query::Query::parse("find main");
 
    ASSERT_EQ("main", query.symbolName);
+}
+
+TEST(QueryTest, FindExplicitSymbol)
+{
+   ftags::query::Query query = ftags::query::Query::parse("find symbol main");
+
+   ASSERT_EQ("main", query.symbolName);
+}
+
+TEST(QueryTest, FindFunction)
+{
+   ftags::query::Query query = ftags::query::Query::parse("find function main");
+
+   ASSERT_EQ("main", query.symbolName);
+   ASSERT_EQ(query.type, ftags::query::Query::Type::Function);
 }
