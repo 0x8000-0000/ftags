@@ -1,0 +1,26 @@
+Proposed syntax for the command line queries
+
+   find symbol foo
+   find symbol name::space::foo
+   find function foo
+   find class foo
+   find structure foo
+   find attribute foo
+   find attribute definition foo
+   find function reference foo
+   ----------------------------
+   find [symbol|function|class|structure|method|attribute]? [definition|declaration|reference]? (namespace::)*symbol
+
+   identify symbol at file:line:column
+
+   find callers for (namespace::)*(class::)?foo
+
+   find containers for baz    (structures that contain a member of type baz)
+
+   find (all)? base class|struct for foo
+
+   find (all)? derived class|struct from foo
+
+   find override for namespace::class::method
+
+   list dependencies of translation-unit
