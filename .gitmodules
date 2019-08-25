@@ -11,3 +11,6 @@
 [submodule "spdlog"]
 	path = external/spdlog
 	url = https://github.com/gabime/spdlog
+[submodule "pegtl"]
+	path = external/PEGTL
+	url = https://github.com/taocpp/PEGTL

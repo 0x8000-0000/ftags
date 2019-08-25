@@ -54,6 +54,7 @@ Included dependencies:
    * [{fmt}](https://github.com/fmtlib/fmt)
    * [GoogleTest](https://github.com/google/googletest)
    * [spdlog](https://github.com/gabime/spdlog)
+   * [PEGTL](https://github.com/taocpp/PEGTL)
 
 
 Building
