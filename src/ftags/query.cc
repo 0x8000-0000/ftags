@@ -56,7 +56,14 @@ struct str_callers: TAO_PEGTL_STRING("callers") {};
 struct str_containers: TAO_PEGTL_STRING("containers") {};
 struct str_override: TAO_PEGTL_STRING("override") {};
 
+struct str_declaration: TAO_PEGTL_STRING("declaration") {};
+struct str_definition: TAO_PEGTL_STRING("definition") {};
+struct str_reference: TAO_PEGTL_STRING("reference") {};
+struct str_instantiation: TAO_PEGTL_STRING("instantiation") {};
+struct str_destruction: TAO_PEGTL_STRING("destruction") {};
+
 struct str_type : pegtl::sor<str_symbol, str_function, str_parameter, str_class, str_struct, str_attribute, str_method> {};
+struct str_qualifier : pegtl::sor<str_declaration, str_definition, str_reference, str_instantiation, str_destruction> {};
 
 struct key_find: key<str_find> {};
 struct key_identify: key<str_identify> {};
@@ -65,6 +72,7 @@ struct key_override: key<str_override> {};
 
 struct key_symbol: key<str_symbol> {};
 struct key_type: key<str_type> {};
+struct key_qualifier: key<str_qualifier> {};
 
 struct namespace_qual : pegtl::seq<pegtl::identifier, pegtl::one<':'>, pegtl::one<':'>>
 {
@@ -83,6 +91,7 @@ struct path_element : pegtl::star<pegtl::sor<pegtl::alnum, pegtl::one<'.', '-', 
 struct find_symbol : pegtl::seq<key_find,
                                 sep,
                                 pegtl::opt<pegtl::seq<key_type, sep>>,
+                                pegtl::opt<pegtl::seq<key_qualifier, sep>>,
                                 pegtl::opt<ns_sep>,
                                 pegtl::star<namespace_qual>,
                                 symbol_name,
@@ -279,6 +288,36 @@ struct action<column_number>
    static void apply(const Input& in, ftags::query::Query& query)
    {
       query.columnNumber = static_cast<unsigned>(std::stoul(in.string()));
+   }
+};
+
+template <>
+struct action<str_reference>
+{
+   template <typename Input>
+   static void apply(const Input& /* in */, ftags::query::Query& query)
+   {
+      query.qualifier = ftags::query::Query::Qualifier::Reference;
+   }
+};
+
+template <>
+struct action<str_declaration>
+{
+   template <typename Input>
+   static void apply(const Input& /* in */, ftags::query::Query& query)
+   {
+      query.qualifier = ftags::query::Query::Qualifier::Declaration;
+   }
+};
+
+template <>
+struct action<str_definition>
+{
+   template <typename Input>
+   static void apply(const Input& /* in */, ftags::query::Query& query)
+   {
+      query.qualifier = ftags::query::Query::Qualifier::Definition;
    }
 };
 

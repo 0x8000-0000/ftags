@@ -74,6 +74,7 @@ TEST(QueryTest, FindFunctionInGlobalNamespace)
 
    ASSERT_EQ("check", query.symbolName);
    ASSERT_EQ(query.type, ftags::query::Query::Type::Function);
+   ASSERT_EQ(query.qualifier, ftags::query::Query::Qualifier::Any);
    ASSERT_TRUE(query.inGlobalNamespace);
    ASSERT_TRUE(query.nameSpace.empty());
 }
@@ -117,4 +118,37 @@ TEST(QueryTest, FindOverrideFor)
    ASSERT_EQ(query.type, ftags::query::Query::Type::Override);
    ASSERT_FALSE(query.inGlobalNamespace);
    ASSERT_EQ(2, query.nameSpace.size());
+}
+
+TEST(QueryTest, FindReferencesToFunctionInGlobalNamespace)
+{
+   ftags::query::Query query = ftags::query::Query::parse("find function reference ::check");
+
+   ASSERT_EQ("check", query.symbolName);
+   ASSERT_EQ(query.type, ftags::query::Query::Type::Function);
+   ASSERT_EQ(query.qualifier, ftags::query::Query::Qualifier::Reference);
+   ASSERT_TRUE(query.inGlobalNamespace);
+   ASSERT_TRUE(query.nameSpace.empty());
+}
+
+TEST(QueryTest, FindDeclarationsOfFunctionInGlobalNamespace)
+{
+   ftags::query::Query query = ftags::query::Query::parse("find function declaration ::check");
+
+   ASSERT_EQ("check", query.symbolName);
+   ASSERT_EQ(query.type, ftags::query::Query::Type::Function);
+   ASSERT_EQ(query.qualifier, ftags::query::Query::Qualifier::Declaration);
+   ASSERT_TRUE(query.inGlobalNamespace);
+   ASSERT_TRUE(query.nameSpace.empty());
+}
+
+TEST(QueryTest, FindDefinitionsOfFunctionInGlobalNamespace)
+{
+   ftags::query::Query query = ftags::query::Query::parse("find function definition ::check");
+
+   ASSERT_EQ("check", query.symbolName);
+   ASSERT_EQ(query.type, ftags::query::Query::Type::Function);
+   ASSERT_EQ(query.qualifier, ftags::query::Query::Qualifier::Definition);
+   ASSERT_TRUE(query.inGlobalNamespace);
+   ASSERT_TRUE(query.nameSpace.empty());
 }
