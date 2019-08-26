@@ -111,7 +111,7 @@ TEST(QueryTest, IdentifySymbolInAbsolutePath)
 
 TEST(QueryTest, FindOverrideFor)
 {
-   ftags::query::Query query = ftags::query::Query::parse("find override of foo::Test::check");
+   ftags::query::Query query("find override of foo::Test::check");
 
    ASSERT_EQ("check", query.symbolName);
    ASSERT_EQ(query.verb, ftags::query::Query::Verb::Find);
@@ -163,7 +163,7 @@ TEST(QueryTest, ListProjects)
 
 TEST(QueryTest, ListDependenciesOfTranslationUnit)
 {
-   ftags::query::Query query = ftags::query::Query::parse("list dependencies of path/to/file.c");
+   ftags::query::Query query("list dependencies of path/to/file.c");
 
    ASSERT_EQ(query.verb, ftags::query::Query::Verb::List);
    ASSERT_EQ(query.type, ftags::query::Query::Type::Dependency);

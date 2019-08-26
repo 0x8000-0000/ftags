@@ -106,27 +106,16 @@ struct path_element : pegtl::star<pegtl::sor<pegtl::alnum, pegtl::one<'.', '-', 
 
 // clang-format on
 
-struct find_symbol : pegtl::seq<key_find,
-                                sep,
-                                pegtl::opt<pegtl::seq<key_type, sep>>,
-                                pegtl::opt<pegtl::seq<key_qualifier, sep>>,
-                                pegtl::opt<ns_sep>,
-                                pegtl::star<namespace_qual>,
-                                symbol_name,
-                                pegtl::eof>
-{
-};
-
-struct find_override : pegtl::seq<key_find,
-                                  sep,
-                                  key_override,
-                                  sep,
-                                  str_of,
-                                  sep,
-                                  pegtl::opt<ns_sep>,
-                                  pegtl::star<namespace_qual>,
-                                  symbol_name,
-                                  pegtl::eof>
+struct find_symbol
+   : pegtl::if_must<
+        key_find,
+        sep,
+        pegtl::sor<pegtl::if_must<key_override, sep, str_of, sep>,
+                   pegtl::seq<pegtl::opt<pegtl::seq<key_type, sep>>, pegtl::opt<pegtl::seq<key_qualifier, sep>>>>,
+        pegtl::opt<ns_sep>,
+        pegtl::star<namespace_qual>,
+        symbol_name,
+        pegtl::eof>
 {
 };
 
@@ -156,38 +145,31 @@ struct location : pegtl::seq<path, pegtl::one<':'>, line_number, pegtl::one<':'>
 {
 };
 
-struct identify_symbol : pegtl::seq<key_identify, sep, key_symbol, sep, str_at, sep, location, pegtl::eof>
+struct identify_symbol : pegtl::if_must<key_identify, sep, key_symbol, sep, str_at, sep, location, pegtl::eof>
 {
 };
 
-struct list_projects : pegtl::seq<key_list, sep, key_projects, pegtl::eof>
+struct list_projects
+   : pegtl::if_must<key_list,
+                    sep,
+                    pegtl::sor<key_projects, pegtl::if_must<key_dependencies, sep, str_of, sep, path>>,
+                    pegtl::eof>
 {
 };
 
-struct list_dependencies : pegtl::seq<key_list, sep, key_dependencies, sep, str_of, sep, path, pegtl::eof>
+struct ping_server : pegtl::if_must<key_ping, pegtl::eof>
 {
 };
 
-struct ping_server : pegtl::seq<key_ping, pegtl::eof>
+struct shutdown_server : pegtl::if_must<key_shutdown, pegtl::eof>
 {
 };
 
-struct shutdown_server : pegtl::seq<key_shutdown, pegtl::eof>
+struct dump_stats : pegtl::if_must<key_dump, sep, str_statistics, pegtl::eof>
 {
 };
 
-struct dump_stats : pegtl::seq<key_dump, sep, str_statistics, pegtl::eof>
-{
-};
-
-struct grammar : pegtl::must<pegtl::sor<find_symbol,
-                                        find_override,
-                                        identify_symbol,
-                                        list_projects,
-                                        list_dependencies,
-                                        ping_server,
-                                        shutdown_server,
-                                        dump_stats>>
+struct grammar : pegtl::sor<find_symbol, identify_symbol, list_projects, ping_server, shutdown_server, dump_stats>
 {
 };
 
