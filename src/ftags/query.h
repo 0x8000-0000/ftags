@@ -32,6 +32,9 @@ struct Query
       Find,
       List,
       Identify,
+      Ping,
+      Shutdown,
+      Dump,
    };
 
    enum Type : uint8_t
@@ -47,6 +50,8 @@ struct Query
       Override,
       Project,
       Dependency,
+      Statistics,
+      Contents,
    };
 
    enum Qualifier : uint8_t
@@ -74,6 +79,9 @@ struct Query
    std::string filePath;
    unsigned    lineNumber;
    unsigned    columnNumber;
+
+   Query() = default;
+   Query(std::string_view input);
 
    static Query parse(std::string_view input);
    static Query parse(std::vector<std::string> input);

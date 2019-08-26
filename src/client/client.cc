@@ -16,6 +16,8 @@
 
 #include <project.h>
 
+#include <query.h>
+
 #include <ftags.pb.h>
 
 #include <fmt/format.h>
@@ -179,7 +181,7 @@ std::string              projectName;
 std::string              symbolName;
 std::string              fileName;
 std::string              dirName;
-std::vector<std::string> query;
+std::vector<std::string> queryArray;
 
 auto cli = clara::Help(showHelp) | clara::Opt(doQuit)["-q"]["--quit"]("Shutdown server") |
            clara::Opt(beVerbose)["-v"]["--verbose"]("Verbose stats") |
@@ -191,7 +193,7 @@ auto cli = clara::Help(showHelp) | clara::Opt(doQuit)["-q"]["--quit"]("Shutdown 
            clara::Opt(findFunction)["-f"]["--function"]("Find function") |
            clara::Opt(dumpTranslationUnit)["--dump"]("Dump symbols for translation unit") |
            clara::Opt(symbolName, "symbol")["-s"]["--symbol"]("Symbol name") |
-           clara::Opt(fileName, "file")["--file"]("File name") | clara::Arg(query, "query");
+           clara::Opt(fileName, "file")["--file"]("File name") | clara::Arg(queryArray, "query");
 
 } // namespace
 
@@ -224,12 +226,17 @@ int main(int argc, char* argv[])
       exit(0);
    }
 
-   std::cout << "Query:";
-   for (const auto& word : query)
+   ftags::query::Query query;
+
+   try
    {
-      std::cout << ' ' << word;
+      query = ftags::query::Query::parse(queryArray);
    }
-   std::cout << std::endl;
+   catch (std::runtime_error& runtimeError)
+   {
+      std::cout << "Failed to parse query: " << runtimeError.what() << std::endl;
+      exit(1);
+   }
 
    const char*       xdgRuntimeDir  = std::getenv("XDG_RUNTIME_DIR");
    const std::string socketLocation = fmt::format("ipc://{}/ftags_server", xdgRuntimeDir);
@@ -249,7 +256,7 @@ int main(int argc, char* argv[])
    std::string   serializedCommand;
    ftags::Status status;
 
-   if (doPing)
+   if (query.verb == ftags::query::Query::Verb::Ping)
    {
       command.set_type(ftags::Command::Type::Command_Type_PING);
       const std::size_t requestSize = command.ByteSizeLong();
@@ -267,35 +274,38 @@ int main(int argc, char* argv[])
          std::cout << fmt::format("Received timestamp {} with status {}\n", status.timestamp(), status.type());
       }
    }
-   else if (findAll)
+   else if (query.verb == ftags::query::Query::Verb::Find)
    {
-      dispatchFindAll(socket, projectName, dirName, symbolName);
+      dispatchFindAll(socket, projectName, dirName, query.symbolName);
    }
-   else if (dumpTranslationUnit)
+   else if (query.verb == ftags::query::Query::Verb::Dump)
    {
-      dispatchDumpTranslationUnit(socket, projectName, dirName, fileName);
-   }
-   else if (queryStats)
-   {
-      command.set_type(ftags::Command::Type::Command_Type_QUERY_STATISTICS);
-      command.set_projectname(projectName);
-      command.set_directoryname(dirName);
-      const std::size_t requestSize = command.ByteSizeLong();
-      zmq::message_t    request(requestSize);
-      command.SerializeToArray(request.data(), static_cast<int>(requestSize));
-      socket.send(request);
-
-      zmq::message_t reply;
-      socket.recv(&reply);
-
-      status.ParseFromArray(reply.data(), static_cast<int>(reply.size()));
-
-      for (int ii = 0; ii < status.remarks_size(); ii++)
+      if (query.type == ftags::query::Query::Type::Statistics)
       {
-         std::cout << status.remarks(ii) << std::endl;
+         command.set_type(ftags::Command::Type::Command_Type_QUERY_STATISTICS);
+         command.set_projectname(projectName);
+         command.set_directoryname(dirName);
+         const std::size_t requestSize = command.ByteSizeLong();
+         zmq::message_t    request(requestSize);
+         command.SerializeToArray(request.data(), static_cast<int>(requestSize));
+         socket.send(request);
+
+         zmq::message_t reply;
+         socket.recv(&reply);
+
+         status.ParseFromArray(reply.data(), static_cast<int>(reply.size()));
+
+         for (int ii = 0; ii < status.remarks_size(); ii++)
+         {
+            std::cout << status.remarks(ii) << std::endl;
+         }
+      }
+      else if (query.type == ftags::query::Query::Type::Contents)
+      {
+         dispatchDumpTranslationUnit(socket, projectName, dirName, fileName);
       }
    }
-   else if (doQuit)
+   else if (query.verb == ftags::query::Query::Verb::Shutdown)
    {
       command.set_type(ftags::Command::Type::Command_Type_SHUT_DOWN);
       std::string quitCommand;

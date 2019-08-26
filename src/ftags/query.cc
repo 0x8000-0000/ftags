@@ -18,6 +18,10 @@
 
 #include <tao/pegtl.hpp>
 
+#include <fmt/format.h>
+
+#include <sstream>
+
 namespace
 {
 
@@ -40,6 +44,9 @@ struct key : pegtl::seq<Key, pegtl::not_at<pegtl::identifier_other>>
 struct str_find : TAO_PEGTL_STRING("find") {};
 struct str_identify: TAO_PEGTL_STRING("identify") {};
 struct str_list: TAO_PEGTL_STRING("list") {};
+struct str_ping: TAO_PEGTL_STRING("ping") {};
+struct str_shutdown: TAO_PEGTL_STRING("shutdown") {};
+struct str_dump: TAO_PEGTL_STRING("dump") {};
 
 struct str_projects: TAO_PEGTL_STRING("projects") {};
 struct str_dependencies: TAO_PEGTL_STRING("dependencies") {};
@@ -54,6 +61,7 @@ struct str_struct : TAO_PEGTL_STRING("struct") {};
 struct str_method: TAO_PEGTL_STRING("method") {};
 struct str_attribute: TAO_PEGTL_STRING("attribute") {};
 struct str_parameter: TAO_PEGTL_STRING("parameter") {};
+struct str_statistics : TAO_PEGTL_STRING("statistics") {};
 
 struct str_callers: TAO_PEGTL_STRING("callers") {};
 struct str_containers: TAO_PEGTL_STRING("containers") {};
@@ -71,6 +79,9 @@ struct str_qualifier : pegtl::sor<str_declaration, str_definition, str_reference
 struct key_find: key<str_find> {};
 struct key_identify: key<str_identify> {};
 struct key_list: key<str_list> {};
+struct key_ping: key<str_ping> {};
+struct key_shutdown: key<str_shutdown> {};
+struct key_dump: key<str_dump> {};
 
 struct key_override: key<str_override> {};
 
@@ -157,8 +168,26 @@ struct list_dependencies : pegtl::seq<key_list, sep, key_dependencies, sep, str_
 {
 };
 
-struct grammar
-   : pegtl::must<pegtl::sor<find_symbol, find_override, identify_symbol, list_projects, list_dependencies>>
+struct ping_server : pegtl::seq<key_ping, pegtl::eof>
+{
+};
+
+struct shutdown_server : pegtl::seq<key_shutdown, pegtl::eof>
+{
+};
+
+struct dump_stats : pegtl::seq<key_dump, sep, str_statistics, pegtl::eof>
+{
+};
+
+struct grammar : pegtl::must<pegtl::sor<find_symbol,
+                                        find_override,
+                                        identify_symbol,
+                                        list_projects,
+                                        list_dependencies,
+                                        ping_server,
+                                        shutdown_server,
+                                        dump_stats>>
 {
 };
 
@@ -198,6 +227,36 @@ struct action<key_list>
 };
 
 template <>
+struct action<key_ping>
+{
+   template <typename Input>
+   static void apply(const Input& /* in */, ftags::query::Query& query)
+   {
+      query.verb = ftags::query::Query::Verb::Ping;
+   }
+};
+
+template <>
+struct action<key_shutdown>
+{
+   template <typename Input>
+   static void apply(const Input& /* in */, ftags::query::Query& query)
+   {
+      query.verb = ftags::query::Query::Verb::Shutdown;
+   }
+};
+
+template <>
+struct action<key_dump>
+{
+   template <typename Input>
+   static void apply(const Input& /* in */, ftags::query::Query& query)
+   {
+      query.verb = ftags::query::Query::Verb::Dump;
+   }
+};
+
+template <>
 struct action<str_function>
 {
    template <typename Input>
@@ -224,6 +283,16 @@ struct action<str_class>
    static void apply(const Input& /* in */, ftags::query::Query& query)
    {
       query.type = ftags::query::Query::Type::Class;
+   }
+};
+
+template <>
+struct action<str_statistics>
+{
+   template <typename Input>
+   static void apply(const Input& /* in */, ftags::query::Query& query)
+   {
+      query.type = ftags::query::Query::Type::Statistics;
    }
 };
 
@@ -369,13 +438,47 @@ struct action<str_dependencies>
 
 } // anonymous namespace
 
-ftags::query::Query ftags::query::Query::parse(std::string_view input)
+ftags::query::Query::Query(std::string_view input)
 {
-   ftags::query::Query query;
-
    pegtl::memory_input in(input.data(), input.size(), "");
 
-   pegtl::parse<grammar, action>(in, query);
+   pegtl::parse<grammar, action>(in, *this);
+}
 
-   return query;
+ftags::query::Query ftags::query::Query::parse(std::string_view input)
+{
+   try
+   {
+      ftags::query::Query query(input);
+
+      return query;
+   }
+   catch (const tao::pegtl::parse_error& parseError)
+   {
+      throw std::runtime_error(fmt::format("Failed to parse input: {}", parseError.std::exception::what()));
+   }
+   catch (const tao::pegtl::input_error& inputError)
+   {
+      throw std::runtime_error(fmt::format("Failed to parse input: {}", inputError.std::exception::what()));
+   }
+}
+
+ftags::query::Query ftags::query::Query::parse(std::vector<std::string> input)
+{
+   std::stringstream os;
+
+   bool first = true;
+
+   for (const auto& elem : input)
+   {
+      if (!first)
+      {
+         os << ' ';
+      }
+
+      os << elem;
+      first = false;
+   }
+
+   return parse(os.str());
 }

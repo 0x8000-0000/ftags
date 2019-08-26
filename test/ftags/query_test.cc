@@ -59,7 +59,7 @@ TEST(QueryTest, FindMethod)
 
 TEST(QueryTest, FindFunctionInNamespace)
 {
-   ftags::query::Query query = ftags::query::Query::parse("find function test2::main");
+   ftags::query::Query query("find function test2::main");
 
    ASSERT_EQ("main", query.symbolName);
    ASSERT_EQ(query.verb, ftags::query::Query::Verb::Find);
@@ -168,4 +168,19 @@ TEST(QueryTest, ListDependenciesOfTranslationUnit)
    ASSERT_EQ(query.verb, ftags::query::Query::Verb::List);
    ASSERT_EQ(query.type, ftags::query::Query::Type::Dependency);
    ASSERT_EQ("path/to/file.c", query.filePath);
+}
+
+TEST(QueryTest, ShutdownServer)
+{
+   ftags::query::Query query = ftags::query::Query::parse("shutdown");
+
+   ASSERT_EQ(query.verb, ftags::query::Query::Verb::Shutdown);
+}
+
+TEST(QueryTest, DumpStats)
+{
+   ftags::query::Query query("dump statistics");
+
+   ASSERT_EQ(query.verb, ftags::query::Query::Verb::Dump);
+   ASSERT_EQ(query.type, ftags::query::Query::Type::Statistics);
 }
