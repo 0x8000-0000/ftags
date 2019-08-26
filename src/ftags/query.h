@@ -45,6 +45,8 @@ struct Query
       Attribute,
       Parameter,
       Override,
+      Project,
+      Dependency,
    };
 
    enum Qualifier : uint8_t
@@ -63,7 +65,7 @@ struct Query
 
    bool inGlobalNamespace = false;
 
-   std::string symbolName;
+   std::string              symbolName;
    std::vector<std::string> nameSpace;
 
    std::string translationUnit;

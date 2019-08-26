@@ -41,6 +41,9 @@ struct str_find : TAO_PEGTL_STRING("find") {};
 struct str_identify: TAO_PEGTL_STRING("identify") {};
 struct str_list: TAO_PEGTL_STRING("list") {};
 
+struct str_projects: TAO_PEGTL_STRING("projects") {};
+struct str_dependencies: TAO_PEGTL_STRING("dependencies") {};
+
 struct str_at: TAO_PEGTL_STRING("at") {};
 struct str_of: TAO_PEGTL_STRING("of") {};
 
@@ -68,11 +71,15 @@ struct str_qualifier : pegtl::sor<str_declaration, str_definition, str_reference
 struct key_find: key<str_find> {};
 struct key_identify: key<str_identify> {};
 struct key_list: key<str_list> {};
+
 struct key_override: key<str_override> {};
 
 struct key_symbol: key<str_symbol> {};
 struct key_type: key<str_type> {};
 struct key_qualifier: key<str_qualifier> {};
+
+struct key_projects: key<str_projects> {};
+struct key_dependencies: key<str_dependencies> {};
 
 struct namespace_qual : pegtl::seq<pegtl::identifier, pegtl::one<':'>, pegtl::one<':'>>
 {
@@ -142,7 +149,16 @@ struct identify_symbol : pegtl::seq<key_identify, sep, key_symbol, sep, str_at, 
 {
 };
 
-struct grammar : pegtl::must<pegtl::sor<find_symbol, find_override, identify_symbol>>
+struct list_projects : pegtl::seq<key_list, sep, key_projects, pegtl::eof>
+{
+};
+
+struct list_dependencies : pegtl::seq<key_list, sep, key_dependencies, sep, str_of, sep, path, pegtl::eof>
+{
+};
+
+struct grammar
+   : pegtl::must<pegtl::sor<find_symbol, find_override, identify_symbol, list_projects, list_dependencies>>
 {
 };
 
@@ -168,6 +184,16 @@ struct action<key_identify>
    static void apply(const Input& /* in */, ftags::query::Query& query)
    {
       query.verb = ftags::query::Query::Verb::Identify;
+   }
+};
+
+template <>
+struct action<key_list>
+{
+   template <typename Input>
+   static void apply(const Input& /* in */, ftags::query::Query& query)
+   {
+      query.verb = ftags::query::Query::Verb::List;
    }
 };
 
@@ -318,6 +344,26 @@ struct action<str_definition>
    static void apply(const Input& /* in */, ftags::query::Query& query)
    {
       query.qualifier = ftags::query::Query::Qualifier::Definition;
+   }
+};
+
+template <>
+struct action<str_projects>
+{
+   template <typename Input>
+   static void apply(const Input& /* in */, ftags::query::Query& query)
+   {
+      query.type = ftags::query::Query::Type::Project;
+   }
+};
+
+template <>
+struct action<str_dependencies>
+{
+   template <typename Input>
+   static void apply(const Input& /* in */, ftags::query::Query& query)
+   {
+      query.type = ftags::query::Query::Type::Dependency;
    }
 };
 

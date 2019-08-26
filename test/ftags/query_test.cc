@@ -152,3 +152,20 @@ TEST(QueryTest, FindDefinitionsOfFunctionInGlobalNamespace)
    ASSERT_TRUE(query.inGlobalNamespace);
    ASSERT_TRUE(query.nameSpace.empty());
 }
+
+TEST(QueryTest, ListProjects)
+{
+   ftags::query::Query query = ftags::query::Query::parse("list projects");
+
+   ASSERT_EQ(query.verb, ftags::query::Query::Verb::List);
+   ASSERT_EQ(query.type, ftags::query::Query::Type::Project);
+}
+
+TEST(QueryTest, ListDependenciesOfTranslationUnit)
+{
+   ftags::query::Query query = ftags::query::Query::parse("list dependencies of path/to/file.c");
+
+   ASSERT_EQ(query.verb, ftags::query::Query::Verb::List);
+   ASSERT_EQ(query.type, ftags::query::Query::Type::Dependency);
+   ASSERT_EQ("path/to/file.c", query.filePath);
+}
