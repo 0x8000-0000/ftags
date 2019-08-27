@@ -64,10 +64,28 @@ class BufferInsertor
 public:
    BufferInsertor(std::byte* buffer, std::size_t size) : m_buffer{buffer}, m_size{size}
    {
+      if (m_buffer == nullptr)
+      {
+         throw("Invalid buffer address");
+      }
+
+      if (m_size == 0)
+      {
+         throw("Invalid buffer size");
+      }
    }
 
    BufferInsertor(std::vector<std::byte>& buffer) : m_buffer{buffer.data()}, m_size{buffer.size()}
    {
+      if (m_buffer == nullptr)
+      {
+         throw("Invalid buffer address");
+      }
+
+      if (m_size == 0)
+      {
+         throw("Invalid buffer size");
+      }
    }
 
    template <typename T>
@@ -143,6 +161,10 @@ class BufferExtractor
 public:
    BufferExtractor(const std::byte* buffer, std::size_t size) : m_buffer{buffer}, m_size{size}
    {
+      if (buffer == nullptr)
+      {
+         throw("Invalid serialization buffer");
+      }
    }
 
    BufferExtractor(std::vector<std::byte>& buffer) : m_buffer{buffer.data()}, m_size{buffer.size()}
