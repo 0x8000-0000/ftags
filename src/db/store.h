@@ -22,6 +22,7 @@
 #include <algorithm>
 #include <iterator>
 #include <map>
+#include <memory>
 #include <set>
 #include <stdexcept>
 #include <vector>
@@ -45,8 +46,8 @@ class Store
 {
 
 public:
-   using iterator        = typename std::vector<T>::iterator;
-   using const_iterator  = typename std::vector<T>::const_iterator;
+   using iterator        = T*;
+   using const_iterator  = const T*;
    using block_size_type = uint32_t;
 
    using key_type = K;
@@ -56,8 +57,8 @@ public:
 
    struct Allocation
    {
-      K                                 key;
-      typename std::vector<T>::iterator iterator;
+      K  key;
+      T* iterator;
    };
 
    Store() = default;
@@ -227,7 +228,7 @@ private:
          throw std::length_error("Exceeded data structure capacity");
       }
 
-      m_segment.emplace_back(std::vector<T>(/* size = */ MaxSegmentSize));
+      m_segment.emplace_back(std::unique_ptr<std::byte[]>(new std::byte[sizeof(T) * MaxSegmentSize]));
 
       const K key{makeKey(segmentsInUse, FirstKeyValue)};
 
@@ -258,7 +259,7 @@ private:
 
    /** Segment of contiguous T, up to (1<<B) elements in size.
     */
-   std::vector<std::vector<T>> m_segment;
+   std::vector<std::unique_ptr<std::byte[]>> m_segment;
 
    /** Maps sizes to block indices
     */
@@ -280,20 +281,21 @@ Store<T, K, SegmentSizeBits>::get(K key) const
    if (key == 0)
    {
       return std::pair<typename Store<T, K, SegmentSizeBits>::const_iterator,
-                       typename Store<T, K, SegmentSizeBits>::const_iterator>(m_segment[0].end(), m_segment[0].end());
+                       typename Store<T, K, SegmentSizeBits>::const_iterator>(nullptr, nullptr);
    }
 
    const block_size_type segmentIndex{getSegmentIndex(key)};
    const block_size_type offsetInSegment{getOffsetInSegment(key)};
 
    const auto& segment{m_segment.at(segmentIndex)};
-   auto        iter{segment.begin()};
-   std::advance(iter, offsetInSegment);
+   const T*    iter{static_cast<T*>(static_cast<void*>(segment.get()))};
+   const T*    segmentEnd = iter + MaxSegmentSize;
+   iter += offsetInSegment;
 
-   assert(iter < segment.end());
+   assert(offsetInSegment < MaxSegmentSize);
 
    return std::pair<typename Store<T, K, SegmentSizeBits>::const_iterator,
-                    typename Store<T, K, SegmentSizeBits>::const_iterator>(iter, segment.end());
+                    typename Store<T, K, SegmentSizeBits>::const_iterator>(iter, segmentEnd);
 }
 
 template <typename T, typename K, unsigned SegmentSizeBits>
@@ -303,20 +305,21 @@ Store<T, K, SegmentSizeBits>::get(K key)
    if (key == 0)
    {
       return std::pair<typename Store<T, K, SegmentSizeBits>::iterator,
-                       typename Store<T, K, SegmentSizeBits>::const_iterator>(m_segment[0].end(), m_segment[0].end());
+                       typename Store<T, K, SegmentSizeBits>::const_iterator>(nullptr, nullptr);
    }
 
    const block_size_type segmentIndex    = getSegmentIndex(key);
    const block_size_type offsetInSegment = getOffsetInSegment(key);
 
-   auto& segment = m_segment.at(segmentIndex);
-   auto  iter    = segment.begin();
-   std::advance(iter, offsetInSegment);
+   auto&    segment = m_segment.at(segmentIndex);
+   T*       iter{static_cast<T*>(static_cast<void*>(segment.get()))};
+   const T* segmentEnd = iter + MaxSegmentSize;
+   iter += offsetInSegment;
 
-   assert(iter < segment.end());
+   assert(offsetInSegment < MaxSegmentSize);
 
    return std::pair<typename Store<T, K, SegmentSizeBits>::iterator,
-                    typename Store<T, K, SegmentSizeBits>::const_iterator>(iter, segment.end());
+                    typename Store<T, K, SegmentSizeBits>::const_iterator>(iter, segmentEnd);
 }
 
 template <typename T, typename K, unsigned SegmentSizeBits>
@@ -352,8 +355,8 @@ typename Store<T, K, SegmentSizeBits>::Allocation Store<T, K, SegmentSizeBits>::
          recordFreeBlock(reminderBlockKey, reminderBlockSize);
       }
 
-      auto iter{m_segment[segmentIndex].begin()};
-      std::advance(iter, offsetInSegment);
+      T* iter{static_cast<T*>(static_cast<void*>(m_segment[segmentIndex].get()))};
+      iter += offsetInSegment;
 
       return Allocation{key, iter};
    }
@@ -451,8 +454,8 @@ Store<T, K, SegmentSizeBits>::extend(K key, block_size_type oldSize, block_size_
       }
 
       auto& segment = m_segment.at(segmentIndex);
-      auto  iter{segment.begin()};
-      std::advance(iter, offsetInSegment + oldSize);
+      T*    iter{static_cast<T*>(static_cast<void*>(segment.get()))};
+      iter += offsetInSegment + oldSize;
 
       return iter;
    }
@@ -609,7 +612,7 @@ void Store<T, K, SegmentSizeBits>::serialize(ftags::BufferInsertor& insertor) co
          insertor << m_segment[ii];
       }
 
-      insertor.serialize(m_segment[segmentCount - 1], spaceUsedInLastSegment);
+      insertor.serialize(static_cast<void*>(m_segment[segmentCount - 1].get()), spaceUsedInLastSegment * sizeof(T));
 
       ftags::Serializer<std::map<K, block_size_type>>::serialize(m_freeBlocksIndex, insertor);
    }
@@ -645,12 +648,12 @@ Store<T, K, SegmentSizeBits> Store<T, K, SegmentSizeBits>::deserialize(ftags::Bu
 
          extractor >> segment;
 
-         retval.m_segment.emplace_back(std::vector<T>(/* size = */ MaxSegmentSize));
+         retval.m_segment.emplace_back(std::unique_ptr<std::byte[]>(new std::byte[sizeof(T) * MaxSegmentSize]));
       }
 
       {
          auto& segment = retval.m_segment.back();
-         extractor.deserialize(segment, spaceUsedInLastSegment);
+         extractor.deserialize(static_cast<void*>(segment.get()), spaceUsedInLastSegment * sizeof(T));
       }
 
       assert(retval.m_freeBlocksIndex.size() == 1);
