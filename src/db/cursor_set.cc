@@ -16,7 +16,7 @@
 
 #include <project.h>
 
-#include <SpookyV2.h>
+#include <spooky.h>
 
 /*
  * CursorSet

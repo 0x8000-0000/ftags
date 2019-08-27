@@ -20,6 +20,8 @@
 #include <flat_map.h>
 #include <store.h>
 
+#include <spooky.h>
+
 #include <functional>
 #include <memory>
 #include <string>
@@ -36,14 +38,14 @@ namespace ftags
 class CharPointerHashingFunctor
 {
 public:
-   size_t operator()(const char* key) const
+   std::size_t operator()(const char* key) const
    {
-      /*
-       * lazy implementation for now
-       */
-      const std::string asString{key};
-      return std::hash<std::string>()(asString);
+      const std::size_t keyLen = std::strlen(key);
+      return SpookyHash::Hash64(key, keyLen, k_hashSeed);
    }
+
+private:
+   static constexpr std::size_t k_hashSeed = 0xfcaa376ab99295b0;
 };
 
 class CharPointerCompareFunctor
@@ -51,7 +53,7 @@ class CharPointerCompareFunctor
 public:
    bool operator()(const char* leftString, const char* rightString) const
    {
-      return 0 == strcmp(leftString, rightString);
+      return 0 == std::strcmp(leftString, rightString);
    }
 };
 

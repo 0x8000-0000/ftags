@@ -16,7 +16,7 @@
 
 #include <record_span.h>
 
-#include <SpookyV2.h>
+#include <spooky.h>
 
 #include <numeric>
 
