@@ -327,7 +327,7 @@ typename Store<T, K, SegmentSizeBits>::Allocation Store<T, K, SegmentSizeBits>::
 {
    if (size >= MaxSegmentSize)
    {
-      throw std::length_error("Can't store objects that large");
+      throw std::length_error(std::string("Can't store objects that large: ") + std::to_string(size));
    }
 
    /*
