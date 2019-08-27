@@ -60,9 +60,9 @@ private:
    };
 
 public:
-   using Store            = ftags::Store<RecordSpan, uint32_t, 20>;
+   using Store            = ftags::Store<RecordSpan, uint32_t, 22>;
    using Hash             = std::uint64_t;
-   using SymbolIndexStore = ftags::Store<uint32_t, uint32_t, 20>;
+   using SymbolIndexStore = ftags::Store<uint32_t, uint32_t, 22>;
 
    RecordSpan() = default;
 
