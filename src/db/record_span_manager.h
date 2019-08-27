@@ -63,14 +63,30 @@ public:
 
    const ftags::RecordSpan& getSpan(Key key) const
    {
-      const auto spanIterPair = m_recordSpanStore.get(key);
-      return *spanIterPair.first;
+      if (key != 0)
+      {
+         const auto spanIterPair = m_recordSpanStore.get(key);
+         return *spanIterPair.first;
+      }
+      else
+      {
+         assert(key != 0);
+         throw("Invalid span key");
+      }
    }
 
    ftags::RecordSpan& getSpan(Key key)
    {
-      auto spanIterPair = m_recordSpanStore.get(key);
-      return *spanIterPair.first;
+      if (key != 0)
+      {
+         auto spanIterPair = m_recordSpanStore.get(key);
+         return *spanIterPair.first;
+      }
+      else
+      {
+         assert(key != 0);
+         throw("Invalid span key");
+      }
    }
 
    /*

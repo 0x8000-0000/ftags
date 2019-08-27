@@ -140,18 +140,22 @@ public:
                                 F                       func,
                                 const SymbolIndexStore& symbolIndexStore) const
    {
-      const auto symbolIndexIter              = symbolIndexStore.get(m_symbolIndexKey);
-      const auto recordsInSymbolKeyOrderBegin = &*symbolIndexIter.first;
-      const auto recordsInSymbolKeyOrderEnd   = recordsInSymbolKeyOrderBegin + m_size;
-
-      const RecordSymbolComparator::KeyWrapper keyWrapper{symbolNameKey};
-
-      const auto keyRange = std::equal_range(
-         recordsInSymbolKeyOrderBegin, recordsInSymbolKeyOrderEnd, keyWrapper, RecordSymbolComparator(m_records));
-
-      for (auto iter = keyRange.first; iter != keyRange.second; ++iter)
+      assert(m_symbolIndexKey != 0);
+      if (m_symbolIndexKey != 0)
       {
-         func(&m_records[*iter]);
+         const auto symbolIndexIter              = symbolIndexStore.get(m_symbolIndexKey);
+         const auto recordsInSymbolKeyOrderBegin = &*symbolIndexIter.first;
+         const auto recordsInSymbolKeyOrderEnd   = recordsInSymbolKeyOrderBegin + m_size;
+
+         const RecordSymbolComparator::KeyWrapper keyWrapper{symbolNameKey};
+
+         const auto keyRange = std::equal_range(
+            recordsInSymbolKeyOrderBegin, recordsInSymbolKeyOrderEnd, keyWrapper, RecordSymbolComparator(m_records));
+
+         for (auto iter = keyRange.first; iter != keyRange.second; ++iter)
+         {
+            func(&m_records[*iter]);
+         }
       }
    }
 
