@@ -156,7 +156,7 @@ TEST(RecordSpanManagerTest, HandleDuplicatesAfterSerialization)
 
       ftags::BufferExtractor extractor{buffer};
       newManager = ftags::RecordSpanManager::deserialize(extractor);
-   };
+   }
 
    ftags::RecordSpan::Store::Key key1 = 0;
 
