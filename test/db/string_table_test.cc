@@ -115,7 +115,7 @@ TEST(StringTableTest, SerializeTwoStrings)
    insertor.assertEmpty();
 
    ftags::BufferExtractor extractor{serializedFormat};
-   ftags::StringTable rec = ftags::StringTable::deserialize(extractor);
+   ftags::StringTable     rec = ftags::StringTable::deserialize(extractor);
    extractor.assertEmpty();
 
    const uint32_t keyForFoo = st.getKey(fooString);
@@ -137,9 +137,9 @@ TEST(StringTableTest, SerializeTwoStringsWithGap)
 {
    ftags::StringTable st;
 
-   const char fooString[] = "foo";
+   const char fooString[]   = "foo";
    const char alphaString[] = "alpha";
-   const char barString[] = "bar";
+   const char barString[]   = "bar";
 
    st.addKey(fooString);
    st.addKey(alphaString);
@@ -156,7 +156,7 @@ TEST(StringTableTest, SerializeTwoStringsWithGap)
    insertor.assertEmpty();
 
    ftags::BufferExtractor extractor{serializedFormat};
-   ftags::StringTable rec = ftags::StringTable::deserialize(extractor);
+   ftags::StringTable     rec = ftags::StringTable::deserialize(extractor);
    extractor.assertEmpty();
 
    const uint32_t keyForFoo = st.getKey(fooString);
@@ -201,16 +201,54 @@ TEST(StringTableTest, MergeStringTables)
    ASSERT_EQ(oldKeyForFoo, left.getKey(fooString));
    ASSERT_EQ(oldKeyForBar, left.getKey(barString));
 
-   Key barKeyInRight = right.getKey(barString);
+   Key  barKeyInRight      = right.getKey(barString);
    auto barKeyInMergedIter = mapping.lookup(barKeyInRight);
    ASSERT_NE(mapping.none(), barKeyInMergedIter);
    Key barKeyInMerged = barKeyInMergedIter->second;
    ASSERT_STREQ(barString, left.getString(barKeyInMerged));
 
-   Key bazKeyInRight = right.getKey(bazString);
+   Key  bazKeyInRight      = right.getKey(bazString);
    auto bazKeyInMergedIter = mapping.lookup(bazKeyInRight);
    ASSERT_NE(mapping.none(), bazKeyInMergedIter);
    Key bazKeyInMerged = bazKeyInMergedIter->second;
    ASSERT_STREQ(bazString, left.getString(bazKeyInMerged));
 }
 
+TEST(StringTableTest, AddOneMillionStrings)
+{
+   using Key = ftags::StringTable::Key;
+
+   ftags::StringTable stringTable;
+
+   std::string input = "abcdefghijlkmnopqrstuvxyz";
+
+   for (int ii = 0; ii < 1000 * 1000; ii++)
+   {
+      stringTable.addKey(input.data());
+      std::next_permutation(input.begin(), input.end());
+   }
+
+   const size_t           serializedSize = stringTable.computeSerializedSize();
+   std::vector<std::byte> buffer(/* size = */ serializedSize);
+
+   ftags::BufferInsertor insertor{buffer};
+   stringTable.serialize(insertor);
+   insertor.assertEmpty();
+
+   ftags::BufferExtractor extractor{buffer};
+   ftags::StringTable     rehydrated = ftags::StringTable::deserialize(extractor);
+
+   std::string test = "abcdefghijlkmnopqrstuvxyz";
+
+   for (int ii = 0; ii < 1000 * 1000; ii++)
+   {
+      Key originalKey   = stringTable.getKey(test.data());
+      Key rehydratedKey = rehydrated.getKey(test.data());
+
+      ASSERT_NE(originalKey, 0);
+
+      ASSERT_EQ(rehydratedKey, originalKey);
+
+      std::next_permutation(test.begin(), test.end());
+   }
+}
