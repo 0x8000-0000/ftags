@@ -99,11 +99,13 @@ std::size_t ftags::Serializer<std::multimap<uint32_t, uint32_t>>::computeSeriali
           val.size() * (sizeof(map_uu::key_type) + sizeof(map_uu::mapped_type));
 }
 
+const std::string_view k_std_multimap_uint32_uint32_SerializationSignature{"eeto2jaed!ie2Ou"};
+
 template <>
 void ftags::Serializer<std::multimap<uint32_t, uint32_t>>::serialize(const std::multimap<uint32_t, uint32_t>& val,
                                                                      ftags::BufferInsertor& insertor)
 {
-   ftags::SerializedObjectHeader header = {};
+   ftags::SerializedObjectHeader header = {k_std_multimap_uint32_uint32_SerializationSignature.data()};
    insertor << header;
 
    insertor << val.size();
@@ -122,6 +124,10 @@ ftags::Serializer<std::multimap<uint32_t, uint32_t>>::deserialize(ftags::BufferE
 
    ftags::SerializedObjectHeader header = {};
    extractor >> header;
+
+   assert(memcmp(header.m_objectType,
+                 k_std_multimap_uint32_uint32_SerializationSignature.data(),
+                 sizeof(header.m_objectType)) == 0);
 
    std::multimap<uint32_t, uint32_t>::size_type mapSize = 0;
    extractor >> mapSize;
