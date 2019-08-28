@@ -268,6 +268,10 @@ private:
    /** Maps free block indices to the block size
     */
    std::map<K, block_size_type> m_freeBlocksIndex;
+
+   /** Serialization signature
+    */
+   static constexpr std::string_view k_serializationSignature{"thooh/eiR4sho1v"};
 };
 
 /*
@@ -596,7 +600,7 @@ std::size_t Store<T, K, SegmentSizeBits>::computeSerializedSize() const
 template <typename T, typename K, unsigned SegmentSizeBits>
 void Store<T, K, SegmentSizeBits>::serialize(ftags::BufferInsertor& insertor) const
 {
-   ftags::SerializedObjectHeader header{"Store<T, K, SegmentSizeBits>"};
+   ftags::SerializedObjectHeader header{k_serializationSignature.data()};
    insertor << header;
 
    const uint64_t segmentCount = m_segment.size();
@@ -609,7 +613,7 @@ void Store<T, K, SegmentSizeBits>::serialize(ftags::BufferInsertor& insertor) co
 
       for (uint64_t ii = 0; ii < (segmentCount - 1); ii++)
       {
-         insertor << m_segment[ii];
+         insertor.serialize(static_cast<void*>(m_segment[ii].get()), MaxSegmentSize * sizeof(T));
       }
 
       insertor.serialize(static_cast<void*>(m_segment[segmentCount - 1].get()), spaceUsedInLastSegment * sizeof(T));
@@ -631,6 +635,8 @@ Store<T, K, SegmentSizeBits> Store<T, K, SegmentSizeBits>::deserialize(ftags::Bu
    ftags::SerializedObjectHeader header;
    extractor >> header;
 
+   assert(memcmp(header.m_objectType, k_serializationSignature.data(), sizeof(header.m_objectType)) == 0);
+
    uint64_t segmentCount = 0;
    extractor >> segmentCount;
 
@@ -639,27 +645,21 @@ Store<T, K, SegmentSizeBits> Store<T, K, SegmentSizeBits>::deserialize(ftags::Bu
 
    if (segmentCount)
    {
-
-      retval.addSegment();
-
       for (uint64_t ii = 0; ii < (segmentCount - 1); ii++)
       {
+         retval.m_segment.emplace_back(std::unique_ptr<std::byte[]>(new std::byte[MaxSegmentSize * sizeof(T)]));
          auto& segment = retval.m_segment.back();
-
-         extractor >> segment;
-
-         retval.m_segment.emplace_back(std::unique_ptr<std::byte[]>(new std::byte[sizeof(T) * MaxSegmentSize]));
+         extractor.deserialize(static_cast<void*>(segment.get()), MaxSegmentSize * sizeof(T));
       }
 
       {
+         retval.m_segment.emplace_back(std::unique_ptr<std::byte[]>(new std::byte[MaxSegmentSize * sizeof(T)]));
          auto& segment = retval.m_segment.back();
          extractor.deserialize(static_cast<void*>(segment.get()), spaceUsedInLastSegment * sizeof(T));
       }
 
-      assert(retval.m_freeBlocksIndex.size() == 1);
-      assert(retval.m_freeBlocks.size() == 1);
-
-      retval.m_freeBlocks.clear();
+      assert(retval.m_freeBlocksIndex.size() == 0);
+      assert(retval.m_freeBlocks.size() == 0);
 
       retval.m_freeBlocksIndex = ftags::Serializer<std::map<K, block_size_type>>::deserialize(extractor);
 
