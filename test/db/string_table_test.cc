@@ -214,7 +214,7 @@ TEST(StringTableTest, MergeStringTables)
    ASSERT_STREQ(bazString, left.getString(bazKeyInMerged));
 }
 
-TEST(StringTableTest, AddOneMillionStrings)
+TEST(StringTableTest, AddTenThousandStrings)
 {
    using Key = ftags::StringTable::Key;
 
@@ -222,7 +222,9 @@ TEST(StringTableTest, AddOneMillionStrings)
 
    std::string input = "abcdefghijlkmnopqrstuvxyz";
 
-   for (int ii = 0; ii < 1000 * 1000; ii++)
+   const int testSize = 10 * 1000;
+
+   for (int ii = 0; ii < testSize; ii++)
    {
       stringTable.addKey(input.data());
       std::next_permutation(input.begin(), input.end());
@@ -240,7 +242,7 @@ TEST(StringTableTest, AddOneMillionStrings)
 
    std::string test = "abcdefghijlkmnopqrstuvxyz";
 
-   for (int ii = 0; ii < 1000 * 1000; ii++)
+   for (int ii = 0; ii < testSize; ii++)
    {
       Key originalKey   = stringTable.getKey(test.data());
       Key rehydratedKey = rehydrated.getKey(test.data());

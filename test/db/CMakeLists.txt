@@ -23,6 +23,14 @@ target_link_libraries (string_table_test PRIVATE db-util)
 
 gtest_discover_tests (string_table_test)
 
+add_executable (long_string_table_test long_string_table_test.cc)
+target_link_libraries (long_string_table_test PRIVATE project_options project_warnings)
+target_link_libraries (long_string_table_test PRIVATE gtest_main)
+target_link_libraries (long_string_table_test PRIVATE db-util)
+
+# don't run the long tests by default
+# gtest_discover_tests (long_string_table_test)
+
 add_executable (flat_map_test flat_map_test.cc)
 target_link_libraries (flat_map_test PRIVATE project_options project_warnings)
 target_link_libraries (flat_map_test PRIVATE gtest_main)
