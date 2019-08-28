@@ -478,3 +478,31 @@ TEST(TagsIndexTest, MergeProjectDatabases)
    const std::vector<const ftags::Record*> allArg = mergedDb.findSymbol("arg");
    ASSERT_EQ(6, allArg.size());
 }
+
+TEST(TagsIndexTest, IdentifySymbols)
+{
+   ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
+
+   const auto path = std::filesystem::current_path();
+
+   const std::vector<const char*> arguments = {
+      "-Wall",
+      "-Wextra",
+      "-isystem",
+      "/usr/include",
+   };
+
+   const auto libPath = path / "test" / "db" / "data" / "multi-module" / "lib.cc";
+   ASSERT_TRUE(std::filesystem::exists(libPath));
+   tagsDb.parseOneFile(libPath, arguments);
+
+   const auto testPath = path / "test" / "db" / "data" / "multi-module" / "test.cc";
+   ASSERT_TRUE(std::filesystem::exists(testPath));
+   tagsDb.parseOneFile(testPath, arguments);
+
+   const std::vector<const ftags::Record*> line3Records = tagsDb.identifySymbol(libPath.string(), 3, 5);
+   ASSERT_EQ(2, line3Records.size());
+
+   const std::vector<const ftags::Record*> line11Records = tagsDb.identifySymbol(libPath.string(), 11, 14);
+   ASSERT_EQ(1, line11Records.size());
+}

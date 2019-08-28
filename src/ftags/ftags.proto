@@ -31,6 +31,7 @@ message Command
       CLASS = 1;
       VARIABLE = 2;
       PARAMETER = 3;
+      IDENTIFY = 4;
    }
 
    QueryType queryType = 3;
@@ -40,8 +41,10 @@ message Command
    string symbolName = 6;
    string namespaceName = 7;
    string fileName = 8;
+   uint32 lineNumber = 9;
+   uint32 columnNumber = 10;
 
-   repeated string translationUnit = 10;
+   repeated string translationUnit = 20;
 }
 
 message Status

@@ -233,6 +233,32 @@ void ftags::RecordSpan::setRecordsFrom(const std::vector<ftags::Record>& other,
    copyRecordsFrom(other, symbolIndexStore);
 }
 
+ftags::StringTable::Key ftags::RecordSpan::getFileKey() const
+{
+   if (m_records == nullptr)
+   {
+      assert(m_size == 0);
+      return 0;
+   }
+
+   if (m_size != 0)
+   {
+      const ftags::StringTable::Key fileKey = m_records[0].location.fileNameKey;
+
+      for (uint32_t ii = 1; ii < m_size; ii++)
+      {
+         assert(fileKey == m_records[ii].location.fileNameKey);
+      }
+
+      return fileKey;
+   }
+   else
+   {
+      assert(false);
+      return 0;
+   }
+}
+
 #if (!defined(NDEBUG)) && (defined(ENABLE_THOROUGH_VALIDITY_CHECKS))
 void ftags::RecordSpan::assertValid() const
 {

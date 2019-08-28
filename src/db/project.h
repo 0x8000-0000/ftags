@@ -198,6 +198,8 @@ public:
    Record* getDefinition(Record* record) const;
    Record* getDeclaration(Record* record) const;
 
+   std::vector<const Record*>
+           identifySymbol(const std::string& fileName, unsigned lineNumber, unsigned columnNumber) const;
    Record* followLocation(const Record::Location& location) const;
    Record* followLocation(const Record::Location& location, int endLine, int endColumn) const;
 
@@ -472,6 +474,20 @@ private:
       if (key)
       {
          results = m_recordSpanManager.filterRecordsWithSymbol(key, selectRecord);
+      }
+
+      return results;
+   }
+
+   template <typename F>
+   std::vector<const Record*> filterRecordsFromFile(const std::string& fileName, F selectRecord) const
+   {
+      std::vector<const ftags::Record*> results;
+
+      const auto key = m_fileNameTable.getKey(fileName.data());
+      if (key)
+      {
+         results = m_recordSpanManager.filterRecordsFromFile(key, selectRecord);
       }
 
       return results;

@@ -193,13 +193,19 @@ TEST(RecordSpanManagerTest, RecordIteration)
       ftags::Record four  = {};
       ftags::Record five  = {};
 
-      one.symbolNameKey        = 1;
-      two.symbolNameKey        = 2;
-      two.location.fileNameKey = 45;
-      three.symbolNameKey      = 3;
-      four.symbolNameKey       = 3;
-      five.symbolNameKey       = 2;
-      two.location.fileNameKey = 25;
+      one.symbolNameKey   = 1;
+      two.symbolNameKey   = 2;
+      three.symbolNameKey = 3;
+      four.symbolNameKey  = 3;
+      five.symbolNameKey  = 2;
+
+      // clang-format off
+      one.location.fileNameKey =
+         two.location.fileNameKey =
+         three.location.fileNameKey =
+         four.location.fileNameKey =
+         five.location.fileNameKey = 25;
+      // clang-format on
 
       input.push_back(one);
       input.push_back(two);
@@ -217,10 +223,15 @@ TEST(RecordSpanManagerTest, RecordIteration)
       ftags::Record two   = {};
       ftags::Record three = {};
 
-      one.symbolNameKey        = 1;
-      two.symbolNameKey        = 2;
-      two.location.fileNameKey = 99;
-      three.symbolNameKey      = 3;
+      one.symbolNameKey   = 1;
+      two.symbolNameKey   = 2;
+      three.symbolNameKey = 3;
+
+      // clang-format off
+      one.location.fileNameKey =
+         two.location.fileNameKey = 
+         three.location.fileNameKey = 99;
+      // clang-format on
 
       input2.push_back(one);
       input2.push_back(two);
@@ -255,11 +266,17 @@ TEST(RecordSpanManagerTest, RecordIterationAfterSerialization)
 
       one.symbolNameKey         = 1;
       two.symbolNameKey         = 2;
-      two.location.fileNameKey  = 45;
       three.symbolNameKey       = 3;
       four.symbolNameKey        = 3;
       five.symbolNameKey        = 2;
-      five.location.fileNameKey = 25;
+
+      // clang-format off
+      one.location.fileNameKey =
+         two.location.fileNameKey =
+         three.location.fileNameKey =
+         four.location.fileNameKey =
+         five.location.fileNameKey = 25;
+      // clang-format on
 
       input.push_back(one);
       input.push_back(two);
@@ -289,8 +306,13 @@ TEST(RecordSpanManagerTest, RecordIterationAfterSerialization)
 
       one.symbolNameKey        = 1;
       two.symbolNameKey        = 2;
-      two.location.fileNameKey = 99;
       three.symbolNameKey      = 3;
+
+      // clang-format off
+      one.location.fileNameKey =
+         two.location.fileNameKey = 
+         three.location.fileNameKey = 99;
+      // clang-format on
 
       input2.push_back(one);
       input2.push_back(two);

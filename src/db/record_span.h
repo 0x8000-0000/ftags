@@ -97,6 +97,8 @@ public:
       return m_key;
    }
 
+   ftags::StringTable::Key getFileKey() const;
+
    ftags::Record::Store::Key getSize() const
    {
       return m_size;

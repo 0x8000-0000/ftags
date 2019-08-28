@@ -222,6 +222,14 @@ std::vector<const ftags::Record*> ftags::ProjectDb::findSymbol(const std::string
       symbolName, [symbolType](const Record* record) { return record->attributes.type == symbolType; });
 }
 
+std::vector<const ftags::Record*>
+ftags::ProjectDb::identifySymbol(const std::string& fileName, unsigned lineNumber, unsigned columnNumber) const
+{
+   const auto key = m_fileNameTable.getKey(fileName.data());
+
+   return m_recordSpanManager.findClosestRecord(key, lineNumber, columnNumber);
+}
+
 std::vector<const ftags::Record*> ftags::ProjectDb::dumpTranslationUnit(const std::string& fileName) const
 {
    const StringTable::Key                   fileKey            = m_fileNameTable.getKey(fileName.data());

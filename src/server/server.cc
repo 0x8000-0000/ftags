@@ -105,6 +105,45 @@ void dispatchFindAll(zmq::socket_t& socket, const ftags::ProjectDb* projectDb, c
    socket.send(resultsMessage);
 }
 
+void dispatchQueryIdentify(zmq::socket_t&          socket,
+                           const ftags::ProjectDb* projectDb,
+                           const std::string&      fileName,
+                           unsigned                lineNumber,
+                           unsigned                columnNumber)
+{
+   ftags::Status status{};
+   status.set_timestamp(getTimeStamp());
+
+   spdlog::info("Received identify {}:{}:{} in project {}", fileName, lineNumber, columnNumber, projectDb->getName());
+   const std::vector<const ftags::Record*> queryResultsVector =
+      projectDb->identifySymbol(fileName, lineNumber, columnNumber);
+   spdlog::info("Found {} records for {}:{}:{}", queryResultsVector.size(), fileName, lineNumber, columnNumber);
+
+   std::string serializedStatus;
+
+   if (queryResultsVector.empty())
+   {
+      status.set_type(ftags::Status_Type::Status_Type_QUERY_NO_RESULTS);
+   }
+   else
+   {
+      status.set_type(ftags::Status_Type::Status_Type_QUERY_RESULTS);
+   }
+
+   const std::size_t headerSize = status.ByteSizeLong();
+   zmq::message_t    reply(headerSize);
+   status.SerializeToArray(reply.data(), static_cast<int>(headerSize));
+   socket.send(reply, ZMQ_SNDMORE);
+
+   const ftags::CursorSet queryResultsCursor = projectDb->inflateRecords(queryResultsVector);
+
+   const std::size_t     payloadSize = queryResultsCursor.computeSerializedSize();
+   zmq::message_t        resultsMessage(payloadSize);
+   ftags::BufferInsertor insertor(static_cast<std::byte*>(resultsMessage.data()), payloadSize);
+   queryResultsCursor.serialize(insertor);
+   socket.send(resultsMessage);
+}
+
 void dispatchDumpTranslationUnit(zmq::socket_t&          socket,
                                  const ftags::ProjectDb* projectDb,
                                  const std::string&      fileName)
@@ -331,7 +370,16 @@ int main(int argc, char* argv[])
          }
          else
          {
-            dispatchFindAll(socket, projectDb, command.symbolname());
+            switch (command.querytype())
+            {
+            case ftags::Command_QueryType::Command_QueryType_IDENTIFY:
+               dispatchQueryIdentify(
+                  socket, projectDb, command.filename(), command.linenumber(), command.columnnumber());
+               break;
+            default:
+               dispatchFindAll(socket, projectDb, command.symbolname());
+               break;
+            }
          }
          break;
 

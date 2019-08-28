@@ -50,7 +50,8 @@ ftags::RecordSpanManager::Key ftags::RecordSpanManager::addSpan(const std::vecto
    return alloc.key;
 }
 
-void ftags::RecordSpanManager::indexRecordSpan(const ftags::RecordSpan& recordSpan, ftags::RecordSpan::Store::Key key)
+void ftags::RecordSpanManager::indexRecordSpan(const ftags::RecordSpan&      recordSpan,
+                                               ftags::RecordSpan::Store::Key recordSpanKey)
 {
    // gather all unique symbols in this record span
    std::set<ftags::StringTable::Key> symbolKeys;
@@ -59,9 +60,11 @@ void ftags::RecordSpanManager::indexRecordSpan(const ftags::RecordSpan& recordSp
    /*
     * add a mapping from this symbol to this record span
     */
-   std::for_each(symbolKeys.cbegin(), symbolKeys.cend(), [this, key](ftags::StringTable::Key symbolKey) {
-      m_symbolIndex.emplace(symbolKey, key);
+   std::for_each(symbolKeys.cbegin(), symbolKeys.cend(), [this, recordSpanKey](ftags::StringTable::Key symbolKey) {
+      m_symbolIndex.emplace(symbolKey, recordSpanKey);
    });
+
+   m_fileIndex.emplace(recordSpan.getFileKey(), recordSpanKey);
 }
 
 std::size_t ftags::RecordSpanManager::computeSerializedSize() const
@@ -123,6 +126,14 @@ std::set<ftags::StringTable::Key> ftags::RecordSpanManager::getSymbolKeys() cons
 std::size_t ftags::RecordSpanManager::getSymbolCount() const
 {
    return getSymbolKeys().size();
+}
+
+std::vector<const ftags::Record*> ftags::RecordSpanManager::findClosestRecord(StringTable::Key fileNameKey,
+                                                                              unsigned         lineNumber,
+                                                                              unsigned /* columnNumber */) const
+{
+   return filterRecordsFromFile(fileNameKey,
+                                [lineNumber](const Record* record) { return record->location.line == lineNumber; });
 }
 
 #if (!defined(NDEBUG)) && (defined(ENABLE_THOROUGH_VALIDITY_CHECKS))

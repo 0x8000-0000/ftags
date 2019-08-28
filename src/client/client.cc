@@ -98,6 +98,74 @@ void dispatchFindAll(zmq::socket_t&     socket,
    }
 }
 
+void dispatchIdentifySymbol(zmq::socket_t&     socket,
+                            const std::string& projectName,
+                            const std::string& dirName,
+                            const std::string& fileName,
+                            unsigned           lineNumber,
+                            unsigned           columnNumber)
+{
+   if (beVerbose)
+   {
+      std::cout << fmt::format("Identifying symbol at {}:{}:{}\n", fileName, lineNumber, columnNumber);
+   }
+
+   ftags::Command command{};
+   command.set_source("client");
+   std::string serializedCommand;
+
+   command.set_type(ftags::Command::Type::Command_Type_QUERY);
+   command.set_querytype(ftags::Command_QueryType_IDENTIFY);
+   command.set_projectname(projectName);
+   command.set_directoryname(dirName);
+   command.set_filename(fileName);
+   command.set_linenumber(lineNumber);
+   command.set_columnnumber(columnNumber);
+   command.SerializeToString(&serializedCommand);
+
+   zmq::message_t request(serializedCommand.size());
+   memcpy(request.data(), serializedCommand.data(), serializedCommand.size());
+   socket.send(request);
+
+   //  Get the reply.
+   zmq::message_t reply;
+   socket.recv(&reply);
+
+   ftags::Status status;
+   status.ParseFromArray(reply.data(), static_cast<int>(reply.size()));
+
+   if (status.type() == ftags::Status_Type::Status_Type_QUERY_RESULTS)
+   {
+      zmq::message_t resultsMessage;
+      socket.recv(&resultsMessage);
+
+      ftags::BufferExtractor extractor(static_cast<std::byte*>(resultsMessage.data()), resultsMessage.size());
+      const ftags::CursorSet output = ftags::CursorSet::deserialize(extractor);
+      if (beVerbose)
+      {
+         std::cout << fmt::format("Received {} results\n", output.size());
+      }
+
+      for (auto iter = output.begin(); iter != output.end(); ++iter)
+      {
+         const ftags::Cursor cursor = output.inflateRecord(*iter);
+
+         std::cout << cursor.location.fileName << ':' << cursor.location.line << ':' << cursor.location.column << "  "
+                   << cursor.attributes.getRecordFlavor() << ' ' << cursor.attributes.getRecordType() << " >> "
+                   << cursor.symbolName << std::endl;
+      }
+   }
+   else if (status.type() == ftags::Status_Type::Status_Type_UNKNOWN_PROJECT)
+   {
+      std::cout << "Unknown project: '" << projectName << "'" << std::endl;
+
+      for (int ii = 0; ii < status.remarks_size(); ii++)
+      {
+         std::cout << status.remarks(ii) << std::endl;
+      }
+   }
+}
+
 void dispatchDumpTranslationUnit(zmq::socket_t&     socket,
                                  const std::string& projectName,
                                  const std::string& dirName,
@@ -277,6 +345,10 @@ int main(int argc, char* argv[])
    else if (query.verb == ftags::query::Query::Verb::Find)
    {
       dispatchFindAll(socket, projectName, dirName, query.symbolName);
+   }
+   else if (query.verb == ftags::query::Query::Verb::Identify)
+   {
+      dispatchIdentifySymbol(socket, projectName, dirName, query.filePath, query.lineNumber, query.columnNumber);
    }
    else if (query.verb == ftags::query::Query::Verb::Dump)
    {

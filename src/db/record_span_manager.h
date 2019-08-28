@@ -31,6 +31,8 @@ class RecordSpanManager
     */
    Index m_symbolIndex;
 
+   Index m_fileIndex;
+
 public:
    RecordSpanManager() = default;
 
@@ -157,6 +159,31 @@ public:
             }
          });
    }
+
+   template <typename F>
+   std::vector<const Record*> filterRecordsFromFile(StringTable::Key fileNameKey, F selectRecord) const
+   {
+      std::vector<const ftags::Record*> results;
+      if (fileNameKey)
+      {
+         const auto range = m_fileIndex.equal_range(fileNameKey);
+         for (auto iter = range.first; iter != range.second; ++iter)
+         {
+            const RecordSpan& recordSpan = getSpan(iter->second);
+
+            recordSpan.forEachRecord([&results, selectRecord](const Record* record) {
+               if (selectRecord(record))
+               {
+                  results.push_back(record);
+               }
+            });
+         }
+      }
+      return results;
+   }
+
+   std::vector<const Record*>
+   findClosestRecord(StringTable::Key fileNameKey, unsigned lineNumber, unsigned columnNumber) const;
 
    std::size_t getRecordCount() const
    {
