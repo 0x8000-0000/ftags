@@ -18,7 +18,7 @@ int main(int argc, char* argv[])
       arg = test::function(arg);
    }
 
-   std::cout << arg << std::endl;
+   std::cout << arg << ' ' << DOUBLY_SO(arg) << std::endl;
 
    return 0;
 }
