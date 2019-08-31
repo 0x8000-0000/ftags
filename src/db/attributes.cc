@@ -170,26 +170,37 @@ std::string ftags::Attributes::getRecordType() const
    case ftags::SymbolType::ReinterpretCastExpression:
    case ftags::SymbolType::ConstCastExpression:
    case ftags::SymbolType::FunctionalCastExpression:
+      return "Cast";
 
    case ftags::SymbolType::TypeidExpression:
    case ftags::SymbolType::BoolLiteralExpression:
-   case ftags::SymbolType::NullPtrLiteralExpression:
-   case ftags::SymbolType::ThisExpression:
    case ftags::SymbolType::ThrowExpression:
 
    case ftags::SymbolType::NewExpression:
    case ftags::SymbolType::DeleteExpression:
 
-   case ftags::SymbolType::LambdaExpression:
    case ftags::SymbolType::FixedPointLiteral:
 
-   case ftags::SymbolType::MacroDefinition:
-   case ftags::SymbolType::MacroExpansion:
-   case ftags::SymbolType::InclusionDirective:
-
    case ftags::SymbolType::TypeAliasTemplateDecl:
-
       return "Something";
+
+   case ftags::SymbolType::ThisExpression:
+      return "this";
+
+   case ftags::SymbolType::NullPtrLiteralExpression:
+      return "Nullptr";
+
+   case ftags::SymbolType::LambdaExpression:
+      return "Lambda";
+
+   case ftags::SymbolType::InclusionDirective:
+      return "Include";
+
+   case ftags::SymbolType::MacroExpansion:
+      return "MacroExp";
+
+   case ftags::SymbolType::MacroDefinition:
+      return "MacroDef";
 
    default:
       return "Unknown";
