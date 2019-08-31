@@ -357,6 +357,7 @@ int main(int argc, char* argv[])
          command.set_type(ftags::Command::Type::Command_Type_QUERY_STATISTICS);
          command.set_projectname(projectName);
          command.set_directoryname(dirName);
+         command.set_symbolname(query.symbolName);
          const std::size_t requestSize = command.ByteSizeLong();
          zmq::message_t    request(requestSize);
          command.SerializeToArray(request.data(), static_cast<int>(requestSize));

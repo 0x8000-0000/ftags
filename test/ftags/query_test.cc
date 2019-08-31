@@ -177,10 +177,11 @@ TEST(QueryTest, ShutdownServer)
    ASSERT_EQ(query.verb, ftags::query::Query::Verb::Shutdown);
 }
 
-TEST(QueryTest, DumpStats)
+TEST(QueryTest, DumpGeneralStats)
 {
-   ftags::query::Query query("dump statistics");
+   ftags::query::Query query("dump general statistics");
 
    ASSERT_EQ(query.verb, ftags::query::Query::Verb::Dump);
    ASSERT_EQ(query.type, ftags::query::Query::Type::Statistics);
+   ASSERT_EQ(query.symbolName, "general");
 }

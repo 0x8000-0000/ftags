@@ -165,7 +165,7 @@ struct shutdown_server : pegtl::if_must<key_shutdown, pegtl::eof>
 {
 };
 
-struct dump_stats : pegtl::if_must<key_dump, sep, str_statistics, pegtl::eof>
+struct dump_stats : pegtl::if_must<key_dump, sep, symbol_name, sep, str_statistics, pegtl::eof>
 {
 };
 

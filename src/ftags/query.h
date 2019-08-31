@@ -77,8 +77,8 @@ struct Query
    std::string pathFragment;
 
    std::string filePath;
-   unsigned    lineNumber;
-   unsigned    columnNumber;
+   unsigned    lineNumber   = 0;
+   unsigned    columnNumber = 0;
 
    Query() = default;
    Query(std::string_view input);
