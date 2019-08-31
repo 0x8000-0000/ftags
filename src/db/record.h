@@ -256,6 +256,59 @@ struct Record
 
 static_assert(sizeof(Record) == 32, "sizeof(Record) exceeds 32 bytes");
 
+/*
+ * locationFileNameKey moved to owning span
+ * locationLine moved to owning span
+ *
+ * store namespace symbols separately to save 12 bits
+ */
+struct CompactRecord
+{
+   uint32_t symbolNameKey : 28; // 268,435,456 values
+   uint32_t namespaceKey : 16;  // 65,536 values
+
+   // uint32_t locationFileNameKey : 18;     // 262,144
+   uint32_t locationLineOffset : 10; // 1,048,576
+   uint32_t locationColumn : 12;     // 4,096
+
+   uint32_t definitionFileNameKey : 18; // 262,144
+   uint32_t definitionLine : 20;
+   uint32_t definitionColumn : 12;
+
+   /* Attributes */
+
+   uint32_t symbolType : 10;
+
+   uint32_t isDeclaration : 1;
+   uint32_t isDefinition : 1;
+   uint32_t isUse : 1;
+   uint32_t isOverload : 1;
+
+   uint32_t isReference : 1;
+   uint32_t isExpression : 1;
+
+   uint32_t isArray : 1;
+   uint32_t isConstant : 1;
+   uint32_t isGlobal : 1;
+   uint32_t isMember : 1;
+
+   uint32_t isCast : 1;
+   uint32_t isParameter : 1;
+   uint32_t isConstructed : 1;
+   uint32_t isDestructed : 1;
+
+   uint32_t isThrown : 1;
+
+   uint32_t isFromMainFile : 1;
+   uint32_t isDefinedInMainFile : 1;
+
+   uint32_t isNamespaceRef : 1;
+
+   uint32_t freeBits : 4;
+};
+
+static_assert(sizeof(CompactRecord) == 20, "sizeof(CompactRecord) exceeds 20 bytes");
+
 } // namespace ftags
 
 #endif // FTAGS_DB_RECORD_H_INCLUDED
