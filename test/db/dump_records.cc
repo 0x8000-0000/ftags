@@ -72,11 +72,11 @@ int main(int argc, char* argv[])
       "--gcc-toolchain=/usr",
    };
 
-   const auto path = std::filesystem::current_path();
+   const auto canonicalPath = std::filesystem::canonical(std::filesystem::current_path());
 
-   ftags::ProjectDb                         tagsDb{/* name = */ projectName, /* rootDirectory = */ path.string()};
+   ftags::ProjectDb tagsDb{/* name = */ projectName, /* rootDirectory = */ canonicalPath.string()};
    const ftags::ProjectDb::TranslationUnit& translationUnit =
-      tagsDb.parseOneFile(inputFileName, arguments, indexEverything);
+      tagsDb.parseOneFile(std::filesystem::canonical(inputFileName).string(), arguments, indexEverything);
 
    if (!dumpFileName.empty())
    {
