@@ -299,7 +299,7 @@ static void getSymbolType(CXCursor clangCursor, ftags::Attributes& attributes)
       break;
    }
 
-   attributes.type = symbolType;
+   attributes.setType(symbolType);
 }
 
 struct TranslationUnitAccumulator
@@ -376,7 +376,7 @@ void TranslationUnitAccumulator::processCursor(CXCursor clangCursor)
 
    getSymbolType(clangCursor, cursor.attributes);
 
-   if (cursor.attributes.type == ftags::SymbolType::Undefined)
+   if (cursor.attributes.getType() == ftags::SymbolType::Undefined)
    {
 #if 0
       enum CXCursorKind cursorKind = clang_getCursorKind(clangCursor);

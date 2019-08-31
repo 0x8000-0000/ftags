@@ -87,13 +87,13 @@ void ftags::ProjectDb::TranslationUnit::addCursor(const ftags::Cursor&      curs
                                                   ftags::StringTable::Key   referencedFileNameKey,
                                                   ftags::RecordSpanManager& recordSpanManager)
 {
-   if (cursor.attributes.type == ftags::SymbolType::DeclarationReferenceExpression)
+   if (cursor.attributes.getType() == ftags::SymbolType::DeclarationReferenceExpression)
    {
       assert(!m_currentSpan.empty());
 
       ftags::Record& oldRecord = m_currentSpan.back();
 
-      if (oldRecord.attributes.type == ftags::SymbolType::FunctionCallExpression)
+      if (oldRecord.attributes.getType() == ftags::SymbolType::FunctionCallExpression)
       {
          if (oldRecord.symbolNameKey == symbolNameKey)
          {
@@ -103,7 +103,7 @@ void ftags::ProjectDb::TranslationUnit::addCursor(const ftags::Cursor&      curs
       }
    }
 
-   if (cursor.attributes.type == ftags::SymbolType::NamespaceReference)
+   if (cursor.attributes.getType() == ftags::SymbolType::NamespaceReference)
    {
       assert(!m_currentSpan.empty());
 

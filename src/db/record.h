@@ -116,10 +116,15 @@ enum class SymbolType : uint16_t
    InclusionDirective = 503,
 
    TypeAliasTemplateDecl = 601,
+
+   LastValue,
 };
+
+static_assert(static_cast<unsigned>(SymbolType::LastValue) < 1023, "SymbolTypeDeclaration exceeds 10 bits");
+
 struct Attributes
 {
-   SymbolType type : 16;
+   uint32_t type : 10;
 
    uint32_t isDeclaration : 1;
    uint32_t isDefinition : 1;
@@ -146,7 +151,17 @@ struct Attributes
 
    uint32_t isNamespaceRef : 1;
 
-   uint32_t freeBits : 22;
+   uint32_t freeBits : 28;
+
+   void setType(enum SymbolType type_)
+   {
+      type = static_cast<uint32_t>(type_);
+   }
+
+   SymbolType getType() const
+   {
+      return static_cast<SymbolType>(type);
+   }
 
    std::string getRecordType() const;
 
@@ -209,7 +224,7 @@ struct Record
 
    SymbolType getType() const
    {
-      return attributes.type;
+      return attributes.getType();
    }
 
    void setLocationFileKey(FileNameKey key)

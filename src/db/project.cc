@@ -187,7 +187,7 @@ std::vector<const ftags::Record*> ftags::ProjectDb::getFunctions() const
    {
       translationUnit.forEachRecord(
          [&functions](const Record* record) {
-            if (record->attributes.type == SymbolType::FunctionDeclaration)
+            if (record->attributes.getType() == SymbolType::FunctionDeclaration)
             {
                functions.push_back(record);
             }
@@ -219,7 +219,7 @@ std::vector<const ftags::Record*> ftags::ProjectDb::findSymbol(const std::string
                                                                ftags::SymbolType  symbolType) const
 {
    return filterRecordsWithSymbol(
-      symbolName, [symbolType](const Record* record) { return record->attributes.type == symbolType; });
+      symbolName, [symbolType](const Record* record) { return record->attributes.getType() == symbolType; });
 }
 
 std::vector<const ftags::Record*>
