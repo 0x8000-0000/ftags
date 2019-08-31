@@ -310,38 +310,90 @@ struct TranslationUnitAccumulator
    ftags::RecordSpanManager&          recordSpanManager;
    std::string                        filterPath;
 
+   std::map<std::string, ftags::StringTable::Key> fileKeyCache;
+
+   TranslationUnitAccumulator(ftags::ProjectDb::TranslationUnit& translationUnit_,
+                              ftags::StringTable&                symbolTable_,
+                              ftags::StringTable&                fileNameTable_,
+                              ftags::RecordSpanManager&          recordSpanManager_,
+                              std::string                        filterPath_) :
+      translationUnit{translationUnit_},
+      symbolTable{symbolTable_},
+      fileNameTable{fileNameTable_},
+      recordSpanManager{recordSpanManager_},
+      filterPath{filterPath_}
+   {
+   }
+
    void processCursor(CXCursor clangCursor);
+
+   bool getCursorLocation(CXCursor                 clangCursor,
+                          ftags::Cursor::Location& cursorLocation,
+                          ftags::StringTable::Key* fileNameKey);
 };
 
-bool getCursorLocation(CXCursor clangCursor, ftags::Cursor::Location& cursorLocation)
+bool TranslationUnitAccumulator::getCursorLocation(CXCursor                 clangCursor,
+                                                   ftags::Cursor::Location& cursorLocation,
+                                                   ftags::StringTable::Key* fileNameKey)
 {
-   CXStringWrapper fileName;
+   CXStringWrapper fileNameWrapper;
 
    CXSourceLocation location = clang_getCursorLocation(clangCursor);
-   clang_getPresumedLocation(location, fileName.get(), &cursorLocation.line, &cursorLocation.column);
+   clang_getPresumedLocation(location, fileNameWrapper.get(), &cursorLocation.line, &cursorLocation.column);
 
-#ifdef USE_CANONICAL_PATHS
-   const char*           fileNameAsRawCString = fileName.c_str();
-   std::filesystem::path filePath{fileNameAsRawCString};
-   std::string           canonicalFilePathAsString{fileNameAsRawCString};
-   if (std::filesystem::exists(filePath))
+   std::string fileName{fileNameWrapper.c_str()};
+   const auto  iter = fileKeyCache.find(fileName);
+
+   if (iter != fileKeyCache.end())
    {
-      std::filesystem::path canonicalFilePath = std::filesystem::canonical(filePath);
-      canonicalFilePathAsString               = canonicalFilePath.string();
+      *fileNameKey = iter->second;
    }
    else
    {
-      std::filesystem::path otherPath = std::filesystem::current_path() / filePath;
-      if (std::filesystem::exists(otherPath))
+      std::filesystem::path filePath{fileName};
+      if (std::filesystem::exists(filePath))
       {
-         std::filesystem::path canonicalFilePath = std::filesystem::canonical(otherPath);
-         canonicalFilePathAsString               = canonicalFilePath.string();
-      }
-   }
-   cursor.location.fileName = canonicalFilePathAsString.data();
-#else
-   cursorLocation.fileName = fileName.c_str();
+         std::filesystem::path canonicalFilePath = std::filesystem::canonical(filePath);
+         *fileNameKey                            = fileNameTable.addKey(canonicalFilePath.string().data());
+         const auto insertIter                   = fileKeyCache.emplace(std::move(fileName), *fileNameKey);
+#ifdef NDEBUG
+         (void)insertIter;
 #endif
+         assert(insertIter.second);
+      }
+      else
+      {
+         std::filesystem::path otherPath = std::filesystem::current_path() / filePath;
+         if (std::filesystem::exists(otherPath))
+         {
+            std::filesystem::path canonicalFilePath = std::filesystem::canonical(otherPath);
+            *fileNameKey                            = fileNameTable.addKey(canonicalFilePath.string().data());
+            const auto insertIter                   = fileKeyCache.emplace(std::move(fileName), *fileNameKey);
+#ifdef NDEBUG
+            (void)insertIter;
+#endif
+            assert(insertIter.second);
+         }
+         else
+         {
+            if (fileName == "<built-in>")
+            {
+               *fileNameKey          = fileNameTable.addKey(fileName.data());
+               const auto insertIter = fileKeyCache.emplace(std::move(fileName), *fileNameKey);
+#ifdef NDEBUG
+               (void)insertIter;
+#endif
+               assert(insertIter.second);
+            }
+            else
+            {
+               assert(false);
+            }
+         }
+      }
+
+      cursorLocation.fileName = nullptr;
+   }
 
    return clang_Location_isFromMainFile(location);
 }
@@ -397,7 +449,9 @@ void TranslationUnitAccumulator::processCursor(CXCursor clangCursor)
    // TODO: combine FunctionCallExpression with the subsequent DeclarationReferenceExpression and optional NamespaceReference
 #endif
 
-   cursor.attributes.isFromMainFile = getCursorLocation(clangCursor, cursor.location);
+   ftags::StringTable::Key fileNameKey = 0;
+   cursor.attributes.isFromMainFile    = getCursorLocation(clangCursor, cursor.location, &fileNameKey);
+   assert(fileNameKey != 0);
 
    if (clang_isCursorDefinition(clangCursor))
    {
@@ -408,12 +462,13 @@ void TranslationUnitAccumulator::processCursor(CXCursor clangCursor)
 
    cursor.unifiedSymbol = unifiedSymbol.c_str();
 
-   CXCursor referencedCursor             = clang_getCursorReferenced(clangCursor);
-   cursor.attributes.isDefinedInMainFile = getCursorLocation(referencedCursor, cursor.definition);
+   CXCursor                referencedCursor      = clang_getCursorReferenced(clangCursor);
+   ftags::StringTable::Key referencedFileNameKey = 0;
+   cursor.attributes.isDefinedInMainFile =
+      getCursorLocation(referencedCursor, cursor.definition, &referencedFileNameKey);
+   assert(referencedFileNameKey != 0);
 
-   const ftags::StringTable::Key symbolNameKey         = symbolTable.addKey(cursor.symbolName);
-   const ftags::StringTable::Key fileNameKey           = fileNameTable.addKey(cursor.location.fileName);
-   const ftags::StringTable::Key referencedFileNameKey = fileNameTable.addKey(cursor.definition.fileName);
+   const ftags::StringTable::Key symbolNameKey = symbolTable.addKey(cursor.symbolName);
 
    translationUnit.addCursor(cursor, symbolNameKey, fileNameKey, referencedFileNameKey, recordSpanManager);
 }
