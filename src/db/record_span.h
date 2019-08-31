@@ -21,6 +21,10 @@
 
 #include <store.h>
 
+#include <filesystem>
+#include <string>
+#include <vector>
+
 namespace ftags
 {
 
@@ -164,9 +168,10 @@ public:
    /*
     * Debugging
     */
-   void dumpRecords(std::ostream&             os,
-                    const ftags::StringTable& symbolTable,
-                    const ftags::StringTable& fileNameTable) const;
+   void dumpRecords(std::ostream&                os,
+                    const ftags::StringTable&    symbolTable,
+                    const ftags::StringTable&    fileNameTable,
+                    const std::filesystem::path& trimPath) const;
 
 #if 0
    // handled in bulk by RecordSpanManager

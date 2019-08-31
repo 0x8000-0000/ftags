@@ -25,6 +25,7 @@
 #include <string_table.h>
 
 #include <algorithm>
+#include <filesystem>
 #include <iosfwd>
 #include <map>
 #include <memory>
@@ -226,7 +227,7 @@ public:
    /*
     * Debugging
     */
-   void dumpRecords(std::ostream& os) const;
+   void dumpRecords(std::ostream& os, const std::filesystem::path& trimPath) const;
 
    void dumpStats(std::ostream& os) const;
 
@@ -411,10 +412,11 @@ public:
       /*
        * Debugging
        */
-      void dumpRecords(std::ostream&             os,
-                       const RecordSpanManager&  recordSpanManager,
-                       const ftags::StringTable& symbolTable,
-                       const ftags::StringTable& fileNameTable) const;
+      void dumpRecords(std::ostream&                os,
+                       const RecordSpanManager&     recordSpanManager,
+                       const ftags::StringTable&    symbolTable,
+                       const ftags::StringTable&    fileNameTable,
+                       const std::filesystem::path& trimPath) const;
 
       void assertValid() const
 #if defined(NDEBUG) || (!defined(ENABLE_THOROUGH_VALIDITY_CHECKS))

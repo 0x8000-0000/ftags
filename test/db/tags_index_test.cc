@@ -109,7 +109,7 @@ TEST(TagsIndexTest, CanDumpRecords)
 
    std::stringstream output;
 
-   tagsDb.dumpRecords(output);
+   tagsDb.dumpRecords(output, std::filesystem::current_path());
 
    const std::string result = output.str();
    ASSERT_FALSE(result.empty());

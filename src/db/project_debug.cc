@@ -19,6 +19,7 @@
 #include <fmt/format.h>
 
 #include <algorithm>
+#include <filesystem>
 #include <numeric>
 #include <ostream>
 
@@ -70,9 +71,10 @@ private:
 
 } // anonymous namespace
 
-void ftags::RecordSpan::dumpRecords(std::ostream&             os,
-                                    const ftags::StringTable& symbolTable,
-                                    const ftags::StringTable& fileNameTable) const
+void ftags::RecordSpan::dumpRecords(std::ostream&                os,
+                                    const ftags::StringTable&    symbolTable,
+                                    const ftags::StringTable&    fileNameTable,
+                                    const std::filesystem::path& trimPath) const
 {
    for (std::size_t ii = 0; ii < m_size; ii++)
    {
@@ -83,48 +85,53 @@ void ftags::RecordSpan::dumpRecords(std::ostream&             os,
       {
          namespaceName = fmt::format("{}::", symbolTable.getString(record.namespaceKey));
       }
-      const char*       symbolName = symbolTable.getString(record.symbolNameKey);
-      const char*       fileName   = fileNameTable.getString(record.location.fileNameKey);
-      const std::string symbolType = record.attributes.getRecordType();
+      const char* symbolName = symbolTable.getString(record.symbolNameKey);
+      // const char*       fileName   = fileNameTable.getString(record.location.fileNameKey);
+      const std::string           symbolType = record.attributes.getRecordType();
+      const std::filesystem::path filePath{fileNameTable.getString(record.location.fileNameKey)};
       os << fmt::format("   {}{}  {} {} {}:{}",
                         namespaceName,
                         symbolName,
                         symbolType,
-                        fileName,
+                        std::filesystem::relative(filePath, trimPath).string(),
                         record.location.line,
                         record.location.column)
          << std::endl;
    }
 }
 
-void ftags::ProjectDb::TranslationUnit::dumpRecords(std::ostream&             os,
-                                                    const RecordSpanManager&  recordSpanManager,
-                                                    const ftags::StringTable& symbolTable,
-                                                    const ftags::StringTable& fileNameTable) const
+void ftags::ProjectDb::TranslationUnit::dumpRecords(std::ostream&                os,
+                                                    const RecordSpanManager&     recordSpanManager,
+                                                    const ftags::StringTable&    symbolTable,
+                                                    const ftags::StringTable&    fileNameTable,
+                                                    const std::filesystem::path& trimPath) const
 {
    os << " Found " << getRecordCount(recordSpanManager) << " records." << std::endl;
 
-   forEachRecordSpan([&os, &symbolTable, &fileNameTable](
-                        const RecordSpan& recordSpan) { recordSpan.dumpRecords(os, symbolTable, fileNameTable); },
-                     recordSpanManager);
+   forEachRecordSpan(
+      [&os, &symbolTable, &fileNameTable, &trimPath](const RecordSpan& recordSpan) {
+         recordSpan.dumpRecords(os, symbolTable, fileNameTable, trimPath);
+      },
+      recordSpanManager);
 }
 
-void ftags::ProjectDb::dumpRecords(std::ostream& os) const
+void ftags::ProjectDb::dumpRecords(std::ostream& os, const std::filesystem::path& trimPath) const
 {
-   std::for_each(
-      m_translationUnits.cbegin(), m_translationUnits.cend(), [&os, this](const TranslationUnit& translationUnit) {
-         const auto  fileNameKey = translationUnit.getFileNameKey();
-         const char* fileName    = m_fileNameTable.getString(fileNameKey);
-         if (fileName)
-         {
-            os << "File: " << fileName << std::endl;
-         }
-         else
-         {
-            os << "File: unnamed" << std::endl;
-         }
-         translationUnit.dumpRecords(os, m_recordSpanManager, m_symbolTable, m_fileNameTable);
-      });
+   std::for_each(m_translationUnits.cbegin(),
+                 m_translationUnits.cend(),
+                 [&os, &trimPath, this](const TranslationUnit& translationUnit) {
+                    const auto  fileNameKey = translationUnit.getFileNameKey();
+                    const char* fileName    = m_fileNameTable.getString(fileNameKey);
+                    if (fileName)
+                    {
+                       os << "File: " << fileName << std::endl;
+                    }
+                    else
+                    {
+                       os << "File: unnamed" << std::endl;
+                    }
+                    translationUnit.dumpRecords(os, m_recordSpanManager, m_symbolTable, m_fileNameTable, trimPath);
+                 });
 }
 
 void ftags::ProjectDb::dumpStats(std::ostream& os) const

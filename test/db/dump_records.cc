@@ -85,7 +85,7 @@ int main(int argc, char* argv[])
 
    if (dumpToConsole)
    {
-      tagsDb.dumpRecords(std::cout);
+      tagsDb.dumpRecords(std::cout, canonicalPath);
    }
 
    std::cout << std::endl;
