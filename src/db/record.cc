@@ -96,22 +96,22 @@ private:
    const std::vector<ftags::Record>& m_records;
 };
 
-#if 0
-void filterDuplicates(std::vector<const ftags::Record*> records)
+} // anonymous namespace
+
+void ftags::Record::filterDuplicates(std::vector<const ftags::Record*>& records)
 {
    const auto begin = records.begin();
    const auto end   = records.end();
 
    std::sort(begin, end, [](const ftags::Record* leftRecord, const ftags::Record* rightRecord) {
-      return compareRecordsByLocation(*leftRecord, *rightRecord);
+      return *leftRecord < *rightRecord;
    });
 
-   auto last = std::unique(begin, end);
+   auto last = std::unique(begin, end, [](const ftags::Record* leftRecord, const ftags::Record* rightRecord) {
+      return *leftRecord == *rightRecord;
+   });
    records.erase(last, end);
 }
-#endif
-
-} // anonymous namespace
 
 /*
  * Record serialization

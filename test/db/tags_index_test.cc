@@ -506,3 +506,33 @@ TEST(TagsIndexTest, IdentifySymbols)
    const std::vector<const ftags::Record*> line11Records = tagsDb.identifySymbol(libPath.string(), 11, 14);
    ASSERT_EQ(1, line11Records.size());
 }
+
+TEST(TagsIndexTest, FindMacroDefinition)
+{
+   ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
+
+   const auto path = std::filesystem::current_path();
+
+   const std::vector<const char*> arguments = {
+      "-Wall",
+      "-Wextra",
+      "-isystem",
+      "/usr/include",
+   };
+
+   const auto libPath = path / "test" / "db" / "data" / "multi-module" / "lib.cc";
+   ASSERT_TRUE(std::filesystem::exists(libPath));
+   tagsDb.parseOneFile(libPath, arguments);
+
+   // finds one definition only
+   const std::vector<const ftags::Record*> doubleMacro = tagsDb.findSymbol("DOUBLY_SO");
+   ASSERT_EQ(1, doubleMacro.size());
+
+   const auto testPath = path / "test" / "db" / "data" / "multi-module" / "test.cc";
+   ASSERT_TRUE(std::filesystem::exists(testPath));
+   tagsDb.parseOneFile(testPath, arguments);
+
+   // finds definition and declaration
+   const std::vector<const ftags::Record*> doubleMacroAgain = tagsDb.findSymbol("DOUBLY_SO");
+   ASSERT_EQ(2, doubleMacroAgain.size());
+}

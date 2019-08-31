@@ -511,6 +511,8 @@ private:
          results = m_recordSpanManager.filterRecordsWithSymbol(key, selectRecord);
       }
 
+      Record::filterDuplicates(results);
+
       return results;
    }
 

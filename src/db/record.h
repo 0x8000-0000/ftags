@@ -20,6 +20,7 @@
 #include <string_table.h>
 
 #include <string>
+#include <vector>
 
 #include <cstdint>
 
@@ -252,6 +253,30 @@ struct Record
       definition.column = static_cast<uint32_t>(column);
    }
 #pragma GCC diagnostic pop
+
+   static void filterDuplicates(std::vector<const ftags::Record*>& records);
+
+   bool operator<(const Record& other) const
+   {
+      if (symbolNameKey < other.symbolNameKey)
+      {
+         return true;
+      }
+
+      if (symbolNameKey == other.symbolNameKey)
+      {
+         if (location < other.location)
+         {
+            return true;
+         }
+      }
+      return false;
+   }
+
+   bool operator==(const Record& other) const
+   {
+      return (symbolNameKey == other.symbolNameKey) && (location == other.location);
+   }
 };
 
 static_assert(sizeof(Record) == 32, "sizeof(Record) exceeds 32 bytes");

@@ -6,7 +6,11 @@
 namespace test
 {
 
+using argument_type = int;
+
 int function(int arg);
+
+int other_function(argument_type input);
 
 } // namespace test
 
