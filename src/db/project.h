@@ -443,7 +443,42 @@ public:
       Key m_currentRecordSpanFileKey = 0;
 
       std::vector<Record> m_currentSpan;
-      void                flushCurrentSpan(RecordSpanManager& recordSpanManager);
+
+      struct SymbolAtLocation
+      {
+         StringTable::Key symbolKey;
+         Record::Location location;
+
+         SymbolAtLocation(StringTable::Key symbolKey_, StringTable::Key fileKey, uint32_t line, uint32_t column) :
+            symbolKey{symbolKey_},
+            location{fileKey, line, column}
+         {
+         }
+
+         bool operator==(const SymbolAtLocation& other) const
+         {
+            return (symbolKey == other.symbolKey) && (location == other.location);
+         }
+
+         bool operator<(const SymbolAtLocation& other) const
+         {
+            if (symbolKey < other.symbolKey)
+            {
+               return true;
+            }
+            if (symbolKey == other.symbolKey)
+            {
+               if (location < other.location)
+               {
+                  return true;
+               }
+            }
+            return false;
+         }
+      };
+
+      std::set<SymbolAtLocation> m_currentSpanLocations;
+      void                       flushCurrentSpan(RecordSpanManager& recordSpanManager);
 
       void beginParsingUnit(StringTable::Key fileNameKey);
       void finalizeParsingUnit(RecordSpanManager& recordSpanManager);

@@ -57,10 +57,10 @@ void ftags::ProjectDb::TranslationUnit::copyRecords(const TranslationUnit&   oth
     */
    m_recordSpans.reserve(otherTranslationUnit.m_recordSpans.size());
 
-   std::vector<Record> tempRecords;
-
    for (RecordSpan::Store::Key otherKey : otherTranslationUnit.m_recordSpans)
    {
+      std::vector<Record> tempRecords;
+
       const RecordSpan& otherSpan = otherRecordSpanManager.getSpan(otherKey);
       otherSpan.copyRecordsTo(tempRecords);
 
@@ -77,6 +77,7 @@ void ftags::ProjectDb::TranslationUnit::flushCurrentSpan(RecordSpanManager& reco
       m_recordSpans.push_back(recordSpanManager.addSpan(m_currentSpan));
 
       m_currentSpan.clear();
+      m_currentSpanLocations.clear();
    }
 }
 
@@ -123,16 +124,23 @@ void ftags::ProjectDb::TranslationUnit::addCursor(const ftags::Cursor&      curs
       m_currentRecordSpanFileKey = fileNameKey;
    }
 
-   ftags::Record& newRecord = m_currentSpan.emplace_back();
+   const SymbolAtLocation newLocation{symbolNameKey, fileNameKey, cursor.location.line, cursor.location.column};
 
-   newRecord.symbolNameKey = symbolNameKey;
-   newRecord.attributes    = cursor.attributes;
+   if (m_currentSpanLocations.find(newLocation) == m_currentSpanLocations.end())
+   {
+      m_currentSpanLocations.insert(newLocation);
 
-   newRecord.setLocationFileKey(fileNameKey);
-   newRecord.setLocationAddress(cursor.location.line, cursor.location.column);
+      ftags::Record& newRecord = m_currentSpan.emplace_back();
 
-   newRecord.setDefinitionFileKey(referencedFileNameKey);
-   newRecord.setDefinitionAddress(cursor.definition.line, cursor.definition.column);
+      newRecord.symbolNameKey = symbolNameKey;
+      newRecord.attributes    = cursor.attributes;
+
+      newRecord.setLocationFileKey(fileNameKey);
+      newRecord.setLocationAddress(cursor.location.line, cursor.location.column);
+
+      newRecord.setDefinitionFileKey(referencedFileNameKey);
+      newRecord.setDefinitionAddress(cursor.definition.line, cursor.definition.column);
+   }
 }
 
 std::size_t ftags::ProjectDb::TranslationUnit::computeSerializedSize() const

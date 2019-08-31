@@ -169,6 +169,34 @@ struct Record
       FileNameKey fileNameKey;
       uint32_t    line : 20;
       uint32_t    column : 12;
+
+      bool operator<(const Location& other) const
+      {
+         if (fileNameKey < other.fileNameKey)
+         {
+            return true;
+         }
+         if (fileNameKey == other.fileNameKey)
+         {
+            if (line < other.line)
+            {
+               return true;
+            }
+            if (line == other.line)
+            {
+               if (column < other.column)
+               {
+                  return true;
+               }
+            }
+         }
+         return false;
+      }
+
+      bool operator==(const Location& other) const
+      {
+         return ((fileNameKey == other.fileNameKey) && (line == other.line) && (column == other.column));
+      }
    };
 
    SymbolNameKey    symbolNameKey;
