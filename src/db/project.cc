@@ -346,19 +346,21 @@ void ftags::ProjectDb::updateFrom(const std::string& /* fileName */, const Proje
    mergeFrom(other);
 }
 
-std::vector<std::string> ftags::ProjectDb::getStatisticsRemarks() const
+std::vector<std::string> ftags::ProjectDb::getStatisticsRemarks(const std::string& statisticsGroup) const
 {
-   std::vector<std::string> remarks;
-
-   remarks.emplace_back(fmt::format("{:n} translation units indexed", m_translationUnits.size()));
-
-   remarks.emplace_back(fmt::format("Serialized size is {:n} bytes", computeSerializedSize()));
-
-   remarks.emplace_back(fmt::format("Indexed {:n} symbols", m_symbolTable.getSize()));
-
-   remarks.emplace_back(fmt::format("Indexed {:n} distinct files", m_fileNameTable.getSize()));
-
-   return remarks;
+   if (statisticsGroup == "recordspans")
+   {
+      return m_recordSpanManager.getStatisticsRemarks();
+   }
+   else
+   {
+      std::vector<std::string> remarks;
+      remarks.emplace_back(fmt::format("Serialized size is {:n} bytes", computeSerializedSize()));
+      remarks.emplace_back(fmt::format("Indexed {:n} translation units", m_translationUnits.size()));
+      remarks.emplace_back(fmt::format("Indexed {:n} symbols", m_symbolTable.getSize()));
+      remarks.emplace_back(fmt::format("Indexed {:n} distinct files", m_fileNameTable.getSize()));
+      return remarks;
+   }
 }
 
 #if (!defined(NDEBUG)) && (defined(ENABLE_THOROUGH_VALIDITY_CHECKS))

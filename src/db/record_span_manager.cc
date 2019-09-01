@@ -162,3 +162,9 @@ void ftags::RecordSpanManager::assertValid() const
    assert(uniqueKeysFromRecords == getSymbolKeys());
 }
 #endif
+
+std::vector<std::string> ftags::RecordSpanManager::getStatisticsRemarks() const
+{
+   std::vector<std::string> remarks;
+   return remarks;
+}

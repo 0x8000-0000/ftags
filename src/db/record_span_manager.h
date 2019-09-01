@@ -200,6 +200,8 @@ public:
       ;
 #endif
 
+   std::vector<std::string> getStatisticsRemarks() const;
+
 private:
    // persistent
    ftags::RecordSpan::Store m_recordSpanStore;

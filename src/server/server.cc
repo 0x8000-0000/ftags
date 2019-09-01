@@ -215,13 +215,15 @@ void dispatchUpdateTranslationUnit(zmq::socket_t& socket, ftags::ProjectDb* proj
    spdlog::info("Acknowledged translation unit {}", fileName);
 }
 
-void dispatchQueryStatistics(zmq::socket_t& socket, const ftags::ProjectDb* projectDb)
+void dispatchQueryStatistics(zmq::socket_t&          socket,
+                             const ftags::ProjectDb* projectDb,
+                             const std::string&      statisticsGroup)
 {
    ftags::Status status{};
    status.set_timestamp(getTimeStamp());
    status.set_type(ftags::Status_Type::Status_Type_STATISTICS_REMARKS);
 
-   std::vector<std::string> statisticsRemarks = projectDb->getStatisticsRemarks();
+   std::vector<std::string> statisticsRemarks = projectDb->getStatisticsRemarks(statisticsGroup);
 
    for (const auto& remark : statisticsRemarks)
    {
@@ -420,7 +422,7 @@ int main(int argc, char* argv[])
          }
          else
          {
-            dispatchQueryStatistics(socket, projectDb);
+            dispatchQueryStatistics(socket, projectDb, command.symbolname());
          }
          break;
 

@@ -236,7 +236,7 @@ public:
       return m_recordSpanManager.getRecordCount();
    }
 
-   std::vector<std::string> getStatisticsRemarks() const;
+   std::vector<std::string> getStatisticsRemarks(const std::string& statisticsGroup) const;
 
    void assertValid() const
 #if defined(NDEBUG) || (!defined(ENABLE_THOROUGH_VALIDITY_CHECKS))
