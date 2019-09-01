@@ -50,6 +50,12 @@ ftags::util::StringTable::Key ftags::util::StringTable::getKey(const char* input
    }
 }
 
+ftags::util::StringTable::Key ftags::util::StringTable::getKey(std::string_view inputString) const noexcept
+{
+   std::string local(inputString);
+   return getKey(local.data());
+}
+
 ftags::util::StringTable::Key ftags::util::StringTable::addKey(const char* inputString)
 {
    const Key currentPosition{getKey(inputString)};
@@ -62,6 +68,12 @@ ftags::util::StringTable::Key ftags::util::StringTable::addKey(const char* input
    Key key = insertString(inputString);
 
    return key;
+}
+
+ftags::util::StringTable::Key ftags::util::StringTable::addKey(std::string_view inputString)
+{
+   std::string local(inputString);
+   return addKey(local.data());
 }
 
 ftags::util::StringTable::Key ftags::util::StringTable::insertString(const char* aString)

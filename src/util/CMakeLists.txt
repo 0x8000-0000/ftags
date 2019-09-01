@@ -1,4 +1,5 @@
-add_library (util STATIC string_table.cc string_table_io.cc serialization.cc)
+add_library (util STATIC string_table.cc string_table_io.cc
+   serialization.cc file_name_table.cc)
    
 target_link_libraries (util PRIVATE project_options project_warnings)
 target_include_directories (util PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

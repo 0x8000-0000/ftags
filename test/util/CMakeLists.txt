@@ -34,3 +34,9 @@ target_link_libraries (flat_map_test PRIVATE util)
 
 gtest_discover_tests (flat_map_test)
 
+add_executable (file_name_table_test file_name_table_test.cc)
+target_link_libraries (file_name_table_test PRIVATE project_options project_warnings)
+target_link_libraries (file_name_table_test PRIVATE gtest_main)
+target_link_libraries (file_name_table_test PRIVATE util)
+
+gtest_discover_tests (file_name_table_test)

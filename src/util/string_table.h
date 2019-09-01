@@ -25,6 +25,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -126,6 +127,9 @@ public:
    Key  getKey(const char* string) const noexcept;
    Key  addKey(const char* string);
    void removeKey(const char* string);
+
+   Key getKey(std::string_view string) const noexcept;
+   Key addKey(std::string_view string);
 
    /* Add all the keys from other that are missing in this table.
     *
