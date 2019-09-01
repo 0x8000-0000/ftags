@@ -18,24 +18,24 @@
 
 #include <serialization.h>
 
-std::size_t ftags::StringTable::computeSerializedSize() const
+std::size_t ftags::util::StringTable::computeSerializedSize() const
 {
-   return sizeof(ftags::SerializedObjectHeader) + m_store.computeSerializedSize();
+   return sizeof(SerializedObjectHeader) + m_store.computeSerializedSize();
 }
 
-void ftags::StringTable::serialize(ftags::BufferInsertor& insertor) const
+void ftags::util::StringTable::serialize(ftags::util::BufferInsertor& insertor) const
 {
-   ftags::SerializedObjectHeader header{"ftags::StringTable"};
+   SerializedObjectHeader header{"ftags::StringTable"};
    insertor << header;
 
    m_store.serialize(insertor);
 }
 
-ftags::StringTable ftags::StringTable::deserialize(ftags::BufferExtractor& extractor)
+ftags::util::StringTable ftags::util::StringTable::deserialize(ftags::util::BufferExtractor& extractor)
 {
-   ftags::StringTable retval;
+   StringTable retval;
 
-   ftags::SerializedObjectHeader header;
+   SerializedObjectHeader header;
    extractor >> header;
 
    retval.m_store = StoreType::deserialize(extractor);

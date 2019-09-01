@@ -16,7 +16,7 @@
 
 #include <project.h>
 
-void ftags::ProjectDb::TranslationUnit::beginParsingUnit(StringTable::Key fileNameKey)
+void ftags::ProjectDb::TranslationUnit::beginParsingUnit(ftags::util::StringTable::Key fileNameKey)
 {
    m_fileNameKey = fileNameKey;
 }
@@ -81,11 +81,11 @@ void ftags::ProjectDb::TranslationUnit::flushCurrentSpan(RecordSpanManager& reco
    }
 }
 
-void ftags::ProjectDb::TranslationUnit::addCursor(const ftags::Cursor&      cursor,
-                                                  ftags::StringTable::Key   symbolNameKey,
-                                                  ftags::StringTable::Key   fileNameKey,
-                                                  ftags::StringTable::Key   referencedFileNameKey,
-                                                  ftags::RecordSpanManager& recordSpanManager)
+void ftags::ProjectDb::TranslationUnit::addCursor(const ftags::Cursor&          cursor,
+                                                  ftags::util::StringTable::Key symbolNameKey,
+                                                  ftags::util::StringTable::Key fileNameKey,
+                                                  ftags::util::StringTable::Key referencedFileNameKey,
+                                                  ftags::RecordSpanManager&     recordSpanManager)
 {
    if (cursor.attributes.getType() == ftags::SymbolType::DeclarationReferenceExpression)
    {
@@ -147,13 +147,13 @@ std::size_t ftags::ProjectDb::TranslationUnit::computeSerializedSize() const
 {
    std::vector<uint64_t> recordSpanHashes(/* size = */ m_recordSpans.size());
 
-   return sizeof(ftags::SerializedObjectHeader) + sizeof(StringTable::Key) +
-          ftags::Serializer<std::vector<RecordSpan::Store::Key>>::computeSerializedSize(m_recordSpans);
+   return sizeof(ftags::util::SerializedObjectHeader) + sizeof(ftags::util::StringTable::Key) +
+          ftags::util::Serializer<std::vector<RecordSpan::Store::Key>>::computeSerializedSize(m_recordSpans);
 }
 
-void ftags::ProjectDb::TranslationUnit::serialize(ftags::BufferInsertor& insertor) const
+void ftags::ProjectDb::TranslationUnit::serialize(ftags::util::BufferInsertor& insertor) const
 {
-   ftags::SerializedObjectHeader header{"ftags::TranslationUnit"};
+   ftags::util::SerializedObjectHeader header{"ftags::TranslationUnit"};
    insertor << header;
 
    assert(m_fileNameKey);
@@ -161,20 +161,21 @@ void ftags::ProjectDb::TranslationUnit::serialize(ftags::BufferInsertor& inserto
 
    std::vector<uint64_t> recordSpanHashes;
 
-   ftags::Serializer<std::vector<RecordSpan::Store::Key>>::serialize(m_recordSpans, insertor);
+   ftags::util::Serializer<std::vector<RecordSpan::Store::Key>>::serialize(m_recordSpans, insertor);
 }
 
-ftags::ProjectDb::TranslationUnit ftags::ProjectDb::TranslationUnit::deserialize(ftags::BufferExtractor& extractor)
+ftags::ProjectDb::TranslationUnit
+ftags::ProjectDb::TranslationUnit::deserialize(ftags::util::BufferExtractor& extractor)
 {
    ftags::ProjectDb::TranslationUnit retval;
 
-   ftags::SerializedObjectHeader header = {};
+   ftags::util::SerializedObjectHeader header = {};
    extractor >> header;
 
    extractor >> retval.m_fileNameKey;
    assert(retval.m_fileNameKey);
 
-   retval.m_recordSpans = ftags::Serializer<std::vector<RecordSpan::Store::Key>>::deserialize(extractor);
+   retval.m_recordSpans = ftags::util::Serializer<std::vector<RecordSpan::Store::Key>>::deserialize(extractor);
 
    return retval;
 }

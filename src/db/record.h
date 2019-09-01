@@ -173,12 +173,12 @@ static_assert(sizeof(Attributes) == 8, "sizeof(Attributes) exceeds 8 bytes");
 
 struct Record
 {
-   using Store = ftags::Store<Record, uint32_t, 24>;
+   using Store = ftags::util::Store<Record, uint32_t, 24>;
    using Key   = Store::key_type;
 
-   using SymbolNameKey    = ftags::StringTable::Key;
-   using NamespaceNameKey = ftags::StringTable::Key;
-   using FileNameKey      = ftags::StringTable::Key;
+   using SymbolNameKey    = ftags::util::StringTable::Key;
+   using NamespaceNameKey = ftags::util::StringTable::Key;
+   using FileNameKey      = ftags::util::StringTable::Key;
 
    struct Location
    {

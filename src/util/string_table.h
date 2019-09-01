@@ -32,7 +32,7 @@
 #include <cstdint>
 #include <cstring>
 
-namespace ftags
+namespace ftags::util
 {
 
 class CharPointerHashingFunctor
@@ -131,16 +131,16 @@ public:
     *
     * @return a mapping between the keys in the old table and the keys in the updated table
     */
-   ftags::FlatMap<ftags::StringTable::Key, ftags::StringTable::Key> mergeStringTable(const StringTable& other);
+   FlatMap<StringTable::Key, StringTable::Key> mergeStringTable(const StringTable& other);
 
    /*
     * Serialization interface
     */
    std::size_t computeSerializedSize() const;
 
-   void serialize(ftags::BufferInsertor& insertor) const;
+   void serialize(BufferInsertor& insertor) const;
 
-   static StringTable deserialize(ftags::BufferExtractor& extractor);
+   static StringTable deserialize(BufferExtractor& extractor);
 
 private:
    // not-thread safe method
@@ -148,7 +148,7 @@ private:
 
    static constexpr uint32_t k_bucketSize = 24;
 
-   using StoreType = ftags::Store<char, Key, k_bucketSize>;
+   using StoreType = Store<char, Key, k_bucketSize>;
 
    StoreType m_store;
 
@@ -158,6 +158,6 @@ private:
    std::unordered_map<const char*, Key, CharPointerHashingFunctor, CharPointerCompareFunctor> m_index;
 };
 
-} // namespace ftags
+} // namespace ftags::util
 
 #endif // STRING_TABLE_H_INCLUDED

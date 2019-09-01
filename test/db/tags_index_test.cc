@@ -22,6 +22,9 @@
 #include <sstream>
 #include <vector>
 
+using ftags::util::BufferExtractor;
+using ftags::util::BufferInsertor;
+
 TEST(TagsIndexTest, IndexOneFile)
 {
    /*
@@ -373,9 +376,9 @@ TEST(TagsIndexTest, SerializeDeserializeResults)
 
    const std::size_t      bufferSpace = originalCursorSet.computeSerializedSize();
    std::vector<std::byte> buffer(/* size = */ bufferSpace);
-   ftags::BufferInsertor  insertor(buffer);
+   BufferInsertor         insertor(buffer);
    originalCursorSet.serialize(insertor);
-   ftags::BufferExtractor extractor(buffer);
+   BufferExtractor extractor(buffer);
 
    const ftags::CursorSet restoredCursorSet = ftags::CursorSet::deserialize(extractor);
 

@@ -71,8 +71,8 @@ void dispatchFindAll(zmq::socket_t&     socket,
       zmq::message_t resultsMessage;
       socket.recv(&resultsMessage);
 
-      ftags::BufferExtractor extractor(static_cast<std::byte*>(resultsMessage.data()), resultsMessage.size());
-      const ftags::CursorSet output = ftags::CursorSet::deserialize(extractor);
+      ftags::util::BufferExtractor extractor(static_cast<std::byte*>(resultsMessage.data()), resultsMessage.size());
+      const ftags::CursorSet       output = ftags::CursorSet::deserialize(extractor);
       if (beVerbose)
       {
          std::cout << fmt::format("Received {} results\n", output.size());
@@ -139,8 +139,8 @@ void dispatchIdentifySymbol(zmq::socket_t&     socket,
       zmq::message_t resultsMessage;
       socket.recv(&resultsMessage);
 
-      ftags::BufferExtractor extractor(static_cast<std::byte*>(resultsMessage.data()), resultsMessage.size());
-      const ftags::CursorSet output = ftags::CursorSet::deserialize(extractor);
+      ftags::util::BufferExtractor extractor(static_cast<std::byte*>(resultsMessage.data()), resultsMessage.size());
+      const ftags::CursorSet       output = ftags::CursorSet::deserialize(extractor);
       if (beVerbose)
       {
          std::cout << fmt::format("Received {} results\n", output.size());
@@ -219,8 +219,8 @@ void dispatchDumpTranslationUnit(zmq::socket_t&     socket,
       zmq::message_t resultsMessage;
       socket.recv(&resultsMessage);
 
-      ftags::BufferExtractor extractor(static_cast<std::byte*>(resultsMessage.data()), resultsMessage.size());
-      const ftags::CursorSet output = ftags::CursorSet::deserialize(extractor);
+      ftags::util::BufferExtractor extractor(static_cast<std::byte*>(resultsMessage.data()), resultsMessage.size());
+      const ftags::CursorSet       output = ftags::CursorSet::deserialize(extractor);
       if (beVerbose)
       {
          std::cout << fmt::format("Received {} results\n", output.size());

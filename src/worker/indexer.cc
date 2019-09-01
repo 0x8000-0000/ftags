@@ -179,9 +179,9 @@ int main()
          command.SerializeToArray(header.data(), static_cast<int>(headerSize));
          serverSocket.send(header, ZMQ_SNDMORE);
 
-         const std::size_t     payloadSize = projectDb.computeSerializedSize();
-         zmq::message_t        projectMessage(payloadSize);
-         ftags::BufferInsertor insertor(static_cast<std::byte*>(projectMessage.data()), payloadSize);
+         const std::size_t           payloadSize = projectDb.computeSerializedSize();
+         zmq::message_t              projectMessage(payloadSize);
+         ftags::util::BufferInsertor insertor(static_cast<std::byte*>(projectMessage.data()), payloadSize);
          projectDb.serialize(insertor);
 
          serverSocket.send(projectMessage);

@@ -29,7 +29,7 @@
 
 #include <cassert>
 
-namespace ftags
+namespace ftags::util
 {
 
 /** Allocates blocks of T, returning a cookie
@@ -191,9 +191,9 @@ public:
     */
    std::size_t computeSerializedSize() const;
 
-   void serialize(ftags::BufferInsertor& insertor) const;
+   void serialize(ftags::util::BufferInsertor& insertor) const;
 
-   static Store deserialize(ftags::BufferExtractor& extractor);
+   static Store deserialize(ftags::util::BufferExtractor& extractor);
 
 private:
    static constexpr block_size_type MaxSegmentSize      = (1U << SegmentSizeBits);
@@ -582,25 +582,25 @@ std::size_t Store<T, K, SegmentSizeBits>::computeSerializedSize() const
 
    if (segmentCount)
    {
-      return sizeof(ftags::SerializedObjectHeader) +           // header
+      return sizeof(SerializedObjectHeader) +                  // header
              sizeof(uint64_t) +                                // number of segments
              sizeof(uint64_t) +                                // size (used) of last segment
              (segmentCount - 1) * MaxSegmentSize * sizeof(T) + // full segments
              computeSpaceUsedInLastSegment() * sizeof(T) +     // last segment
-             ftags::Serializer<std::map<K, block_size_type>>::computeSerializedSize(m_freeBlocksIndex);
+             Serializer<std::map<K, block_size_type>>::computeSerializedSize(m_freeBlocksIndex);
    }
    else
    {
-      return sizeof(ftags::SerializedObjectHeader) + // header
-             sizeof(uint64_t) +                      // number of segments
-             sizeof(uint64_t);                       // size (used) of last segment
+      return sizeof(SerializedObjectHeader) + // header
+             sizeof(uint64_t) +               // number of segments
+             sizeof(uint64_t);                // size (used) of last segment
    }
 }
 
 template <typename T, typename K, unsigned SegmentSizeBits>
-void Store<T, K, SegmentSizeBits>::serialize(ftags::BufferInsertor& insertor) const
+void Store<T, K, SegmentSizeBits>::serialize(ftags::util::BufferInsertor& insertor) const
 {
-   ftags::SerializedObjectHeader header{k_serializationSignature.data()};
+   SerializedObjectHeader header{k_serializationSignature.data()};
    insertor << header;
 
    const uint64_t segmentCount = m_segment.size();
@@ -618,7 +618,7 @@ void Store<T, K, SegmentSizeBits>::serialize(ftags::BufferInsertor& insertor) co
 
       insertor.serialize(static_cast<void*>(m_segment[segmentCount - 1].get()), spaceUsedInLastSegment * sizeof(T));
 
-      ftags::Serializer<std::map<K, block_size_type>>::serialize(m_freeBlocksIndex, insertor);
+      Serializer<std::map<K, block_size_type>>::serialize(m_freeBlocksIndex, insertor);
    }
    else
    {
@@ -628,11 +628,11 @@ void Store<T, K, SegmentSizeBits>::serialize(ftags::BufferInsertor& insertor) co
 }
 
 template <typename T, typename K, unsigned SegmentSizeBits>
-Store<T, K, SegmentSizeBits> Store<T, K, SegmentSizeBits>::deserialize(ftags::BufferExtractor& extractor)
+Store<T, K, SegmentSizeBits> Store<T, K, SegmentSizeBits>::deserialize(ftags::util::BufferExtractor& extractor)
 {
    Store<T, K, SegmentSizeBits> retval;
 
-   ftags::SerializedObjectHeader header;
+   SerializedObjectHeader header;
    extractor >> header;
 
    assert(memcmp(header.m_objectType, k_serializationSignature.data(), sizeof(header.m_objectType)) == 0);
@@ -661,7 +661,7 @@ Store<T, K, SegmentSizeBits> Store<T, K, SegmentSizeBits>::deserialize(ftags::Bu
       assert(retval.m_freeBlocksIndex.size() == 0);
       assert(retval.m_freeBlocks.size() == 0);
 
-      retval.m_freeBlocksIndex = ftags::Serializer<std::map<K, block_size_type>>::deserialize(extractor);
+      retval.m_freeBlocksIndex = Serializer<std::map<K, block_size_type>>::deserialize(extractor);
 
       // reconstruct free blocks index from free block
       for (const auto& iter : retval.m_freeBlocksIndex)
@@ -835,6 +835,6 @@ void Store<T, K, SegmentSizeBits>::validateInternalState() const
 #endif
 }
 
-} // namespace ftags
+} // namespace ftags::util
 
 #endif // STORE_H_INCLUDED

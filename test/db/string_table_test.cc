@@ -18,9 +18,14 @@
 
 #include <gtest/gtest.h>
 
+using ftags::util::BufferExtractor;
+using ftags::util::BufferInsertor;
+using ftags::util::FlatMap;
+using ftags::util::StringTable;
+
 TEST(StringTableTest, EmptyTableHasNoString)
 {
-   ftags::StringTable st;
+   StringTable st;
 
    const uint32_t keyForInvalidValue = st.getKey("foo");
 
@@ -29,7 +34,7 @@ TEST(StringTableTest, EmptyTableHasNoString)
 
 TEST(StringTableTest, AddOneGetItBack)
 {
-   ftags::StringTable st;
+   StringTable st;
 
    const char fooString[] = "foo";
 
@@ -45,7 +50,7 @@ TEST(StringTableTest, AddOneGetItBack)
 
 TEST(StringTableTest, DataStructureOwnsIt)
 {
-   ftags::StringTable st;
+   StringTable st;
 
    {
       std::string fooString{"foo"};
@@ -60,7 +65,7 @@ TEST(StringTableTest, DataStructureOwnsIt)
 
 TEST(StringTableTest, AddTwiceGetSomeIndexBack)
 {
-   ftags::StringTable st;
+   StringTable st;
 
    const char fooString[] = "foo";
 
@@ -77,7 +82,7 @@ TEST(StringTableTest, AddTwiceGetSomeIndexBack)
 
 TEST(StringTableTest, AddTwoAndGetThemBack)
 {
-   ftags::StringTable st;
+   StringTable st;
 
    const char fooString[] = "foo";
    const char barString[] = "bar";
@@ -98,7 +103,7 @@ TEST(StringTableTest, AddTwoAndGetThemBack)
 
 TEST(StringTableTest, SerializeTwoStrings)
 {
-   ftags::StringTable st;
+   StringTable st;
 
    const char fooString[] = "foo";
    const char barString[] = "bar";
@@ -110,12 +115,12 @@ TEST(StringTableTest, SerializeTwoStrings)
 
    std::vector<std::byte> serializedFormat(/* size = */ estimatedSerializedSize);
 
-   ftags::BufferInsertor insertor{serializedFormat};
+   BufferInsertor insertor{serializedFormat};
    st.serialize(insertor);
    insertor.assertEmpty();
 
-   ftags::BufferExtractor extractor{serializedFormat};
-   ftags::StringTable     rec = ftags::StringTable::deserialize(extractor);
+   ftags::util::BufferExtractor extractor{serializedFormat};
+   StringTable                  rec = StringTable::deserialize(extractor);
    extractor.assertEmpty();
 
    const uint32_t keyForFoo = st.getKey(fooString);
@@ -135,7 +140,7 @@ TEST(StringTableTest, SerializeTwoStrings)
 
 TEST(StringTableTest, SerializeTwoStringsWithGap)
 {
-   ftags::StringTable st;
+   StringTable st;
 
    const char fooString[]   = "foo";
    const char alphaString[] = "alpha";
@@ -151,12 +156,12 @@ TEST(StringTableTest, SerializeTwoStringsWithGap)
 
    std::vector<std::byte> serializedFormat(/* size = */ estimatedSerializedSize);
 
-   ftags::BufferInsertor insertor{serializedFormat};
+   BufferInsertor insertor{serializedFormat};
    st.serialize(insertor);
    insertor.assertEmpty();
 
-   ftags::BufferExtractor extractor{serializedFormat};
-   ftags::StringTable     rec = ftags::StringTable::deserialize(extractor);
+   BufferExtractor extractor{serializedFormat};
+   StringTable     rec = StringTable::deserialize(extractor);
    extractor.assertEmpty();
 
    const uint32_t keyForFoo = st.getKey(fooString);
@@ -176,10 +181,10 @@ TEST(StringTableTest, SerializeTwoStringsWithGap)
 
 TEST(StringTableTest, MergeStringTables)
 {
-   using Key = ftags::StringTable::Key;
+   using Key = StringTable::Key;
 
-   ftags::StringTable left;
-   ftags::StringTable right;
+   StringTable left;
+   StringTable right;
 
    const char fooString[] = "foo";
    const char barString[] = "bar";
@@ -195,7 +200,7 @@ TEST(StringTableTest, MergeStringTables)
    const uint32_t oldKeyForFoo = left.getKey(fooString);
    const uint32_t oldKeyForBar = left.getKey(barString);
 
-   ftags::FlatMap<Key, Key> mapping = left.mergeStringTable(right);
+   FlatMap<Key, Key> mapping = left.mergeStringTable(right);
 
    ASSERT_NE(0, left.getKey(bazString));
    ASSERT_EQ(oldKeyForFoo, left.getKey(fooString));
@@ -216,9 +221,9 @@ TEST(StringTableTest, MergeStringTables)
 
 TEST(StringTableTest, AddTenThousandStrings)
 {
-   using Key = ftags::StringTable::Key;
+   using Key = StringTable::Key;
 
-   ftags::StringTable stringTable;
+   StringTable stringTable;
 
    std::string input = "abcdefghijlkmnopqrstuvxyz";
 
@@ -233,12 +238,12 @@ TEST(StringTableTest, AddTenThousandStrings)
    const size_t           serializedSize = stringTable.computeSerializedSize();
    std::vector<std::byte> buffer(/* size = */ serializedSize);
 
-   ftags::BufferInsertor insertor{buffer};
+   BufferInsertor insertor{buffer};
    stringTable.serialize(insertor);
    insertor.assertEmpty();
 
-   ftags::BufferExtractor extractor{buffer};
-   ftags::StringTable     rehydrated = ftags::StringTable::deserialize(extractor);
+   BufferExtractor extractor{buffer};
+   StringTable     rehydrated = StringTable::deserialize(extractor);
 
    std::string test = "abcdefghijlkmnopqrstuvxyz";
 

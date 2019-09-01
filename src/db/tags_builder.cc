@@ -305,16 +305,16 @@ static void getSymbolType(CXCursor clangCursor, ftags::Attributes& attributes)
 struct TranslationUnitAccumulator
 {
    ftags::ProjectDb::TranslationUnit& translationUnit;
-   ftags::StringTable&                symbolTable;
-   ftags::StringTable&                fileNameTable;
+   ftags::util::StringTable&          symbolTable;
+   ftags::util::StringTable&          fileNameTable;
    ftags::RecordSpanManager&          recordSpanManager;
    std::string                        filterPath;
 
-   std::map<std::string, ftags::StringTable::Key> fileKeyCache;
+   std::map<std::string, ftags::util::StringTable::Key> fileKeyCache;
 
    TranslationUnitAccumulator(ftags::ProjectDb::TranslationUnit& translationUnit_,
-                              ftags::StringTable&                symbolTable_,
-                              ftags::StringTable&                fileNameTable_,
+                              ftags::util::StringTable&          symbolTable_,
+                              ftags::util::StringTable&          fileNameTable_,
                               ftags::RecordSpanManager&          recordSpanManager_,
                               std::string                        filterPath_) :
       translationUnit{translationUnit_},
@@ -327,14 +327,14 @@ struct TranslationUnitAccumulator
 
    void processCursor(CXCursor clangCursor);
 
-   bool getCursorLocation(CXCursor                 clangCursor,
-                          ftags::Cursor::Location& cursorLocation,
-                          ftags::StringTable::Key* fileNameKey);
+   bool getCursorLocation(CXCursor                       clangCursor,
+                          ftags::Cursor::Location&       cursorLocation,
+                          ftags::util::StringTable::Key* fileNameKey);
 };
 
-bool TranslationUnitAccumulator::getCursorLocation(CXCursor                 clangCursor,
-                                                   ftags::Cursor::Location& cursorLocation,
-                                                   ftags::StringTable::Key* fileNameKey)
+bool TranslationUnitAccumulator::getCursorLocation(CXCursor                       clangCursor,
+                                                   ftags::Cursor::Location&       cursorLocation,
+                                                   ftags::util::StringTable::Key* fileNameKey)
 {
    CXStringWrapper fileNameWrapper;
 
@@ -449,8 +449,8 @@ void TranslationUnitAccumulator::processCursor(CXCursor clangCursor)
    // TODO: combine FunctionCallExpression with the subsequent DeclarationReferenceExpression and optional NamespaceReference
 #endif
 
-   ftags::StringTable::Key fileNameKey = 0;
-   cursor.attributes.isFromMainFile    = getCursorLocation(clangCursor, cursor.location, &fileNameKey);
+   ftags::util::StringTable::Key fileNameKey = 0;
+   cursor.attributes.isFromMainFile          = getCursorLocation(clangCursor, cursor.location, &fileNameKey);
    assert(fileNameKey != 0);
 
    if (clang_isCursorDefinition(clangCursor))
@@ -462,13 +462,13 @@ void TranslationUnitAccumulator::processCursor(CXCursor clangCursor)
 
    cursor.unifiedSymbol = unifiedSymbol.c_str();
 
-   CXCursor                referencedCursor      = clang_getCursorReferenced(clangCursor);
-   ftags::StringTable::Key referencedFileNameKey = 0;
+   CXCursor                      referencedCursor      = clang_getCursorReferenced(clangCursor);
+   ftags::util::StringTable::Key referencedFileNameKey = 0;
    cursor.attributes.isDefinedInMainFile =
       getCursorLocation(referencedCursor, cursor.definition, &referencedFileNameKey);
    assert(referencedFileNameKey != 0);
 
-   const ftags::StringTable::Key symbolNameKey = symbolTable.addKey(cursor.symbolName);
+   const ftags::util::StringTable::Key symbolNameKey = symbolTable.addKey(cursor.symbolName);
 
    translationUnit.addCursor(cursor, symbolNameKey, fileNameKey, referencedFileNameKey, recordSpanManager);
 }
@@ -487,8 +487,8 @@ CXChildVisitResult visitTranslationUnit(CXCursor cursor, CXCursor /* parent */, 
 
 ftags::ProjectDb::TranslationUnit ftags::ProjectDb::TranslationUnit::parse(const std::string&              fileName,
                                                                            const std::vector<const char*>& arguments,
-                                                                           StringTable&       symbolTable,
-                                                                           StringTable&       fileNameTable,
+                                                                           ftags::util::StringTable& symbolTable,
+                                                                           ftags::util::StringTable& fileNameTable,
                                                                            RecordSpanManager& recordSpanManager,
                                                                            const std::string& filterPath)
 {
@@ -496,7 +496,7 @@ ftags::ProjectDb::TranslationUnit ftags::ProjectDb::TranslationUnit::parse(const
 
    TranslationUnitAccumulator accumulator{translationUnit, symbolTable, fileNameTable, recordSpanManager, filterPath};
 
-   StringTable::Key fileKey = fileNameTable.addKey(fileName.c_str());
+   ftags::util::StringTable::Key fileKey = fileNameTable.addKey(fileName.c_str());
    translationUnit.beginParsingUnit(fileKey);
 
    auto clangIndex = std::unique_ptr<void, CXIndexDestroyer>(clang_createIndex(/* excludeDeclarationsFromPCH = */ 0,

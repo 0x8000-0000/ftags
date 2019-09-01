@@ -118,16 +118,16 @@ void ftags::Record::filterDuplicates(std::vector<const ftags::Record*>& records)
  */
 template <>
 std::size_t
-ftags::Serializer<std::vector<ftags::Record>>::computeSerializedSize(const std::vector<ftags::Record>& val)
+ftags::util::Serializer<std::vector<ftags::Record>>::computeSerializedSize(const std::vector<ftags::Record>& val)
 {
-   return sizeof(ftags::SerializedObjectHeader) + sizeof(uint64_t) + val.size() * sizeof(ftags::Record);
+   return sizeof(ftags::util::SerializedObjectHeader) + sizeof(uint64_t) + val.size() * sizeof(ftags::Record);
 }
 
 template <>
-void ftags::Serializer<std::vector<ftags::Record>>::serialize(const std::vector<ftags::Record>& val,
-                                                              ftags::BufferInsertor&            insertor)
+void ftags::util::Serializer<std::vector<ftags::Record>>::serialize(const std::vector<ftags::Record>& val,
+                                                                    ftags::util::BufferInsertor&      insertor)
 {
-   ftags::SerializedObjectHeader header{"std::vector<ftags::Record>"};
+   ftags::util::SerializedObjectHeader header{"std::vector<ftags::Record>"};
    insertor << header;
 
    const uint64_t vecSize = val.size();
@@ -138,9 +138,9 @@ void ftags::Serializer<std::vector<ftags::Record>>::serialize(const std::vector<
 
 template <>
 std::vector<ftags::Record>
-ftags::Serializer<std::vector<ftags::Record>>::deserialize(ftags::BufferExtractor& extractor)
+ftags::util::Serializer<std::vector<ftags::Record>>::deserialize(ftags::util::BufferExtractor& extractor)
 {
-   ftags::SerializedObjectHeader header;
+   ftags::util::SerializedObjectHeader header;
    extractor >> header;
 
    uint64_t vecSize = 0;

@@ -25,7 +25,7 @@
 #include <cstdint>
 #include <cstring>
 
-namespace ftags
+namespace ftags::util
 {
 
 struct SerializedObjectHeader
@@ -256,6 +256,6 @@ struct Serializer
    static T deserialize(BufferExtractor& bufferExtractor);
 };
 
-} // namespace ftags
+} // namespace ftags::util
 
 #endif // SERIALIZATION_H_INCLUDED

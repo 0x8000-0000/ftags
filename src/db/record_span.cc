@@ -123,9 +123,9 @@ void ftags::RecordSpan::copyRecordsTo(std::vector<Record>& newCopy) const
 }
 
 void ftags::RecordSpan::filterRecords(
-   std::vector<Record>&                                                    records,
-   const ftags::FlatMap<ftags::StringTable::Key, ftags::StringTable::Key>& symbolKeyMapping,
-   const ftags::FlatMap<ftags::StringTable::Key, ftags::StringTable::Key>& fileNameKeyMapping)
+   std::vector<Record>&                                                                      records,
+   const ftags::util::FlatMap<ftags::util::StringTable::Key, ftags::util::StringTable::Key>& symbolKeyMapping,
+   const ftags::util::FlatMap<ftags::util::StringTable::Key, ftags::util::StringTable::Key>& fileNameKeyMapping)
 {
    for (Record& record : records)
    {
@@ -233,7 +233,7 @@ void ftags::RecordSpan::setRecordsFrom(const std::vector<ftags::Record>& other,
    copyRecordsFrom(other, symbolIndexStore);
 }
 
-ftags::StringTable::Key ftags::RecordSpan::getFileKey() const
+ftags::util::StringTable::Key ftags::RecordSpan::getFileKey() const
 {
    if (m_records == nullptr)
    {
@@ -243,7 +243,7 @@ ftags::StringTable::Key ftags::RecordSpan::getFileKey() const
 
    if (m_size != 0)
    {
-      const ftags::StringTable::Key fileKey = m_records[0].location.fileNameKey;
+      const ftags::util::StringTable::Key fileKey = m_records[0].location.fileNameKey;
 
       for (uint32_t ii = 1; ii < m_size; ii++)
       {

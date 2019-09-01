@@ -20,13 +20,13 @@
 
 TEST(FlatMapTest, PutAValueGetAValue)
 {
-   ftags::FlatMapAccumulator<int, int> fma(3);
+   ftags::util::FlatMapAccumulator<int, int> fma(3);
 
    fma.add(1, 2);
    fma.add(3, 4);
    fma.add(5, 6);
 
-   ftags::FlatMap<int, int> flatMap = fma.getMap();
+   ftags::util::FlatMap<int, int> flatMap = fma.getMap();
 
    auto iter = flatMap.lookup(1);
    ASSERT_NE(flatMap.none(), iter);
@@ -35,13 +35,13 @@ TEST(FlatMapTest, PutAValueGetAValue)
 
 TEST(FlatMapTest, MissingValuesNotFound)
 {
-   ftags::FlatMapAccumulator<int, int> fma(3);
+   ftags::util::FlatMapAccumulator<int, int> fma(3);
 
    fma.add(1, 2);
    fma.add(3, 4);
    fma.add(5, 6);
 
-   ftags::FlatMap<int, int> flatMap = fma.getMap();
+   ftags::util::FlatMap<int, int> flatMap = fma.getMap();
 
    auto iter2 = flatMap.lookup(2);
    ASSERT_EQ(flatMap.none(), iter2);

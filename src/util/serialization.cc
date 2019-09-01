@@ -30,22 +30,22 @@
 
 template <>
 std::size_t
-ftags::Serializer<std::map<uint32_t, uint32_t>>::computeSerializedSize(const std::map<uint32_t, uint32_t>& val)
+ftags::util::Serializer<std::map<uint32_t, uint32_t>>::computeSerializedSize(const std::map<uint32_t, uint32_t>& val)
 {
    using map_uu = std::map<uint32_t, uint32_t>;
 
    static_assert(sizeof(map_uu::key_type) == sizeof(uint32_t));
    static_assert(sizeof(map_uu::mapped_type) == sizeof(uint32_t));
 
-   return sizeof(ftags::SerializedObjectHeader) + sizeof(uint64_t) +
+   return sizeof(SerializedObjectHeader) + sizeof(uint64_t) +
           val.size() * (sizeof(map_uu::key_type) + sizeof(map_uu::mapped_type));
 }
 
 template <>
-void ftags::Serializer<std::map<uint32_t, uint32_t>>::serialize(const std::map<uint32_t, uint32_t>& val,
-                                                                ftags::BufferInsertor&              insertor)
+void ftags::util::Serializer<std::map<uint32_t, uint32_t>>::serialize(const std::map<uint32_t, uint32_t>& val,
+                                                                      ftags::util::BufferInsertor&        insertor)
 {
-   ftags::SerializedObjectHeader header = {};
+   SerializedObjectHeader header = {};
    insertor << header;
 
    const uint64_t mapSize = val.size();
@@ -59,11 +59,11 @@ void ftags::Serializer<std::map<uint32_t, uint32_t>>::serialize(const std::map<u
 
 template <>
 std::map<uint32_t, uint32_t>
-ftags::Serializer<std::map<uint32_t, uint32_t>>::deserialize(ftags::BufferExtractor& extractor)
+ftags::util::Serializer<std::map<uint32_t, uint32_t>>::deserialize(ftags::util::BufferExtractor& extractor)
 {
    std::map<uint32_t, uint32_t> retval;
 
-   ftags::SerializedObjectHeader header = {};
+   SerializedObjectHeader header = {};
    extractor >> header;
 
    uint64_t mapSize = 0;
@@ -87,7 +87,7 @@ ftags::Serializer<std::map<uint32_t, uint32_t>>::deserialize(ftags::BufferExtrac
  */
 
 template <>
-std::size_t ftags::Serializer<std::multimap<uint32_t, uint32_t>>::computeSerializedSize(
+std::size_t ftags::util::Serializer<std::multimap<uint32_t, uint32_t>>::computeSerializedSize(
    const std::multimap<uint32_t, uint32_t>& val)
 {
    using map_uu = std::multimap<uint32_t, uint32_t>;
@@ -95,17 +95,17 @@ std::size_t ftags::Serializer<std::multimap<uint32_t, uint32_t>>::computeSeriali
    static_assert(sizeof(map_uu::key_type) == sizeof(uint32_t));
    static_assert(sizeof(map_uu::mapped_type) == sizeof(uint32_t));
 
-   return sizeof(ftags::SerializedObjectHeader) + sizeof(map_uu::size_type) +
+   return sizeof(SerializedObjectHeader) + sizeof(map_uu::size_type) +
           val.size() * (sizeof(map_uu::key_type) + sizeof(map_uu::mapped_type));
 }
 
 const std::string_view k_std_multimap_uint32_uint32_SerializationSignature{"eeto2jaed!ie2Ou"};
 
 template <>
-void ftags::Serializer<std::multimap<uint32_t, uint32_t>>::serialize(const std::multimap<uint32_t, uint32_t>& val,
-                                                                     ftags::BufferInsertor& insertor)
+void ftags::util::Serializer<std::multimap<uint32_t, uint32_t>>::serialize(
+   const std::multimap<uint32_t, uint32_t>& val, ftags::util::BufferInsertor& insertor)
 {
-   ftags::SerializedObjectHeader header = {k_std_multimap_uint32_uint32_SerializationSignature.data()};
+   SerializedObjectHeader header = {k_std_multimap_uint32_uint32_SerializationSignature.data()};
    insertor << header;
 
    insertor << val.size();
@@ -118,11 +118,11 @@ void ftags::Serializer<std::multimap<uint32_t, uint32_t>>::serialize(const std::
 
 template <>
 std::multimap<uint32_t, uint32_t>
-ftags::Serializer<std::multimap<uint32_t, uint32_t>>::deserialize(ftags::BufferExtractor& extractor)
+ftags::util::Serializer<std::multimap<uint32_t, uint32_t>>::deserialize(ftags::util::BufferExtractor& extractor)
 {
    std::multimap<uint32_t, uint32_t> retval;
 
-   ftags::SerializedObjectHeader header = {};
+   SerializedObjectHeader header = {};
    extractor >> header;
 
    assert(memcmp(header.m_objectType,
@@ -150,15 +150,16 @@ ftags::Serializer<std::multimap<uint32_t, uint32_t>>::deserialize(ftags::BufferE
  */
 
 template <>
-std::size_t ftags::Serializer<std::vector<char>>::computeSerializedSize(const std::vector<char>& val)
+std::size_t ftags::util::Serializer<std::vector<char>>::computeSerializedSize(const std::vector<char>& val)
 {
-   return sizeof(ftags::SerializedObjectHeader) + sizeof(std::vector<char>::size_type) + val.size();
+   return sizeof(SerializedObjectHeader) + sizeof(std::vector<char>::size_type) + val.size();
 }
 
 template <>
-void ftags::Serializer<std::vector<char>>::serialize(const std::vector<char>& val, ftags::BufferInsertor& insertor)
+void ftags::util::Serializer<std::vector<char>>::serialize(const std::vector<char>&     val,
+                                                           ftags::util::BufferInsertor& insertor)
 {
-   ftags::SerializedObjectHeader header{"std::vector<char>"};
+   SerializedObjectHeader header{"std::vector<char>"};
    insertor << header;
 
    insertor << val.size();
@@ -167,9 +168,9 @@ void ftags::Serializer<std::vector<char>>::serialize(const std::vector<char>& va
 }
 
 template <>
-std::vector<char> ftags::Serializer<std::vector<char>>::deserialize(ftags::BufferExtractor& extractor)
+std::vector<char> ftags::util::Serializer<std::vector<char>>::deserialize(ftags::util::BufferExtractor& extractor)
 {
-   ftags::SerializedObjectHeader header = {};
+   SerializedObjectHeader header = {};
    extractor >> header;
 
    std::vector<char>::size_type vecSize = 0;
@@ -186,17 +187,16 @@ std::vector<char> ftags::Serializer<std::vector<char>>::deserialize(ftags::Buffe
  */
 
 template <>
-std::size_t ftags::Serializer<std::vector<uint32_t>>::computeSerializedSize(const std::vector<uint32_t>& val)
+std::size_t ftags::util::Serializer<std::vector<uint32_t>>::computeSerializedSize(const std::vector<uint32_t>& val)
 {
-   return sizeof(ftags::SerializedObjectHeader) + sizeof(std::vector<uint32_t>::size_type) +
-          val.size() * sizeof(uint32_t);
+   return sizeof(SerializedObjectHeader) + sizeof(std::vector<uint32_t>::size_type) + val.size() * sizeof(uint32_t);
 }
 
 template <>
-void ftags::Serializer<std::vector<uint32_t>>::serialize(const std::vector<uint32_t>& val,
-                                                         ftags::BufferInsertor&       insertor)
+void ftags::util::Serializer<std::vector<uint32_t>>::serialize(const std::vector<uint32_t>& val,
+                                                               ftags::util::BufferInsertor& insertor)
 {
-   ftags::SerializedObjectHeader header{"std::vector<uint32_t>"};
+   SerializedObjectHeader header{"std::vector<uint32_t>"};
    insertor << header;
 
    insertor << val.size();
@@ -205,9 +205,10 @@ void ftags::Serializer<std::vector<uint32_t>>::serialize(const std::vector<uint3
 }
 
 template <>
-std::vector<uint32_t> ftags::Serializer<std::vector<uint32_t>>::deserialize(ftags::BufferExtractor& extractor)
+std::vector<uint32_t>
+ftags::util::Serializer<std::vector<uint32_t>>::deserialize(ftags::util::BufferExtractor& extractor)
 {
-   ftags::SerializedObjectHeader header = {};
+   SerializedObjectHeader header = {};
    extractor >> header;
 
    std::vector<uint32_t>::size_type vecSize = 0;
@@ -224,17 +225,16 @@ std::vector<uint32_t> ftags::Serializer<std::vector<uint32_t>>::deserialize(ftag
  */
 
 template <>
-std::size_t ftags::Serializer<std::vector<uint64_t>>::computeSerializedSize(const std::vector<uint64_t>& val)
+std::size_t ftags::util::Serializer<std::vector<uint64_t>>::computeSerializedSize(const std::vector<uint64_t>& val)
 {
-   return sizeof(ftags::SerializedObjectHeader) + sizeof(std::vector<uint64_t>::size_type) +
-          val.size() * sizeof(uint64_t);
+   return sizeof(SerializedObjectHeader) + sizeof(std::vector<uint64_t>::size_type) + val.size() * sizeof(uint64_t);
 }
 
 template <>
-void ftags::Serializer<std::vector<uint64_t>>::serialize(const std::vector<uint64_t>& val,
-                                                         ftags::BufferInsertor&       insertor)
+void ftags::util::Serializer<std::vector<uint64_t>>::serialize(const std::vector<uint64_t>& val,
+                                                               ftags::util::BufferInsertor& insertor)
 {
-   ftags::SerializedObjectHeader header{"std::vector<uint64_t>"};
+   SerializedObjectHeader header{"std::vector<uint64_t>"};
    insertor << header;
 
    insertor << val.size();
@@ -243,9 +243,10 @@ void ftags::Serializer<std::vector<uint64_t>>::serialize(const std::vector<uint6
 }
 
 template <>
-std::vector<uint64_t> ftags::Serializer<std::vector<uint64_t>>::deserialize(ftags::BufferExtractor& extractor)
+std::vector<uint64_t>
+ftags::util::Serializer<std::vector<uint64_t>>::deserialize(ftags::util::BufferExtractor& extractor)
 {
-   ftags::SerializedObjectHeader header = {};
+   SerializedObjectHeader header = {};
    extractor >> header;
 
    std::vector<uint64_t>::size_type vecSize = 0;
@@ -261,13 +262,13 @@ std::vector<uint64_t> ftags::Serializer<std::vector<uint64_t>>::deserialize(ftag
  * std::string
  */
 template <>
-std::size_t ftags::Serializer<std::string>::computeSerializedSize(const std::string& val)
+std::size_t ftags::util::Serializer<std::string>::computeSerializedSize(const std::string& val)
 {
    return sizeof(uint64_t) + val.size();
 }
 
 template <>
-void ftags::Serializer<std::string>::serialize(const std::string& val, ftags::BufferInsertor& insertor)
+void ftags::util::Serializer<std::string>::serialize(const std::string& val, ftags::util::BufferInsertor& insertor)
 {
    const uint64_t size = val.size();
    insertor << size;
@@ -275,7 +276,7 @@ void ftags::Serializer<std::string>::serialize(const std::string& val, ftags::Bu
 }
 
 template <>
-std::string ftags::Serializer<std::string>::deserialize(ftags::BufferExtractor& extractor)
+std::string ftags::util::Serializer<std::string>::deserialize(ftags::util::BufferExtractor& extractor)
 {
    uint64_t size = 0;
    extractor >> size;

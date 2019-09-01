@@ -21,6 +21,10 @@
 
 #include <filesystem>
 
+using ftags::util::BufferExtractor;
+using ftags::util::BufferInsertor;
+using ftags::util::StringTable;
+
 TEST(ProjectSerializationTest, CursorSet)
 {
    std::vector<const ftags::Record*> input;
@@ -29,14 +33,14 @@ TEST(ProjectSerializationTest, CursorSet)
    ftags::Record two   = {};
    ftags::Record three = {};
 
-   ftags::StringTable symbolTable;
-   ftags::StringTable fileNameTable;
+   StringTable symbolTable;
+   StringTable fileNameTable;
 
    one.symbolNameKey   = symbolTable.addKey("alpha");
    two.symbolNameKey   = symbolTable.addKey("beta");
    three.symbolNameKey = symbolTable.addKey("gamma");
 
-   const auto fileKey = fileNameTable.addKey("hello.cc");
+   const auto fileKey    = fileNameTable.addKey("hello.cc");
    const auto fileDefKey = fileNameTable.addKey("goodbye.cc");
 
    one.setLocationFileKey(fileKey);
@@ -56,12 +60,12 @@ TEST(ProjectSerializationTest, CursorSet)
    const size_t           inputSerializedSize = inputSet.computeSerializedSize();
    std::vector<std::byte> buffer(/* size = */ inputSerializedSize);
 
-   ftags::BufferInsertor insertor{buffer};
+   BufferInsertor insertor{buffer};
 
    inputSet.serialize(insertor);
    insertor.assertEmpty();
 
-   ftags::BufferExtractor extractor{buffer};
+   BufferExtractor        extractor{buffer};
    const ftags::CursorSet output = ftags::CursorSet::deserialize(extractor);
    extractor.assertEmpty();
 
@@ -104,12 +108,12 @@ TEST(ProjectSerializationTest, DeserializedProjectDbEqualsInput)
 
    std::vector<std::byte> buffer(/* size = */ tagsDb.computeSerializedSize());
 
-   ftags::BufferInsertor insertor{buffer};
+   BufferInsertor insertor{buffer};
 
    tagsDb.serialize(insertor);
 
-   ftags::BufferExtractor extractor{buffer};
-   ftags::ProjectDb       restoredTagsDb = ftags::ProjectDb::deserialize(extractor);
+   BufferExtractor  extractor{buffer};
+   ftags::ProjectDb restoredTagsDb = ftags::ProjectDb::deserialize(extractor);
 
    ASSERT_TRUE(tagsDb.operator==(restoredTagsDb));
 }
@@ -144,7 +148,7 @@ TEST(ProjectSerializationTest, FindVariablesInDeserializedProjectDb)
 
       buffer.resize(tagsDb.computeSerializedSize());
 
-      ftags::BufferInsertor insertor{buffer};
+      BufferInsertor insertor{buffer};
 
       tagsDb.serialize(insertor);
 
@@ -166,8 +170,8 @@ TEST(ProjectSerializationTest, FindVariablesInDeserializedProjectDb)
       }
    }
 
-   ftags::BufferExtractor extractor{buffer};
-   ftags::ProjectDb       restoredTagsDb = ftags::ProjectDb::deserialize(extractor);
+   BufferExtractor  extractor{buffer};
+   ftags::ProjectDb restoredTagsDb = ftags::ProjectDb::deserialize(extractor);
 
    std::string restoredName = restoredTagsDb.getName();
    ASSERT_STREQ("test", restoredName.data());

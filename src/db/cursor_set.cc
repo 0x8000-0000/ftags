@@ -21,9 +21,9 @@
 /*
  * CursorSet
  */
-ftags::CursorSet::CursorSet(std::vector<const Record*> records,
-                            const StringTable&         symbolTable,
-                            const StringTable&         fileNameTable)
+ftags::CursorSet::CursorSet(std::vector<const Record*>      records,
+                            const ftags::util::StringTable& symbolTable,
+                            const ftags::util::StringTable& fileNameTable)
 {
    m_records.reserve(records.size());
 
@@ -70,35 +70,35 @@ ftags::Cursor ftags::CursorSet::inflateRecord(const ftags::Record& record) const
 
 std::size_t ftags::CursorSet::computeSerializedSize() const
 {
-   return sizeof(ftags::SerializedObjectHeader) +
-          ftags::Serializer<std::vector<Record>>::computeSerializedSize(m_records) +
+   return sizeof(ftags::util::SerializedObjectHeader) +
+          ftags::util::Serializer<std::vector<Record>>::computeSerializedSize(m_records) +
           m_symbolTable.computeSerializedSize() + m_fileNameTable.computeSerializedSize();
 }
 
-void ftags::CursorSet::serialize(ftags::BufferInsertor& insertor) const
+void ftags::CursorSet::serialize(ftags::util::BufferInsertor& insertor) const
 {
-   ftags::SerializedObjectHeader header{"ftags::CursorSet"};
+   ftags::util::SerializedObjectHeader header{"ftags::CursorSet"};
    insertor << header;
 
-   ftags::Serializer<std::vector<Record>>::serialize(m_records, insertor);
+   ftags::util::Serializer<std::vector<Record>>::serialize(m_records, insertor);
 
    m_symbolTable.serialize(insertor);
 
    m_fileNameTable.serialize(insertor);
 }
 
-ftags::CursorSet ftags::CursorSet::deserialize(ftags::BufferExtractor& extractor)
+ftags::CursorSet ftags::CursorSet::deserialize(ftags::util::BufferExtractor& extractor)
 {
    ftags::CursorSet retval;
 
-   ftags::SerializedObjectHeader header;
+   ftags::util::SerializedObjectHeader header;
    extractor >> header;
 
-   retval.m_records = ftags::Serializer<std::vector<Record>>::deserialize(extractor);
+   retval.m_records = ftags::util::Serializer<std::vector<Record>>::deserialize(extractor);
 
-   retval.m_symbolTable = StringTable::deserialize(extractor);
+   retval.m_symbolTable = ftags::util::StringTable::deserialize(extractor);
 
-   retval.m_fileNameTable = StringTable::deserialize(extractor);
+   retval.m_fileNameTable = ftags::util::StringTable::deserialize(extractor);
 
    return retval;
 }

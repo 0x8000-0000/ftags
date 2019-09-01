@@ -72,12 +72,14 @@ struct Cursor
    Location definition;
 };
 
-using KeyMap = ftags::FlatMap<ftags::StringTable::Key, ftags::StringTable::Key>;
+using KeyMap = ftags::util::FlatMap<ftags::util::StringTable::Key, ftags::util::StringTable::Key>;
 
 class CursorSet
 {
 public:
-   CursorSet(std::vector<const Record*> records, const StringTable& symbolTable, const StringTable& fileNameTable);
+   CursorSet(std::vector<const Record*>      records,
+             const ftags::util::StringTable& symbolTable,
+             const ftags::util::StringTable& fileNameTable);
 
    Cursor inflateRecord(const Record& record) const;
 
@@ -101,9 +103,9 @@ public:
     */
    std::size_t computeSerializedSize() const;
 
-   void serialize(ftags::BufferInsertor& insertor) const;
+   void serialize(ftags::util::BufferInsertor& insertor) const;
 
-   static CursorSet deserialize(ftags::BufferExtractor& extractor);
+   static CursorSet deserialize(ftags::util::BufferExtractor& extractor);
 
    std::size_t computeHash() const;
 
@@ -111,9 +113,9 @@ private:
    CursorSet() = default;
 
    // persistent data
-   std::vector<Record> m_records;
-   StringTable         m_symbolTable;
-   StringTable         m_fileNameTable;
+   std::vector<Record>      m_records;
+   ftags::util::StringTable m_symbolTable;
+   ftags::util::StringTable m_fileNameTable;
 
    static constexpr uint64_t k_hashSeed[] = {0x6905e06277e77c15, 0x27e6864cb5ff7d26};
 };
@@ -266,16 +268,16 @@ public:
     */
    std::size_t computeSerializedSize() const;
 
-   void serialize(ftags::BufferInsertor& insertor) const;
+   void serialize(ftags::util::BufferInsertor& insertor) const;
 
-   static ftags::ProjectDb deserialize(ftags::BufferExtractor& extractor);
+   static ftags::ProjectDb deserialize(ftags::util::BufferExtractor& extractor);
 
    /** Contains all the symbols in a C++ translation unit.
     */
    class TranslationUnit
    {
    public:
-      using Key = ftags::StringTable::Key;
+      using Key = ftags::util::StringTable::Key;
 
       void copyRecords(const TranslationUnit&   other,
                        const RecordSpanManager& otherRecordSpanManager,
@@ -346,16 +348,16 @@ public:
 
       static TranslationUnit parse(const std::string&              fileName,
                                    const std::vector<const char*>& arguments,
-                                   StringTable&                    symbolTable,
-                                   StringTable&                    fileNameTable,
+                                   ftags::util::StringTable&       symbolTable,
+                                   ftags::util::StringTable&       fileNameTable,
                                    RecordSpanManager&              recordSpanManager,
                                    const std::string&              filterPath);
 
-      void addCursor(const Cursor&             cursor,
-                     StringTable::Key          symbolNameKey,
-                     StringTable::Key          fileNameKey,
-                     StringTable::Key          referencedFileNameKey,
-                     ftags::RecordSpanManager& recordSpanManager);
+      void addCursor(const Cursor&                 cursor,
+                     ftags::util::StringTable::Key symbolNameKey,
+                     ftags::util::StringTable::Key fileNameKey,
+                     ftags::util::StringTable::Key referencedFileNameKey,
+                     ftags::RecordSpanManager&     recordSpanManager);
 
       /*
        * Query helper
@@ -412,11 +414,11 @@ public:
       /*
        * Debugging
        */
-      void dumpRecords(std::ostream&                os,
-                       const RecordSpanManager&     recordSpanManager,
-                       const ftags::StringTable&    symbolTable,
-                       const ftags::StringTable&    fileNameTable,
-                       const std::filesystem::path& trimPath) const;
+      void dumpRecords(std::ostream&                   os,
+                       const RecordSpanManager&        recordSpanManager,
+                       const ftags::util::StringTable& symbolTable,
+                       const ftags::util::StringTable& fileNameTable,
+                       const std::filesystem::path&    trimPath) const;
 
       void assertValid() const
 #if defined(NDEBUG) || (!defined(ENABLE_THOROUGH_VALIDITY_CHECKS))
@@ -431,9 +433,9 @@ public:
        */
       std::size_t computeSerializedSize() const;
 
-      void serialize(ftags::BufferInsertor& insertor) const;
+      void serialize(ftags::util::BufferInsertor& insertor) const;
 
-      static TranslationUnit deserialize(ftags::BufferExtractor& extractor);
+      static TranslationUnit deserialize(ftags::util::BufferExtractor& extractor);
 
    private:
       // key of the file name of the main translation unit
@@ -448,10 +450,13 @@ public:
 
       struct SymbolAtLocation
       {
-         StringTable::Key symbolKey;
-         Record::Location location;
+         ftags::util::StringTable::Key symbolKey;
+         Record::Location              location;
 
-         SymbolAtLocation(StringTable::Key symbolKey_, StringTable::Key fileKey, uint32_t line, uint32_t column) :
+         SymbolAtLocation(ftags::util::StringTable::Key symbolKey_,
+                          ftags::util::StringTable::Key fileKey,
+                          uint32_t                      line,
+                          uint32_t                      column) :
             symbolKey{symbolKey_},
             location{fileKey, line, column}
          {
@@ -482,7 +487,7 @@ public:
       std::set<SymbolAtLocation> m_currentSpanLocations;
       void                       flushCurrentSpan(RecordSpanManager& recordSpanManager);
 
-      void beginParsingUnit(StringTable::Key fileNameKey);
+      void beginParsingUnit(ftags::util::StringTable::Key fileNameKey);
       void finalizeParsingUnit(RecordSpanManager& recordSpanManager);
    };
 
@@ -538,15 +543,15 @@ private:
    using TranslationUnitStore = std::vector<TranslationUnit>;
    TranslationUnitStore m_translationUnits;
 
-   StringTable m_symbolTable;
-   StringTable m_namespaceTable;
-   StringTable m_fileNameTable;
+   ftags::util::StringTable m_symbolTable;
+   ftags::util::StringTable m_namespaceTable;
+   ftags::util::StringTable m_fileNameTable;
 
    RecordSpanManager m_recordSpanManager;
 
    /** Maps from a file name key to a position in the translation units vector.
     */
-   std::map<StringTable::Key, std::vector<TranslationUnit>::size_type> m_fileIndex;
+   std::map<ftags::util::StringTable::Key, std::vector<TranslationUnit>::size_type> m_fileIndex;
 };
 
 void parseProject(const char* parentDirectory, ftags::ProjectDb& projectDb);

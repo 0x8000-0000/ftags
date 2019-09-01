@@ -24,6 +24,9 @@
 #include <cstddef>
 #include <cstdint>
 
+using ftags::util::BufferExtractor;
+using ftags::util::BufferInsertor;
+
 TEST(SerializationTest, MapUintToUint)
 {
    std::map<uint32_t, uint32_t> input;
@@ -31,16 +34,16 @@ TEST(SerializationTest, MapUintToUint)
    input[0]  = 33;
    input[13] = 2;
 
-   using Serializer = ftags::Serializer<std::map<uint32_t, uint32_t>>;
+   using Serializer = ftags::util::Serializer<std::map<uint32_t, uint32_t>>;
 
    const size_t           inputSerializedSize = Serializer::computeSerializedSize(input);
    std::vector<std::byte> buffer(/* size = */ inputSerializedSize);
 
-   ftags::BufferInsertor insertor{buffer};
+   BufferInsertor insertor{buffer};
    Serializer::serialize(input, insertor);
    insertor.assertEmpty();
 
-   ftags::BufferExtractor             extractor{buffer};
+   BufferExtractor                    extractor{buffer};
    const std::map<uint32_t, uint32_t> output = Serializer::deserialize(extractor);
    extractor.assertEmpty();
 
@@ -56,17 +59,17 @@ TEST(SerializationTest, CharVector)
    input.push_back('b');
    input.push_back('c');
 
-   using Serializer = ftags::Serializer<std::vector<char>>;
+   using Serializer = ftags::util::Serializer<std::vector<char>>;
 
    const size_t           inputSerializedSize = Serializer::computeSerializedSize(input);
    std::vector<std::byte> buffer(/* size = */ inputSerializedSize);
 
-   ftags::BufferInsertor insertor{buffer};
+   BufferInsertor insertor{buffer};
 
    Serializer::serialize(input, insertor);
    insertor.assertEmpty();
 
-   ftags::BufferExtractor  extractor{buffer};
+   BufferExtractor         extractor{buffer};
    const std::vector<char> output = Serializer::deserialize(extractor);
    extractor.assertEmpty();
 

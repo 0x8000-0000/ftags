@@ -24,8 +24,11 @@
  * Intrusive, black-box tests for Store.
  */
 
-using Store = ftags::Store<uint32_t, uint32_t, 24>;
-using SmallStore = ftags::Store<uint32_t, uint32_t, 5>;     // block size up to 32 - 4
+using Store      = ftags::util::Store<uint32_t, uint32_t, 24>;
+using SmallStore = ftags::util::Store<uint32_t, uint32_t, 5>; // block size up to 32 - 4
+
+using ftags::util::BufferExtractor;
+using ftags::util::BufferInsertor;
 
 TEST(StoreMapTest, FirstAllocationReturnsKey1)
 {
@@ -284,7 +287,6 @@ TEST(StoreMapTest, ExtendAllocatedBlock5)
    std::fill_n(blockFour.iterator, blockSize, 4);
 }
 
-
 TEST(StoreMapTest, SerializeSingleSegment)
 {
    Store store;
@@ -305,22 +307,21 @@ TEST(StoreMapTest, SerializeSingleSegment)
    store.deallocate(blockTwo.key, 2 * blockSize);
 
    // serialize
-   const size_t inputSerializedSize = store.computeSerializedSize();
+   const size_t           inputSerializedSize = store.computeSerializedSize();
    std::vector<std::byte> buffer(/* size = */ inputSerializedSize);
-   ftags::BufferInsertor insertor{buffer};
+   BufferInsertor         insertor{buffer};
    store.serialize(insertor);
    insertor.assertEmpty();
 
-   ftags::BufferExtractor extractor{buffer};
-   Store rehydrated = Store::deserialize(extractor);
+   BufferExtractor extractor{buffer};
+   Store           rehydrated = Store::deserialize(extractor);
    extractor.assertEmpty();
 
    // test
    const auto rehydratedBlockOne = rehydrated.get(blockOne.key);
-   const auto valuesCount = std::count(rehydratedBlockOne.first, rehydratedBlockOne.first + blockSize, 1);
+   const auto valuesCount        = std::count(rehydratedBlockOne.first, rehydratedBlockOne.first + blockSize, 1);
    ASSERT_EQ(blockSize, valuesCount);
 }
-
 
 TEST(StoreAllocatorIteratorTest, EmptyStore)
 {
@@ -543,7 +544,7 @@ TEST(StoreAllocatorIteratorTest, ThreeAllocationsWithTwoGapsOverflow)
    ASSERT_TRUE(store.isValidAllocatedSequence(allocSeq));
 
    ASSERT_EQ(blockFive.key, allocSeq.key);
-   ASSERT_EQ(blockSize + blockSize, allocSeq.size);  // blocks five and six are adjacent
+   ASSERT_EQ(blockSize + blockSize, allocSeq.size); // blocks five and six are adjacent
    const auto allocSeqIter3 = store.get(allocSeq.key).first;
    ASSERT_EQ(blockFive.iterator, allocSeqIter3);
 

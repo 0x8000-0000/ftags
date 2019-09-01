@@ -20,12 +20,16 @@
 #include <record.h>
 #include <record_span.h>
 
+#include <string_table.h>
+
+#include <map>
+
 namespace ftags
 {
 
 class RecordSpanManager
 {
-   using Index = std::multimap<StringTable::Key, RecordSpan::Store::Key>;
+   using Index = std::multimap<ftags::util::StringTable::Key, RecordSpan::Store::Key>;
 
    /** Maps from a symbol key to a bag of translation units containing the symbol.
     */
@@ -96,15 +100,15 @@ public:
     */
    std::size_t computeSerializedSize() const;
 
-   void serialize(ftags::BufferInsertor& insertor) const;
+   void serialize(ftags::util::BufferInsertor& insertor) const;
 
-   static ftags::RecordSpanManager deserialize(ftags::BufferExtractor& extractor);
+   static ftags::RecordSpanManager deserialize(ftags::util::BufferExtractor& extractor);
 
    /*
     * Query interface
     */
    template <typename F>
-   std::vector<const Record*> filterRecordsWithSymbol(StringTable::Key symbolKey, F selectRecord) const
+   std::vector<const Record*> filterRecordsWithSymbol(ftags::util::StringTable::Key symbolKey, F selectRecord) const
    {
       std::vector<const ftags::Record*> results;
 
@@ -131,7 +135,7 @@ public:
    }
 
    template <typename F>
-   void forEachRecordWithSymbol(StringTable::Key symbolKey, F func) const
+   void forEachRecordWithSymbol(ftags::util::StringTable::Key symbolKey, F func) const
    {
       if (symbolKey)
       {
@@ -161,7 +165,7 @@ public:
    }
 
    template <typename F>
-   std::vector<const Record*> filterRecordsFromFile(StringTable::Key fileNameKey, F selectRecord) const
+   std::vector<const Record*> filterRecordsFromFile(ftags::util::StringTable::Key fileNameKey, F selectRecord) const
    {
       std::vector<const ftags::Record*> results;
       if (fileNameKey)
@@ -183,7 +187,7 @@ public:
    }
 
    std::vector<const Record*>
-   findClosestRecord(StringTable::Key fileNameKey, unsigned lineNumber, unsigned columnNumber) const;
+   findClosestRecord(ftags::util::StringTable::Key fileNameKey, unsigned lineNumber, unsigned columnNumber) const;
 
    std::size_t getRecordCount() const
    {
@@ -225,7 +229,7 @@ private:
 
    void indexRecordSpan(const RecordSpan& recordSpan, RecordSpan::Store::Key key);
 
-   std::set<ftags::StringTable::Key> getSymbolKeys() const;
+   std::set<ftags::util::StringTable::Key> getSymbolKeys() const;
 };
 
 } // namespace ftags

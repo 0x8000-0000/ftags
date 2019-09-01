@@ -21,7 +21,7 @@
 #include <utility>
 #include <vector>
 
-namespace ftags
+namespace ftags::util
 {
 
 template <typename K, typename V>
@@ -86,6 +86,6 @@ private:
    std::vector<std::pair<K, V>> m_data;
 };
 
-} // namespace ftags
+} // namespace ftags::util
 
 #endif // FTAGS_FLAT_MAP_H_INCLUDED

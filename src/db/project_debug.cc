@@ -71,10 +71,10 @@ private:
 
 } // anonymous namespace
 
-void ftags::RecordSpan::dumpRecords(std::ostream&                os,
-                                    const ftags::StringTable&    symbolTable,
-                                    const ftags::StringTable&    fileNameTable,
-                                    const std::filesystem::path& trimPath) const
+void ftags::RecordSpan::dumpRecords(std::ostream&                   os,
+                                    const ftags::util::StringTable& symbolTable,
+                                    const ftags::util::StringTable& fileNameTable,
+                                    const std::filesystem::path&    trimPath) const
 {
    for (std::size_t ii = 0; ii < m_size; ii++)
    {
@@ -100,11 +100,11 @@ void ftags::RecordSpan::dumpRecords(std::ostream&                os,
    }
 }
 
-void ftags::ProjectDb::TranslationUnit::dumpRecords(std::ostream&                os,
-                                                    const RecordSpanManager&     recordSpanManager,
-                                                    const ftags::StringTable&    symbolTable,
-                                                    const ftags::StringTable&    fileNameTable,
-                                                    const std::filesystem::path& trimPath) const
+void ftags::ProjectDb::TranslationUnit::dumpRecords(std::ostream&                   os,
+                                                    const RecordSpanManager&        recordSpanManager,
+                                                    const ftags::util::StringTable& symbolTable,
+                                                    const ftags::util::StringTable& fileNameTable,
+                                                    const std::filesystem::path&    trimPath) const
 {
    os << " Found " << getRecordCount(recordSpanManager) << " records." << std::endl;
 

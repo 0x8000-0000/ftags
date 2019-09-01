@@ -18,6 +18,10 @@
 
 #include <gtest/gtest.h>
 
+using ftags::util::BufferExtractor;
+using ftags::util::BufferInsertor;
+using ftags::util::StringTable;
+
 TEST(RecordSpanManagerTest, RecordVector)
 {
    std::vector<ftags::Record> input;
@@ -34,17 +38,17 @@ TEST(RecordSpanManagerTest, RecordVector)
    input.push_back(two);
    input.push_back(three);
 
-   using Serializer = ftags::Serializer<std::vector<ftags::Record>>;
+   using Serializer = ftags::util::Serializer<std::vector<ftags::Record>>;
 
    const size_t           inputSerializedSize = Serializer::computeSerializedSize(input);
    std::vector<std::byte> buffer(/* size = */ inputSerializedSize);
 
-   ftags::BufferInsertor insertor{buffer};
+   BufferInsertor insertor{buffer};
 
    Serializer::serialize(input, insertor);
    insertor.assertEmpty();
 
-   ftags::BufferExtractor           extractor{buffer};
+   BufferExtractor                  extractor{buffer};
    const std::vector<ftags::Record> output = Serializer::deserialize(extractor);
    extractor.assertEmpty();
 
@@ -151,10 +155,10 @@ TEST(RecordSpanManagerTest, HandleDuplicatesAfterSerialization)
       const size_t           inputSerializedSize = manager.computeSerializedSize();
       std::vector<std::byte> buffer(/* size = */ inputSerializedSize);
 
-      ftags::BufferInsertor insertor{buffer};
+      BufferInsertor insertor{buffer};
       manager.serialize(insertor);
 
-      ftags::BufferExtractor extractor{buffer};
+      BufferExtractor extractor{buffer};
       newManager = ftags::RecordSpanManager::deserialize(extractor);
    }
 
@@ -264,11 +268,11 @@ TEST(RecordSpanManagerTest, RecordIterationAfterSerialization)
       ftags::Record four  = {};
       ftags::Record five  = {};
 
-      one.symbolNameKey         = 1;
-      two.symbolNameKey         = 2;
-      three.symbolNameKey       = 3;
-      four.symbolNameKey        = 3;
-      five.symbolNameKey        = 2;
+      one.symbolNameKey   = 1;
+      two.symbolNameKey   = 2;
+      three.symbolNameKey = 3;
+      four.symbolNameKey  = 3;
+      five.symbolNameKey  = 2;
 
       // clang-format off
       one.location.fileNameKey =
@@ -290,10 +294,10 @@ TEST(RecordSpanManagerTest, RecordIterationAfterSerialization)
    const size_t           inputSerializedSize = manager.computeSerializedSize();
    std::vector<std::byte> buffer(/* size = */ inputSerializedSize);
 
-   ftags::BufferInsertor insertor{buffer};
+   BufferInsertor insertor{buffer};
    manager.serialize(insertor);
 
-   ftags::BufferExtractor extractor{buffer};
+   BufferExtractor extractor{buffer};
 
    ftags::RecordSpanManager newManager = ftags::RecordSpanManager::deserialize(extractor);
 
@@ -304,9 +308,9 @@ TEST(RecordSpanManagerTest, RecordIterationAfterSerialization)
       ftags::Record two   = {};
       ftags::Record three = {};
 
-      one.symbolNameKey        = 1;
-      two.symbolNameKey        = 2;
-      three.symbolNameKey      = 3;
+      one.symbolNameKey   = 1;
+      two.symbolNameKey   = 2;
+      three.symbolNameKey = 3;
 
       // clang-format off
       one.location.fileNameKey =

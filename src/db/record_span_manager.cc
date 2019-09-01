@@ -58,39 +58,40 @@ void ftags::RecordSpanManager::indexRecordSpan(const ftags::RecordSpan&      rec
                                                ftags::RecordSpan::Store::Key recordSpanKey)
 {
    // gather all unique symbols in this record span
-   std::set<ftags::StringTable::Key> symbolKeys;
+   std::set<ftags::util::StringTable::Key> symbolKeys;
    recordSpan.forEachRecord([&symbolKeys](const Record* record) { symbolKeys.insert(record->symbolNameKey); });
 
    /*
     * add a mapping from this symbol to this record span
     */
-   std::for_each(symbolKeys.cbegin(), symbolKeys.cend(), [this, recordSpanKey](ftags::StringTable::Key symbolKey) {
-      m_symbolIndex.emplace(symbolKey, recordSpanKey);
-   });
+   std::for_each(
+      symbolKeys.cbegin(), symbolKeys.cend(), [this, recordSpanKey](ftags::util::StringTable::Key symbolKey) {
+         m_symbolIndex.emplace(symbolKey, recordSpanKey);
+      });
 
    m_fileIndex.emplace(recordSpan.getFileKey(), recordSpanKey);
 }
 
 std::size_t ftags::RecordSpanManager::computeSerializedSize() const
 {
-   return sizeof(ftags::SerializedObjectHeader) + m_recordSpanStore.computeSerializedSize() +
+   return sizeof(ftags::util::SerializedObjectHeader) + m_recordSpanStore.computeSerializedSize() +
           m_recordStore.computeSerializedSize();
 }
 
-void ftags::RecordSpanManager::serialize(ftags::BufferInsertor& insertor) const
+void ftags::RecordSpanManager::serialize(ftags::util::BufferInsertor& insertor) const
 {
    assertValid();
 
-   ftags::SerializedObjectHeader header{"ftags::RecordSpanManager"};
+   ftags::util::SerializedObjectHeader header{"ftags::RecordSpanManager"};
    insertor << header;
 
    m_recordSpanStore.serialize(insertor);
    m_recordStore.serialize(insertor);
 }
 
-ftags::RecordSpanManager ftags::RecordSpanManager::deserialize(ftags::BufferExtractor& extractor)
+ftags::RecordSpanManager ftags::RecordSpanManager::deserialize(ftags::util::BufferExtractor& extractor)
 {
-   ftags::SerializedObjectHeader header = {};
+   ftags::util::SerializedObjectHeader header = {};
    extractor >> header;
 
    ftags::RecordSpanManager retval;
@@ -117,9 +118,9 @@ ftags::RecordSpanManager ftags::RecordSpanManager::deserialize(ftags::BufferExtr
    return retval;
 }
 
-std::set<ftags::StringTable::Key> ftags::RecordSpanManager::getSymbolKeys() const
+std::set<ftags::util::StringTable::Key> ftags::RecordSpanManager::getSymbolKeys() const
 {
-   std::set<ftags::StringTable::Key> uniqueKeys;
+   std::set<ftags::util::StringTable::Key> uniqueKeys;
    for (const auto& iter : m_symbolIndex)
    {
       uniqueKeys.insert(iter.first);
@@ -132,9 +133,8 @@ std::size_t ftags::RecordSpanManager::getSymbolCount() const
    return getSymbolKeys().size();
 }
 
-std::vector<const ftags::Record*> ftags::RecordSpanManager::findClosestRecord(StringTable::Key fileNameKey,
-                                                                              unsigned         lineNumber,
-                                                                              unsigned /* columnNumber */) const
+std::vector<const ftags::Record*> ftags::RecordSpanManager::findClosestRecord(
+   ftags::util::StringTable::Key fileNameKey, unsigned lineNumber, unsigned /* columnNumber */) const
 {
    return filterRecordsFromFile(fileNameKey,
                                 [lineNumber](const Record* record) { return record->location.line == lineNumber; });

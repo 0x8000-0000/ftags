@@ -22,7 +22,7 @@
 #include <cassert>
 #include <cstring>
 
-const char* ftags::StringTable::getString(Key stringKey) const noexcept
+const char* ftags::util::StringTable::getString(Key stringKey) const noexcept
 {
    auto location = m_store.get(stringKey);
 
@@ -36,7 +36,7 @@ const char* ftags::StringTable::getString(Key stringKey) const noexcept
    }
 }
 
-ftags::StringTable::Key ftags::StringTable::getKey(const char* inputString) const noexcept
+ftags::util::StringTable::Key ftags::util::StringTable::getKey(const char* inputString) const noexcept
 {
    auto iter = m_index.find(inputString);
 
@@ -50,7 +50,7 @@ ftags::StringTable::Key ftags::StringTable::getKey(const char* inputString) cons
    }
 }
 
-ftags::StringTable::Key ftags::StringTable::addKey(const char* inputString)
+ftags::util::StringTable::Key ftags::util::StringTable::addKey(const char* inputString)
 {
    const Key currentPosition{getKey(inputString)};
 
@@ -64,7 +64,7 @@ ftags::StringTable::Key ftags::StringTable::addKey(const char* inputString)
    return key;
 }
 
-ftags::StringTable::Key ftags::StringTable::insertString(const char* aString)
+ftags::util::StringTable::Key ftags::util::StringTable::insertString(const char* aString)
 {
    const auto inputLength{static_cast<uint32_t>(strlen(aString))};
 
@@ -79,7 +79,7 @@ ftags::StringTable::Key ftags::StringTable::insertString(const char* aString)
    return allocation.key;
 }
 
-void ftags::StringTable::removeKey(const char* inputString)
+void ftags::util::StringTable::removeKey(const char* inputString)
 {
    auto iter = m_index.find(inputString);
 
@@ -101,10 +101,10 @@ void ftags::StringTable::removeKey(const char* inputString)
    m_index.erase(iter);
 }
 
-ftags::FlatMap<ftags::StringTable::Key, ftags::StringTable::Key>
-ftags::StringTable::mergeStringTable(const StringTable& other)
+ftags::util::FlatMap<ftags::util::StringTable::Key, ftags::util::StringTable::Key>
+ftags::util::StringTable::mergeStringTable(const StringTable& other)
 {
-   ftags::FlatMapAccumulator<ftags::StringTable::Key, ftags::StringTable::Key> accumulator(other.m_index.size());
+   FlatMapAccumulator<StringTable::Key, StringTable::Key> accumulator(other.m_index.size());
 
    for (const auto& pair : other.m_index)
    {

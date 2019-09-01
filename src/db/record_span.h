@@ -43,7 +43,7 @@ private:
    {
       struct KeyWrapper
       {
-         ftags::StringTable::Key key;
+         ftags::util::StringTable::Key key;
       };
 
       RecordSymbolComparator(const Record* records) : m_records{records}
@@ -64,9 +64,9 @@ private:
    };
 
 public:
-   using Store            = ftags::Store<RecordSpan, uint32_t, 22>;
+   using Store            = ftags::util::Store<RecordSpan, uint32_t, 22>;
    using Hash             = std::uint64_t;
-   using SymbolIndexStore = ftags::Store<uint32_t, uint32_t, 22>;
+   using SymbolIndexStore = ftags::util::Store<uint32_t, uint32_t, 22>;
 
    RecordSpan() = default;
 
@@ -106,7 +106,7 @@ public:
       return m_key;
    }
 
-   ftags::StringTable::Key getFileKey() const;
+   ftags::util::StringTable::Key getFileKey() const;
 
    ftags::Record::Store::Key getSize() const
    {
@@ -132,10 +132,10 @@ public:
 
    bool isEqualTo(const std::vector<ftags::Record>& records) const;
 
-   static void
-   filterRecords(std::vector<Record>&                                                    records,
-                 const ftags::FlatMap<ftags::StringTable::Key, ftags::StringTable::Key>& symbolKeyMapping,
-                 const ftags::FlatMap<ftags::StringTable::Key, ftags::StringTable::Key>& fileNameKeyMapping);
+   static void filterRecords(
+      std::vector<Record>&                                                                      records,
+      const ftags::util::FlatMap<ftags::util::StringTable::Key, ftags::util::StringTable::Key>& symbolKeyMapping,
+      const ftags::util::FlatMap<ftags::util::StringTable::Key, ftags::util::StringTable::Key>& fileNameKeyMapping);
 
    template <typename F>
    void forEachRecord(F func) const
@@ -147,9 +147,9 @@ public:
    }
 
    template <typename F>
-   void forEachRecordWithSymbol(ftags::StringTable::Key symbolNameKey,
-                                F                       func,
-                                const SymbolIndexStore& symbolIndexStore) const
+   void forEachRecordWithSymbol(ftags::util::StringTable::Key symbolNameKey,
+                                F                             func,
+                                const SymbolIndexStore&       symbolIndexStore) const
    {
       assert(m_symbolIndexKey != 0);
       if (m_symbolIndexKey != 0)
@@ -173,10 +173,10 @@ public:
    /*
     * Debugging
     */
-   void dumpRecords(std::ostream&                os,
-                    const ftags::StringTable&    symbolTable,
-                    const ftags::StringTable&    fileNameTable,
-                    const std::filesystem::path& trimPath) const;
+   void dumpRecords(std::ostream&                   os,
+                    const ftags::util::StringTable& symbolTable,
+                    const ftags::util::StringTable& fileNameTable,
+                    const std::filesystem::path&    trimPath) const;
 
 #if 0
    // handled in bulk by RecordSpanManager

@@ -18,11 +18,14 @@
 
 #include <gtest/gtest.h>
 
+using ftags::util::StringTable;
+using Key = ftags::util::StringTable::Key;
+using ftags::util::BufferExtractor;
+using ftags::util::BufferInsertor;
+
 TEST(StringTableTest, AddOneMillionStrings)
 {
-   using Key = ftags::StringTable::Key;
-
-   ftags::StringTable stringTable;
+   StringTable stringTable;
 
    std::string input = "abcdefghijlkmnopqrstuvxyz";
 
@@ -37,12 +40,12 @@ TEST(StringTableTest, AddOneMillionStrings)
    const size_t           serializedSize = stringTable.computeSerializedSize();
    std::vector<std::byte> buffer(/* size = */ serializedSize);
 
-   ftags::BufferInsertor insertor{buffer};
+   BufferInsertor insertor{buffer};
    stringTable.serialize(insertor);
    insertor.assertEmpty();
 
-   ftags::BufferExtractor extractor{buffer};
-   ftags::StringTable     rehydrated = ftags::StringTable::deserialize(extractor);
+   BufferExtractor extractor{buffer};
+   StringTable     rehydrated = StringTable::deserialize(extractor);
 
    std::string test = "abcdefghijlkmnopqrstuvxyz";
 
@@ -61,9 +64,7 @@ TEST(StringTableTest, AddOneMillionStrings)
 
 TEST(StringTableTest, AddTenMillionStrings)
 {
-   using Key = ftags::StringTable::Key;
-
-   ftags::StringTable stringTable;
+   StringTable stringTable;
 
    std::string input = "abcdefghijlkmnopqrstuvxyz";
 
@@ -78,12 +79,12 @@ TEST(StringTableTest, AddTenMillionStrings)
    const size_t           serializedSize = stringTable.computeSerializedSize();
    std::vector<std::byte> buffer(/* size = */ serializedSize);
 
-   ftags::BufferInsertor insertor{buffer};
+   BufferInsertor insertor{buffer};
    stringTable.serialize(insertor);
    insertor.assertEmpty();
 
-   ftags::BufferExtractor extractor{buffer};
-   ftags::StringTable     rehydrated = ftags::StringTable::deserialize(extractor);
+   BufferExtractor extractor{buffer};
+   StringTable     rehydrated = StringTable::deserialize(extractor);
 
    std::string test = "abcdefghijlkmnopqrstuvxyz";
 
