@@ -107,6 +107,8 @@ public:
 
    using Key = uint32_t;
 
+   static constexpr Key InvalidKey = 0;
+
    const char* getString(Key stringKey) const noexcept;
 
    std::string_view getStringView(Key stringKey) const noexcept;

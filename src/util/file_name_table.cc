@@ -58,7 +58,7 @@ const std::string ftags::util::FileNameTable::getPath(ftags::util::FileNameTable
 {
    std::list<const char*> elements;
 
-   while (pathKey != 0)
+   while (pathKey != InvalidKey)
    {
       assert(pathKey < m_parentToElement.size());
 
@@ -89,17 +89,50 @@ const std::string ftags::util::FileNameTable::getPath(ftags::util::FileNameTable
    return os.str();
 }
 
-ftags::util::FileNameTable::Key ftags::util::FileNameTable::getKey(std::string_view /* path */) const noexcept
+ftags::util::FileNameTable::Key ftags::util::FileNameTable::getKey(std::string_view path) const noexcept
 {
+   const std::vector<std::string_view> elements = splitPath(path);
 
-   return 0;
+   FileNameTable::Key currentPathKey = InvalidKey;
+
+   for (const auto& elem : elements)
+   {
+      StringTable::Key elemKey = m_pathElements.getKey(elem);
+
+      if (elemKey == StringTable::InvalidKey)
+      {
+         return InvalidKey;
+      }
+
+      PathElement thisElement{elemKey, currentPathKey};
+
+      auto iter = m_elementToParent.find(thisElement);
+
+      if (iter == m_elementToParent.end())
+      {
+         return InvalidKey;
+      }
+      else
+      {
+         currentPathKey = iter->second;
+      }
+   }
+
+   if (m_parentToElement[currentPathKey].isTerminal == 1)
+   {
+      return currentPathKey;
+   }
+   else
+   {
+      return InvalidKey;
+   }
 }
 
 ftags::util::FileNameTable::Key ftags::util::FileNameTable::addKey(std::string_view path)
 {
-   std::vector<std::string_view> elements = splitPath(path);
+   const std::vector<std::string_view> elements = splitPath(path);
 
-   FileNameTable::Key currentPathKey = 0;
+   FileNameTable::Key currentPathKey = InvalidKey;
 
    for (const auto& elem : elements)
    {
@@ -118,8 +151,11 @@ ftags::util::FileNameTable::Key ftags::util::FileNameTable::addKey(std::string_v
       else
       {
          currentPathKey = iter->second;
+         m_parentToElement[currentPathKey].referenceCount++;
       }
    }
+
+   m_parentToElement[currentPathKey].isTerminal = 1;
 
    return currentPathKey;
 }

@@ -75,7 +75,7 @@ TEST(FileNameTableTest, AddOneAbsolutePathGetItBack)
 
    const FileNameTable::Key key = fnt.addKey("/home/test/foo");
 
-   ASSERT_NE(key, 0);
+   ASSERT_NE(key, FileNameTable::InvalidKey);
 
    std::string thePath = fnt.getPath(key);
 
@@ -87,10 +87,36 @@ TEST(FileNameTableTest, AddOneRelativePathGetItBack)
    FileNameTable fnt;
 
    const FileNameTable::Key key = fnt.addKey("home/test/foo");
+   ASSERT_NE(key, FileNameTable::InvalidKey);
 
-   ASSERT_NE(key, 0);
-
-   std::string thePath = fnt.getPath(key);
-
+   const std::string thePath = fnt.getPath(key);
    ASSERT_EQ(thePath, "home/test/foo");
+
+   const FileNameTable::Key keyAgain = fnt.getKey("home/test/foo");
+   ASSERT_EQ(keyAgain, key);
+}
+
+TEST(FileNameTableTest, RetrieveFullPathsOnly)
+{
+   FileNameTable fnt;
+
+   const FileNameTable::Key key = fnt.addKey("home/test/foo");
+   ASSERT_NE(key, FileNameTable::InvalidKey);
+
+   const FileNameTable::Key partialKey = fnt.getKey("home/test");
+   ASSERT_EQ(partialKey, FileNameTable::InvalidKey);
+}
+
+TEST(FileNameTableTest, IntermediaryPathsCanBecomeFullPaths)
+{
+   FileNameTable fnt;
+
+   const FileNameTable::Key key = fnt.addKey("home/test/foo");
+   ASSERT_NE(key, FileNameTable::InvalidKey);
+
+   const FileNameTable::Key partialKey = fnt.addKey("home/test");
+   ASSERT_NE(partialKey, FileNameTable::InvalidKey);
+
+   const FileNameTable::Key partialKeyAgain = fnt.getKey("home/test");
+   ASSERT_EQ(partialKeyAgain, partialKey);
 }

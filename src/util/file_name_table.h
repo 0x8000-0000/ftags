@@ -42,6 +42,8 @@ public:
 
    using Key = uint32_t;
 
+   static constexpr Key InvalidKey = 0;
+
    const std::string getPath(Key pathKey) const noexcept;
 
    Key  getKey(std::string_view path) const noexcept;
@@ -66,8 +68,8 @@ public:
 private:
    struct PathElement
    {
-      StringTable::Key   pathElementKey = 0;
-      FileNameTable::Key parentPathKey  = 0;
+      StringTable::Key   pathElementKey = StringTable::InvalidKey;
+      FileNameTable::Key parentPathKey  = FileNameTable::InvalidKey;
 
       bool operator<(const PathElement& other) const
       {
@@ -93,11 +95,24 @@ private:
       }
    };
 
-   StringTable m_pathElements;
+   struct SharedPathElement : public PathElement
+   {
+      uint32_t referenceCount : 31;
+      uint32_t isTerminal : 1;
 
+      SharedPathElement(const PathElement& pathElement) : PathElement{pathElement}, referenceCount{1}, isTerminal{0}
+      {
+      }
+   };
+
+   /* persistent data
+    */
+   StringTable                    m_pathElements;
+   std::vector<SharedPathElement> m_parentToElement;
+
+   /* transient data
+    */
    std::map<PathElement, FileNameTable::Key> m_elementToParent;
-
-   std::vector<PathElement> m_parentToElement;
 };
 
 } // namespace ftags::util
