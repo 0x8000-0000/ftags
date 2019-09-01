@@ -93,6 +93,11 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
       -Wno-extra-semi -Wno-float-equal -Wno-shadow-field-in-constructor
       -Wno-newline-eof -Wno-signed-enum-bitfield
    )
+
+   if (NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "9")
+      target_compile_options (project_warnings INTERFACE
+         -Wno-c++2a-compat)
+   endif()
 endif ()
 endif ()
 
