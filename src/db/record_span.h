@@ -84,6 +84,11 @@ public:
       m_records  = &*alloc.iterator;
    }
 
+   int getUsage() const
+   {
+      return m_referenceCount;
+   }
+
    void addRef()
    {
       m_referenceCount++;

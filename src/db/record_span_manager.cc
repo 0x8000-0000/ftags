@@ -16,6 +16,10 @@
 
 #include <record_span_manager.h>
 
+#include <statistics.h>
+
+#include <fmt/format.h>
+
 ftags::RecordSpanManager::Key ftags::RecordSpanManager::addSpan(const std::vector<Record>& records)
 {
    RecordSpan::Hash hashValue = RecordSpan::computeHash(records);
@@ -165,6 +169,44 @@ void ftags::RecordSpanManager::assertValid() const
 
 std::vector<std::string> ftags::RecordSpanManager::getStatisticsRemarks() const
 {
+   ftags::stats::Sample<unsigned> usageCount;
+   ftags::stats::Sample<unsigned> spanSizes;
+
+   m_recordSpanStore.forEachAllocatedSequence([&usageCount, &spanSizes](RecordSpan::Store::Key /* key */,
+                                                                        const RecordSpan*                  recordSpan,
+                                                                        RecordSpan::Store::block_size_type size) {
+      for (RecordSpan::Store::block_size_type ii = 0; ii < size; ii++)
+      {
+         auto usage = recordSpan[ii].getUsage();
+         assert(usage >= 0);
+         usageCount.addValue(static_cast<unsigned>(usage));
+         spanSizes.addValue(recordSpan[ii].getSize());
+      }
+   });
+
+   const ftags::stats::FiveNumbersSummary<unsigned> usageCountSummary = usageCount.computeFiveNumberSummary();
+   const ftags::stats::FiveNumbersSummary<unsigned> spanSizesSummary  = spanSizes.computeFiveNumberSummary();
+
    std::vector<std::string> remarks;
+
+   remarks.emplace_back(fmt::format("Record span count: {:n}", usageCount.getSampleCount()));
+   remarks.emplace_back("");
+
+   remarks.emplace_back("Record span sizes, (five number summary):");
+   remarks.emplace_back(fmt::format("  minimum:        {:>8}", spanSizesSummary.minimum));
+   remarks.emplace_back(fmt::format("  lower quartile: {:>8}", spanSizesSummary.lowerQuartile));
+   remarks.emplace_back(fmt::format("  median:         {:>8}", spanSizesSummary.median));
+   remarks.emplace_back(fmt::format("  upper quartile: {:>8}", spanSizesSummary.upperQuartile));
+   remarks.emplace_back(fmt::format("  maximum:        {:>8}", spanSizesSummary.maximum));
+   remarks.emplace_back("");
+
+   remarks.emplace_back("Record span usage, (five number summary):");
+   remarks.emplace_back(fmt::format("  minimum:        {:>8}", usageCountSummary.minimum));
+   remarks.emplace_back(fmt::format("  lower quartile: {:>8}", usageCountSummary.lowerQuartile));
+   remarks.emplace_back(fmt::format("  median:         {:>8}", usageCountSummary.median));
+   remarks.emplace_back(fmt::format("  upper quartile: {:>8}", usageCountSummary.upperQuartile));
+   remarks.emplace_back(fmt::format("  maximum:        {:>8}", usageCountSummary.maximum));
+   remarks.emplace_back("");
+
    return remarks;
 }
