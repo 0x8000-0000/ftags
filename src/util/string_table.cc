@@ -36,7 +36,21 @@ const char* ftags::util::StringTable::getString(Key stringKey) const noexcept
    }
 }
 
-ftags::util::StringTable::Key ftags::util::StringTable::getKey(const char* inputString) const noexcept
+std::string_view ftags::util::StringTable::getStringView(Key stringKey) const noexcept
+{
+   auto location = m_store.get(stringKey);
+
+   if (location.first == location.second)
+   {
+      return std::string_view();
+   }
+   else
+   {
+      return std::string_view(&*location.first);
+   }
+}
+
+ftags::util::StringTable::Key ftags::util::StringTable::getKey(std::string_view inputString) const noexcept
 {
    auto iter = m_index.find(inputString);
 
@@ -50,13 +64,7 @@ ftags::util::StringTable::Key ftags::util::StringTable::getKey(const char* input
    }
 }
 
-ftags::util::StringTable::Key ftags::util::StringTable::getKey(std::string_view inputString) const noexcept
-{
-   std::string local(inputString);
-   return getKey(local.data());
-}
-
-ftags::util::StringTable::Key ftags::util::StringTable::addKey(const char* inputString)
+ftags::util::StringTable::Key ftags::util::StringTable::addKey(std::string_view inputString)
 {
    const Key currentPosition{getKey(inputString)};
 
@@ -70,28 +78,22 @@ ftags::util::StringTable::Key ftags::util::StringTable::addKey(const char* input
    return key;
 }
 
-ftags::util::StringTable::Key ftags::util::StringTable::addKey(std::string_view inputString)
+ftags::util::StringTable::Key ftags::util::StringTable::insertString(std::string_view string)
 {
-   std::string local(inputString);
-   return addKey(local.data());
-}
-
-ftags::util::StringTable::Key ftags::util::StringTable::insertString(const char* aString)
-{
-   const auto inputLength{static_cast<uint32_t>(strlen(aString))};
-
    // allocate extra byte for NUL
-   auto allocation{m_store.allocate(inputLength + 1)};
+   auto allocation{m_store.allocate(static_cast<StoreType::block_size_type>(string.size() + 1))};
+
+   std::copy_n(string.data(), string.size(), allocation.iterator);
 
    // also copy NUL
-   std::copy_n(aString, inputLength + 1, allocation.iterator);
+   allocation.iterator[string.size()] = '\0';
 
    m_index[&*allocation.iterator] = allocation.key;
 
    return allocation.key;
 }
 
-void ftags::util::StringTable::removeKey(const char* inputString)
+void ftags::util::StringTable::removeKey(std::string_view inputString)
 {
    auto iter = m_index.find(inputString);
 
@@ -100,15 +102,13 @@ void ftags::util::StringTable::removeKey(const char* inputString)
       return;
    }
 
-   const auto inputLength{static_cast<uint32_t>(strlen(inputString))};
-
 #ifndef NDEBUG
    auto buffer = m_store.get(iter->second).first;
-   std::fill_n(buffer, inputLength + 1, '\0');
+   std::fill_n(buffer, inputString.size() + 1, '\0');
 #endif
 
    // allocated extra byte for NUL
-   m_store.deallocate(iter->second, inputLength + 1);
+   m_store.deallocate(iter->second, static_cast<StoreType::block_size_type>(inputString.size() + 1));
 
    m_index.erase(iter);
 }

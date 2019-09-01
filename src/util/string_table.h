@@ -36,26 +36,16 @@
 namespace ftags::util
 {
 
-class CharPointerHashingFunctor
+class StringViewHashingFunctor
 {
 public:
-   std::size_t operator()(const char* key) const
+   std::size_t operator()(std::string_view key) const
    {
-      const std::size_t keyLen = std::strlen(key);
-      return SpookyHash::Hash64(key, keyLen, k_hashSeed);
+      return SpookyHash::Hash64(key.data(), key.size(), k_hashSeed);
    }
 
 private:
    static constexpr std::size_t k_hashSeed = 0xfcaa376ab99295b0;
-};
-
-class CharPointerCompareFunctor
-{
-public:
-   bool operator()(const char* leftString, const char* rightString) const
-   {
-      return 0 == std::strcmp(leftString, rightString);
-   }
 };
 
 /** Space optimized and serializable symbol table
@@ -119,17 +109,16 @@ public:
 
    const char* getString(Key stringKey) const noexcept;
 
+   std::string_view getStringView(Key stringKey) const noexcept;
+
    std::size_t getSize() const
    {
       return m_index.size();
    }
 
-   Key  getKey(const char* string) const noexcept;
-   Key  addKey(const char* string);
-   void removeKey(const char* string);
-
    Key getKey(std::string_view string) const noexcept;
    Key addKey(std::string_view string);
+   void removeKey(std::string_view string);
 
    /* Add all the keys from other that are missing in this table.
     *
@@ -147,8 +136,7 @@ public:
    static StringTable deserialize(BufferExtractor& extractor);
 
 private:
-   // not-thread safe method
-   Key insertString(const char* aString);
+   Key insertString(std::string_view string);
 
    static constexpr uint32_t k_bucketSize = 24;
 
@@ -159,7 +147,7 @@ private:
    /*
     * Lookup table; can be reconstructed from the store above.
     */
-   std::unordered_map<const char*, Key, CharPointerHashingFunctor, CharPointerCompareFunctor> m_index;
+   std::unordered_map<std::string_view, Key, StringViewHashingFunctor> m_index;
 };
 
 } // namespace ftags::util
