@@ -120,3 +120,73 @@ TEST(FileNameTableTest, IntermediaryPathsCanBecomeFullPaths)
    const FileNameTable::Key partialKeyAgain = fnt.getKey("home/test");
    ASSERT_EQ(partialKeyAgain, partialKey);
 }
+
+TEST(FileNameTableTest, RemoveKeyOnlyKey)
+{
+   FileNameTable fnt;
+
+   const FileNameTable::Key key = fnt.addKey("home/test/foo");
+   ASSERT_NE(key, FileNameTable::InvalidKey);
+
+   fnt.removeKey("home/test/foo");
+
+   const FileNameTable::Key keyForRemovedEntry = fnt.getKey("home/test/foo");
+   ASSERT_EQ(keyForRemovedEntry, FileNameTable::InvalidKey);
+
+   const FileNameTable::Key keyForRemovedParentEntry = fnt.getKey("home/test");
+   ASSERT_EQ(keyForRemovedParentEntry, FileNameTable::InvalidKey);
+}
+
+TEST(FileNameTableTest, RemoveOneKey)
+{
+   FileNameTable fnt;
+
+   const FileNameTable::Key keyOne = fnt.addKey("home/test/foo");
+   ASSERT_NE(keyOne, FileNameTable::InvalidKey);
+
+   const FileNameTable::Key keyTwo = fnt.addKey("home/test/bar");
+   ASSERT_NE(keyTwo, FileNameTable::InvalidKey);
+
+   fnt.removeKey("home/test/foo");
+
+   const FileNameTable::Key keyForRemovedEntry = fnt.getKey("home/test/foo");
+   ASSERT_EQ(keyForRemovedEntry, FileNameTable::InvalidKey);
+
+   const FileNameTable::Key keyForRemainingEntry = fnt.getKey("home/test/bar");
+   ASSERT_EQ(keyForRemainingEntry, keyTwo);
+}
+
+TEST(FileNameTableTest, RemoveOneKeyThenAddItBack)
+{
+   FileNameTable fnt;
+
+   const FileNameTable::Key keyOne = fnt.addKey("home/test/foo");
+   ASSERT_NE(keyOne, FileNameTable::InvalidKey);
+
+   const FileNameTable::Key keyTwo = fnt.addKey("home/test/bar");
+   ASSERT_NE(keyTwo, FileNameTable::InvalidKey);
+
+   fnt.removeKey("home/test/foo");
+
+   const FileNameTable::Key keyForRemovedEntry = fnt.getKey("home/test/foo");
+   ASSERT_EQ(keyForRemovedEntry, FileNameTable::InvalidKey);
+
+   const FileNameTable::Key keyForRemainingEntry = fnt.getKey("home/test/bar");
+   ASSERT_NE(keyForRemainingEntry, FileNameTable::InvalidKey);
+
+   /*
+    * adding back
+    */
+
+   const FileNameTable::Key keyOneBack = fnt.addKey("home/test/foo");
+   ASSERT_NE(keyOneBack, FileNameTable::InvalidKey);
+
+   const FileNameTable::Key keyForReaddedEntry = fnt.getKey("home/test/foo");
+   ASSERT_NE(keyForReaddedEntry, FileNameTable::InvalidKey);
+
+   const std::string remainingEntry = fnt.getPath(keyTwo);
+   ASSERT_EQ(remainingEntry, "home/test/bar");
+
+   const std::string readdedEntry = fnt.getPath(keyForReaddedEntry);
+   ASSERT_EQ(readdedEntry, "home/test/foo");
+}

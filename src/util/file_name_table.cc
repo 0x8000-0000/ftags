@@ -160,6 +160,37 @@ ftags::util::FileNameTable::Key ftags::util::FileNameTable::addKey(std::string_v
    return currentPathKey;
 }
 
-void ftags::util::FileNameTable::removeKey(std::string_view /* path */)
+void ftags::util::FileNameTable::removeKey(std::string_view path)
 {
+   const std::vector<std::string_view> elements = splitPath(path);
+
+   FileNameTable::Key currentPathKey = InvalidKey;
+
+   for (const auto& elem : elements)
+   {
+      StringTable::Key elemKey = m_pathElements.getKey(elem);
+
+      if (elemKey == StringTable::InvalidKey)
+      {
+         // this path element does not exist
+         return;
+      }
+
+      PathElement thisElement{elemKey, currentPathKey};
+
+      auto iter = m_elementToParent.find(thisElement);
+
+      if (iter == m_elementToParent.end())
+      {
+         // this path element does not exist
+         return;
+      }
+      else
+      {
+         currentPathKey = iter->second;
+         m_parentToElement[currentPathKey].referenceCount--;
+      }
+   }
+
+   m_parentToElement[currentPathKey].isTerminal = 0;
 }
