@@ -74,19 +74,19 @@ TEST(StoreMapTest, DeletedBlocksAreCoalesced1)
    const auto blockTwo = store.allocate(blockSize);
    std::fill_n(blockTwo.iterator, blockSize, 2);
 
-   ASSERT_EQ(16, store.countUsedBlocks());
+   ASSERT_EQ(store.countUsedBlocks(), 16);
 
    store.deallocate(blockOne.key, blockSize);
    store.deallocate(blockTwo.key, blockSize);
 
-   ASSERT_EQ(0, store.countUsedBlocks());
+   ASSERT_EQ(store.countUsedBlocks(), 0);
 
    const auto blockThree = store.allocate(blockSize);
    std::fill_n(blockThree.iterator, blockSize, 3);
 
    ASSERT_EQ(blockThree.key, store.FirstKeyValue);
 
-   ASSERT_EQ(8, store.countUsedBlocks());
+   ASSERT_EQ(store.countUsedBlocks(), 8);
 }
 
 TEST(StoreMapTest, DeletedBlocksAreCoalesced2)

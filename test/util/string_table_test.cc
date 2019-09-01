@@ -196,13 +196,13 @@ TEST(StringTableTest, MergeStringTables)
    right.addKey(barString);
    right.addKey(bazString);
 
-   ASSERT_EQ(0, left.getKey(bazString));
+   ASSERT_EQ(left.getKey(bazString), 0);
    const uint32_t oldKeyForFoo = left.getKey(fooString);
    const uint32_t oldKeyForBar = left.getKey(barString);
 
    FlatMap<Key, Key> mapping = left.mergeStringTable(right);
 
-   ASSERT_NE(0, left.getKey(bazString));
+   ASSERT_NE(left.getKey(bazString), 0);
    ASSERT_EQ(oldKeyForFoo, left.getKey(fooString));
    ASSERT_EQ(oldKeyForBar, left.getKey(barString));
 
