@@ -89,7 +89,8 @@ void ftags::RecordSpan::dumpRecords(std::ostream&                   os,
       // const char*       fileName   = fileNameTable.getString(record.location.fileNameKey);
       const std::string           symbolType = record.attributes.getRecordType();
       const std::filesystem::path filePath{fileNameTable.getString(record.location.fileNameKey)};
-      os << fmt::format("   {}{}  {} {} {}:{}",
+      os << fmt::format("{}   {}{}  {} {} {}:{}",
+                        std::string(record.attributes.level, ' '),
                         namespaceName,
                         symbolName,
                         symbolType,

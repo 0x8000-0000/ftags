@@ -103,6 +103,7 @@ void ftags::ProjectDb::TranslationUnit::addCursor(const ftags::Cursor&          
       }
    }
 
+#if 0
    if (cursor.attributes.getType() == ftags::SymbolType::NamespaceReference)
    {
       assert(!m_currentSpan.empty());
@@ -113,6 +114,7 @@ void ftags::ProjectDb::TranslationUnit::addCursor(const ftags::Cursor&          
 
       return;
    }
+#endif
 
    if (fileNameKey != m_currentRecordSpanFileKey)
    {

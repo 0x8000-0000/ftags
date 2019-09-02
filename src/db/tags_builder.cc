@@ -19,6 +19,8 @@
 #include <clang-c/CXString.h>
 #include <clang-c/Index.h>
 
+#include <fmt/format.h>
+
 #ifdef DUMP_SKIPPED_CURSORS
 #include <iostream>
 #endif
@@ -293,9 +295,6 @@ static void getSymbolType(CXCursor clangCursor, ftags::Attributes& attributes)
       break;
 
    default:
-#ifdef DUMP_SKIPPED_CURSORS
-      std::cerr << "Ignoring " << cursorKind << std::endl;
-#endif
       break;
    }
 
@@ -311,6 +310,7 @@ struct TranslationUnitAccumulator
    ftags::RecordSpanManager&          recordSpanManager;
    std::string                        filterPath;
 
+   int                                                  level = 0;
    std::map<std::string, ftags::util::StringTable::Key> fileKeyCache;
 
    TranslationUnitAccumulator(ftags::ProjectDb::TranslationUnit&                translationUnit_,
@@ -328,20 +328,34 @@ struct TranslationUnitAccumulator
 
    bool getCursorLocation(CXCursor                       clangCursor,
                           ftags::Cursor::Location&       cursorLocation,
-                          ftags::util::StringTable::Key* fileNameKey);
+                          ftags::util::StringTable::Key* fileNameKey
+#ifdef DUMP_SKIPPED_CURSORS
+                          ,
+                          std::string& fileName
+#endif
+   );
 };
 
 bool TranslationUnitAccumulator::getCursorLocation(CXCursor                       clangCursor,
                                                    ftags::Cursor::Location&       cursorLocation,
-                                                   ftags::util::StringTable::Key* fileNameKey)
+                                                   ftags::util::StringTable::Key* fileNameKey
+#ifdef DUMP_SKIPPED_CURSORS
+                                                   ,
+                                                   std::string& fileName
+#endif
+)
 {
    CXStringWrapper fileNameWrapper;
 
    CXSourceLocation location = clang_getCursorLocation(clangCursor);
    clang_getPresumedLocation(location, fileNameWrapper.get(), &cursorLocation.line, &cursorLocation.column);
 
+#ifdef DUMP_SKIPPED_CURSORS
+   fileName = fileNameWrapper.c_str();
+#else
    std::string fileName{fileNameWrapper.c_str()};
-   const auto  iter = fileKeyCache.find(fileName);
+#endif
+   const auto iter = fileKeyCache.find(fileName);
 
    if (iter != fileKeyCache.end())
    {
@@ -427,13 +441,34 @@ void TranslationUnitAccumulator::processCursor(CXCursor clangCursor)
 
    getSymbolType(clangCursor, cursor.attributes);
 
+#ifdef DUMP_SKIPPED_CURSORS
+   std::string locationFileName;
+#endif
+   ftags::util::StringTable::Key fileNameKey = 0;
+   cursor.attributes.isFromMainFile          = getCursorLocation(clangCursor,
+                                                        cursor.location,
+                                                        &fileNameKey
+#ifdef DUMP_SKIPPED_CURSORS
+                                                        ,
+                                                        locationFileName
+#endif
+
+   );
+   assert(fileNameKey != 0);
+
    if (cursor.attributes.getType() == ftags::SymbolType::Undefined)
    {
-#if 0
+#ifdef DUMP_SKIPPED_CURSORS
       enum CXCursorKind cursorKind = clang_getCursorKind(clangCursor);
       if (CXCursor_FirstExpr != cursorKind)
       {
-         std::cerr << "@@ Unhandled symbol " << cursor.symbolName << " code: " << cursorKind << std::endl;
+         std::cerr << fmt::format("@@ Unhandled symbol {} with code {} at {}:{}:{}",
+                                  cursor.symbolName,
+                                  cursorKind,
+                                  locationFileName,
+                                  cursor.location.line,
+                                  cursor.location.column)
+                   << std::endl;
       }
 #endif
 
@@ -448,10 +483,6 @@ void TranslationUnitAccumulator::processCursor(CXCursor clangCursor)
    // TODO: combine FunctionCallExpression with the subsequent DeclarationReferenceExpression and optional NamespaceReference
 #endif
 
-   ftags::util::StringTable::Key fileNameKey = 0;
-   cursor.attributes.isFromMainFile          = getCursorLocation(clangCursor, cursor.location, &fileNameKey);
-   assert(fileNameKey != 0);
-
    if (clang_isCursorDefinition(clangCursor))
    {
       cursor.attributes.isDefinition = 1;
@@ -461,14 +492,25 @@ void TranslationUnitAccumulator::processCursor(CXCursor clangCursor)
 
    cursor.unifiedSymbol = unifiedSymbol.c_str();
 
+#ifdef DUMP_SKIPPED_CURSORS
+   std::string referenceFileName;
+#endif
    CXCursor                      referencedCursor      = clang_getCursorReferenced(clangCursor);
    ftags::util::StringTable::Key referencedFileNameKey = 0;
-   cursor.attributes.isDefinedInMainFile =
-      getCursorLocation(referencedCursor, cursor.definition, &referencedFileNameKey);
+   cursor.attributes.isDefinedInMainFile               = getCursorLocation(referencedCursor,
+                                                             cursor.definition,
+                                                             &referencedFileNameKey
+#ifdef DUMP_SKIPPED_CURSORS
+                                                             ,
+                                                             referenceFileName
+#endif
+   );
    assert(referencedFileNameKey != 0);
 
    const ftags::util::StringTable::Key symbolNameKey = symbolTable.addKey(cursor.symbolName);
 
+   assert(level >= 0);
+   cursor.attributes.level = static_cast<uint32_t>(level);
    translationUnit.addCursor(cursor, symbolNameKey, fileNameKey, referencedFileNameKey, recordSpanManager);
 }
 
@@ -477,8 +519,11 @@ CXChildVisitResult visitTranslationUnit(CXCursor cursor, CXCursor /* parent */, 
    TranslationUnitAccumulator* accumulator = reinterpret_cast<TranslationUnitAccumulator*>(clientData);
 
    accumulator->processCursor(cursor);
+   accumulator->level++;
 
    clang_visitChildren(cursor, visitTranslationUnit, clientData);
+
+   accumulator->level--;
    return CXChildVisit_Continue;
 }
 
@@ -548,6 +593,8 @@ ftags::ProjectDb::TranslationUnit ftags::ProjectDb::TranslationUnit::parse(const
    {
       throw std::runtime_error("Failed to parse input");
    }
+
+   assert(accumulator.level == 0);
 
    translationUnit.finalizeParsingUnit(parsingContext.recordSpanManager);
 

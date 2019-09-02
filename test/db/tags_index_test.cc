@@ -504,7 +504,7 @@ TEST(TagsIndexTest, IdentifySymbols)
    tagsDb.parseOneFile(testPath, arguments);
 
    const std::vector<const ftags::Record*> line3Records = tagsDb.identifySymbol(libPath.string(), 3, 5);
-   ASSERT_EQ(2, line3Records.size());
+   ASSERT_EQ(3, line3Records.size());
 
    const std::vector<const ftags::Record*> line11Records = tagsDb.identifySymbol(libPath.string(), 11, 14);
    ASSERT_EQ(1, line11Records.size());

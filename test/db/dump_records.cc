@@ -43,11 +43,15 @@ bool        dumpToConsole   = false;
 std::string dumpFileName;
 std::string projectName = "test";
 std::string inputFileName;
+std::vector<std::string> includePaths;
+std::vector<std::string> definedSymbols;
 
 auto cli = clara::Help(showHelp) | clara::Opt(projectName, "project")["-p"]["--project"]("Project name") |
            clara::Opt(indexEverything)["-e"]["--everything"]("Index all reachable sources and headers") |
            clara::Opt(dumpFileName, "file")["-f"]["--file"]("Dump to file") |
            clara::Opt(dumpToConsole)["-c"]["--console"]("Dump to console") |
+           clara::Opt(includePaths, "include")["-I"]("Include paths") |
+           clara::Opt(definedSymbols, "define")["-D"]("Defined symbols") |
            clara::Arg(inputFileName, "file")("Input file");
 
 int main(int argc, char* argv[])

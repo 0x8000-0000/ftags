@@ -152,7 +152,9 @@ struct Attributes
 
    uint32_t isNamespaceRef : 1;
 
-   uint32_t freeBits : 28;
+   uint32_t level : 8;
+
+   uint32_t freeBits : 20;
 
    void setType(enum SymbolType type_)
    {
