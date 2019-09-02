@@ -352,9 +352,11 @@ void ftags::ProjectDb::updateFrom(const std::string& /* fileName */, const Proje
 
 std::vector<std::string> ftags::ProjectDb::getStatisticsRemarks(const std::string& statisticsGroup) const
 {
+   std::vector<std::string> remarks;
+
    if (statisticsGroup == "recordspans")
    {
-      return m_recordSpanManager.getStatisticsRemarks();
+      remarks = m_recordSpanManager.getStatisticsRemarks();
    }
    else if (statisticsGroup == "symbols")
    {
@@ -366,7 +368,6 @@ std::vector<std::string> ftags::ProjectDb::getStatisticsRemarks(const std::strin
 
       const ftags::stats::FiveNumbersSummary<unsigned> symbolSizesSummary = symbolSizes.computeFiveNumberSummary();
 
-      std::vector<std::string> remarks;
       remarks.emplace_back(fmt::format("Indexed {:n} symbols", m_symbolTable.getSize()));
       remarks.emplace_back("Symbol sizes, (five number summary):");
       remarks.emplace_back(fmt::format("  minimum:        {:>8}", symbolSizesSummary.minimum));
@@ -375,17 +376,63 @@ std::vector<std::string> ftags::ProjectDb::getStatisticsRemarks(const std::strin
       remarks.emplace_back(fmt::format("  upper quartile: {:>8}", symbolSizesSummary.upperQuartile));
       remarks.emplace_back(fmt::format("  maximum:        {:>8}", symbolSizesSummary.maximum));
       remarks.emplace_back("");
-      return remarks;
+   }
+   else if (statisticsGroup == "debug_symbols")
+   {
+      std::vector<ftags::util::StringTable::Key> largeSymbols;
+
+      m_symbolTable.forEachElement([&largeSymbols](std::string_view symbol, ftags::util::StringTable::Key key) {
+         if (symbol.size() > 1024)
+         {
+            largeSymbols.push_back(key);
+         }
+      });
+
+      remarks.emplace_back(fmt::format("Found {:n} symbols larger than 1024", largeSymbols.size()));
+
+      std::sort(largeSymbols.begin(), largeSymbols.end());
+
+      std::vector<const Record*> recordsWithLargeSymbols;
+      m_recordSpanManager.forEachRecord([&largeSymbols, &recordsWithLargeSymbols](const Record* record) {
+         if (std::binary_search(largeSymbols.cbegin(), largeSymbols.cend(), record->symbolNameKey))
+         {
+            recordsWithLargeSymbols.push_back(record);
+         }
+      });
+
+      remarks.emplace_back(
+         fmt::format("Found {:n} records with symbols larger than 1024", recordsWithLargeSymbols.size()));
+
+      int top16 = 16;
+      for (const auto* record : recordsWithLargeSymbols)
+      {
+         if (top16 == 0)
+         {
+            break;
+         }
+         else
+         {
+            top16--;
+         }
+
+         remarks.emplace_back(fmt::format("  ... {}:{}:{}",
+                                          m_fileNameTable.getStringView(record->location.fileNameKey),
+                                          record->location.line,
+                                          record->location.column));
+
+         remarks.emplace_back(
+            fmt::format("  \\ {}", m_symbolTable.getStringView(record->symbolNameKey).substr(0, 128)));
+      }
    }
    else
    {
-      std::vector<std::string> remarks;
       remarks.emplace_back(fmt::format("Serialized size is {:n} bytes", computeSerializedSize()));
       remarks.emplace_back(fmt::format("Indexed {:n} translation units", m_translationUnits.size()));
       remarks.emplace_back(fmt::format("Indexed {:n} symbols", m_symbolTable.getSize()));
       remarks.emplace_back(fmt::format("Indexed {:n} distinct files", m_fileNameTable.getSize()));
-      return remarks;
    }
+
+   return remarks;
 }
 
 #if (!defined(NDEBUG)) && (defined(ENABLE_THOROUGH_VALIDITY_CHECKS))
