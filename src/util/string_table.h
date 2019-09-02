@@ -152,6 +152,14 @@ public:
 
    static StringTable deserialize(BufferExtractor& extractor) noexcept;
 
+   template <typename F>
+   void forEachElement(F func) const
+   {
+      std::for_each(m_index.cbegin(), m_index.cend(), [func](const IndexType::value_type& keyVal) {
+         func(keyVal.first, keyVal.second);
+      });
+   }
+
 private:
    Key insertString(std::string_view string) noexcept;
 
@@ -164,7 +172,8 @@ private:
    /*
     * Lookup table; can be reconstructed from the store above.
     */
-   std::unordered_map<std::string_view, Key, StringViewHashingFunctor> m_index;
+   using IndexType = std::unordered_map<std::string_view, Key, StringViewHashingFunctor>;
+   IndexType m_index;
 };
 
 } // namespace ftags::util

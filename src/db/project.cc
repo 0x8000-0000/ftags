@@ -15,6 +15,7 @@
 */
 
 #include <project.h>
+#include <statistics.h>
 
 #include <fmt/format.h>
 
@@ -354,6 +355,27 @@ std::vector<std::string> ftags::ProjectDb::getStatisticsRemarks(const std::strin
    if (statisticsGroup == "recordspans")
    {
       return m_recordSpanManager.getStatisticsRemarks();
+   }
+   else if (statisticsGroup == "symbols")
+   {
+      ftags::stats::Sample<unsigned> symbolSizes;
+
+      m_symbolTable.forEachElement([&symbolSizes](std::string_view symbol, ftags::util::StringTable::Key /* key */) {
+         symbolSizes.addValue(static_cast<unsigned>(symbol.size()));
+      });
+
+      const ftags::stats::FiveNumbersSummary<unsigned> symbolSizesSummary = symbolSizes.computeFiveNumberSummary();
+
+      std::vector<std::string> remarks;
+      remarks.emplace_back(fmt::format("Indexed {:n} symbols", m_symbolTable.getSize()));
+      remarks.emplace_back("Symbol sizes, (five number summary):");
+      remarks.emplace_back(fmt::format("  minimum:        {:>8}", symbolSizesSummary.minimum));
+      remarks.emplace_back(fmt::format("  lower quartile: {:>8}", symbolSizesSummary.lowerQuartile));
+      remarks.emplace_back(fmt::format("  median:         {:>8}", symbolSizesSummary.median));
+      remarks.emplace_back(fmt::format("  upper quartile: {:>8}", symbolSizesSummary.upperQuartile));
+      remarks.emplace_back(fmt::format("  maximum:        {:>8}", symbolSizesSummary.maximum));
+      remarks.emplace_back("");
+      return remarks;
    }
    else
    {
