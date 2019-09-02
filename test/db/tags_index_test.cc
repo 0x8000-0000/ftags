@@ -25,202 +25,182 @@
 using ftags::util::BufferExtractor;
 using ftags::util::BufferInsertor;
 
-TEST(TagsIndexTest, IndexOneFile)
+class TagsIndexTestHello : public ::testing::Test
 {
-   /*
-    * This assumes we run the test from the root of the build directory.
-    * There's no portable way yet to get the path of the current running
-    * binary.
-    */
-   const auto path = std::filesystem::current_path();
+protected:
+   static void SetUpTestCase()
+   {
+      /*
+       * This assumes we run the test from the root of the build directory.
+       * There's no portable way yet to get the path of the current running
+       * binary.
+       */
+      auto rootPath = std::filesystem::current_path();
+      helloPath     = rootPath / "test" / "db" / "data" / "hello" / "hello.cc";
+      ASSERT_TRUE(std::filesystem::exists(helloPath));
 
-   const auto helloPath = path / "test" / "db" / "data" / "hello" / "hello.cc";
-   ASSERT_TRUE(std::filesystem::exists(helloPath));
+      const std::vector<const char*> arguments = {
+         "-Wall",
+         "-Wextra",
+      };
 
-   const std::vector<const char*> arguments = {
-      "-Wall",
-      "-Wextra",
-   };
+      tagsDb = std::make_unique<ftags::ProjectDb>(/* name = */ "test", /* rootDirectory = */ rootPath.string());
+      tagsDb->parseOneFile(helloPath, arguments, false);
+   }
 
-   ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
-   tagsDb.parseOneFile(helloPath, arguments);
+   static void TearDownTestCase()
+   {
+      tagsDb.release();
+   }
 
-   ASSERT_TRUE(tagsDb.isFileIndexed(helloPath));
+   // static std::filesystem::path rootPath;
+
+   static std::filesystem::path             helloPath;
+   static std::unique_ptr<ftags::ProjectDb> tagsDb;
+};
+
+std::filesystem::path             TagsIndexTestHello::helloPath;
+std::unique_ptr<ftags::ProjectDb> TagsIndexTestHello::tagsDb;
+
+TEST_F(TagsIndexTestHello, IndexOneFile)
+{
+   ASSERT_TRUE(tagsDb->isFileIndexed(helloPath));
 }
 
-TEST(TagsIndexTest, IndexOneFileHasFunctions)
+TEST_F(TagsIndexTestHello, IndexOneFileHasFunctions)
 {
-   /*
-    * This assumes we run the test from the root of the build directory.
-    * There's no portable way yet to get the path of the current running
-    * binary.
-    */
-   const auto path = std::filesystem::current_path();
-
-   const auto helloPath = path / "test" / "db" / "data" / "hello" / "hello.cc";
-   ASSERT_TRUE(std::filesystem::exists(helloPath));
-
-   const std::vector<const char*> arguments = {
-      "-Wall",
-      "-Wextra",
-   };
-
-   ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
-   tagsDb.parseOneFile(helloPath, arguments);
-
-   ASSERT_TRUE(tagsDb.isFileIndexed(helloPath));
-
-   const std::vector<const ftags::Record*> functions = tagsDb.getFunctions();
-   ASSERT_LT(1, functions.size());
+   const std::vector<const ftags::Record*> functions = tagsDb->getFunctions();
+   ASSERT_EQ(functions.size(), 1);
 }
 
-TEST(TagsIndexTest, HelloWorldHasMainFunction)
+TEST_F(TagsIndexTestHello, HelloWorldHasMainFunction)
 {
-   const auto path = std::filesystem::current_path();
-
-   const auto helloPath = path / "test" / "db" / "data" / "hello" / "hello.cc";
-   ASSERT_TRUE(std::filesystem::exists(helloPath));
-
-   const std::vector<const char*> arguments = {
-      "-Wall",
-      "-Wextra",
-   };
-
-   ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
-   tagsDb.parseOneFile(helloPath, arguments);
-
-   const std::vector<const ftags::Record*> results = tagsDb.findDefinition("main");
-   ASSERT_EQ(1, results.size());
+   const std::vector<const ftags::Record*> results = tagsDb->findDefinition("main");
+   ASSERT_EQ(results.size(), 1);
 }
 
-TEST(TagsIndexTest, CanDumpRecords)
+TEST_F(TagsIndexTestHello, CanDumpRecords)
 {
-   const auto path = std::filesystem::current_path();
-
-   const auto helloPath = path / "test" / "db" / "data" / "hello" / "hello.cc";
-   ASSERT_TRUE(std::filesystem::exists(helloPath));
-
-   const std::vector<const char*> arguments = {
-      "-Wall",
-      "-Wextra",
-      "-stdlib=libstdc++",
-      "--gcc-toolchain=/usr",
-   };
-
-   ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ path.string()};
-   tagsDb.parseOneFile(helloPath, arguments, true);
-
    std::stringstream output;
 
-   tagsDb.dumpRecords(output, std::filesystem::current_path());
+   tagsDb->dumpRecords(output, std::filesystem::current_path());
 
    const std::string result = output.str();
    ASSERT_FALSE(result.empty());
 }
 
-TEST(TagsIndexTest, HelloWorldCallsPrintfFunction)
+TEST_F(TagsIndexTestHello, HelloWorldCallsPrintfFunction)
 {
-   const auto path = std::filesystem::current_path();
+   const std::vector<const ftags::Record*> results = tagsDb->findReference("printf");
+   ASSERT_EQ(results.size(), 1);
 
-   const auto helloPath = path / "test" / "db" / "data" / "hello" / "hello.cc";
-   ASSERT_TRUE(std::filesystem::exists(helloPath));
-
-   const std::vector<const char*> arguments = {
-      "-Wall",
-      "-Wextra",
-      "-stdlib=libstdc++",
-      "--gcc-toolchain=/usr",
-   };
-
-   ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
-   tagsDb.parseOneFile(helloPath, arguments);
-
-   const std::vector<const ftags::Record*> results = tagsDb.findReference("printf");
-   ASSERT_EQ(1, results.size());
-
-   const ftags::Cursor cursor0 = tagsDb.inflateRecord(results[0]);
-   ASSERT_STREQ("printf", cursor0.symbolName);
+   const ftags::Cursor cursor0 = tagsDb->inflateRecord(results[0]);
+   ASSERT_STREQ(cursor0.symbolName, "printf");
 }
 
-TEST(TagsIndexTest, IndexEverythingHasPrintfDeclaration)
+class TagsIndexTestHelloWorld : public ::testing::Test
 {
-   const auto path = std::filesystem::current_path();
+protected:
+   static void SetUpTestCase()
+   {
+      /*
+       * This assumes we run the test from the root of the build directory.
+       * There's no portable way yet to get the path of the current running
+       * binary.
+       */
+      auto rootPath = std::filesystem::current_path();
+      helloPath     = rootPath / "test" / "db" / "data" / "hello" / "hello.cc";
+      ASSERT_TRUE(std::filesystem::exists(helloPath));
 
-   const auto helloPath = path / "test" / "db" / "data" / "hello" / "hello.cc";
-   ASSERT_TRUE(std::filesystem::exists(helloPath));
+      const std::vector<const char*> arguments = {
+         "-Wall",
+         "-Wextra",
+      };
 
-   const std::vector<const char*> arguments = {
-      "-Wall",
-      "-Wextra",
-      "-stdlib=libstdc++",
-      "--gcc-toolchain=/usr",
-   };
+      tagsDb = std::make_unique<ftags::ProjectDb>(/* name = */ "test", /* rootDirectory = */ rootPath.string());
+      tagsDb->parseOneFile(helloPath, arguments);
+   }
 
-   ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ path.string()};
-   tagsDb.parseOneFile(helloPath, arguments);
+   static void TearDownTestCase()
+   {
+      tagsDb.release();
+   }
 
-   const std::vector<const ftags::Record*> printfDeclaration = tagsDb.findDeclaration("printf");
-   ASSERT_EQ(1, printfDeclaration.size());
+   static std::filesystem::path             helloPath;
+   static std::unique_ptr<ftags::ProjectDb> tagsDb;
+};
 
-   const std::vector<const ftags::Record*> printfReference = tagsDb.findReference("printf");
-   ASSERT_EQ(1, printfReference.size());
+std::filesystem::path             TagsIndexTestHelloWorld::helloPath;
+std::unique_ptr<ftags::ProjectDb> TagsIndexTestHelloWorld::tagsDb;
+
+TEST_F(TagsIndexTestHelloWorld, IndexEverythingHasPrintfDeclaration)
+{
+   const std::vector<const ftags::Record*> printfDeclaration = tagsDb->findDeclaration("printf");
+   ASSERT_EQ(printfDeclaration.size(), 1);
+
+   const std::vector<const ftags::Record*> printfReference = tagsDb->findReference("printf");
+   ASSERT_EQ(printfReference.size(), 1);
 }
 
-TEST(TagsIndexTest, IndexProjectOnlyDoesNotHavePrintfDeclaration)
+TEST_F(TagsIndexTestHello, IndexProjectOnlyDoesNotHavePrintfDeclaration)
 {
-   const auto path = std::filesystem::current_path();
+   const std::vector<const ftags::Record*> printfDeclaration = tagsDb->findDeclaration("printf");
+   ASSERT_EQ(printfDeclaration.size(), 0);
 
-   const auto helloPath = path / "test" / "db" / "data" / "hello" / "hello.cc";
-   ASSERT_TRUE(std::filesystem::exists(helloPath));
-
-   const std::vector<const char*> arguments = {
-      "-Wall",
-      "-Wextra",
-      "-stdlib=libstdc++",
-      "--gcc-toolchain=/usr",
-   };
-
-   ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ path.string()};
-   tagsDb.parseOneFile(helloPath, arguments, false);
-
-   const std::vector<const ftags::Record*> printfDeclaration = tagsDb.findDeclaration("printf");
-   ASSERT_EQ(0, printfDeclaration.size());
-
-   const std::vector<const ftags::Record*> printfReference = tagsDb.findReference("printf");
-   ASSERT_EQ(1, printfReference.size());
+   const std::vector<const ftags::Record*> printfReference = tagsDb->findReference("printf");
+   ASSERT_EQ(printfReference.size(), 1);
 }
 
-TEST(TagsIndexTest, DistinguishDeclarationFromDefinition)
+class TagsIndexTestFunctions : public ::testing::Test
 {
-   const auto path = std::filesystem::current_path();
+protected:
+   static void SetUpTestCase()
+   {
+      /*
+       * This assumes we run the test from the root of the build directory.
+       * There's no portable way yet to get the path of the current running
+       * binary.
+       */
+      const auto rootPath = std::filesystem::current_path();
 
-   const auto translationUnitPath = path / "test" / "db" / "data" / "functions" / "alpha-beta.cc";
-   ASSERT_TRUE(std::filesystem::exists(translationUnitPath));
+      const std::vector<const char*> arguments = {
+         "-Wall",
+         "-Wextra",
+      };
 
-   const std::vector<const char*> arguments = {
-      "-Wall",
-      "-Wextra",
-      "-isystem",
-      "/usr/include",
-   };
+      tagsDb = std::make_unique<ftags::ProjectDb>(/* name = */ "functions", /* rootDirectory = */ rootPath.string());
 
-   ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
-   tagsDb.parseOneFile(translationUnitPath, arguments);
+      const auto translationUnitPath = rootPath / "test" / "db" / "data" / "functions" / "alpha-beta.cc";
+      ASSERT_TRUE(std::filesystem::exists(translationUnitPath));
+      tagsDb->parseOneFile(translationUnitPath, arguments);
+   }
 
-   const std::vector<const ftags::Record*> alphaDefinition = tagsDb.findDefinition("alpha");
-   ASSERT_EQ(1, alphaDefinition.size());
+   static void TearDownTestCase()
+   {
+      tagsDb.release();
+   }
 
-   const std::vector<const ftags::Record*> alphaDeclaration = tagsDb.findDeclaration("alpha");
-   ASSERT_EQ(1, alphaDeclaration.size());
+   static std::unique_ptr<ftags::ProjectDb> tagsDb;
+};
 
-   const std::vector<const ftags::Record*> betaDefinition = tagsDb.findDefinition("beta");
-   ASSERT_EQ(1, betaDefinition.size());
+std::unique_ptr<ftags::ProjectDb> TagsIndexTestFunctions::tagsDb;
 
-   const std::vector<const ftags::Record*> betaDeclaration = tagsDb.findDeclaration("beta");
-   ASSERT_EQ(1, betaDeclaration.size());
+TEST_F(TagsIndexTestFunctions, DistinguishDeclarationFromDefinition)
+{
+   const std::vector<const ftags::Record*> alphaDefinition = tagsDb->findDefinition("alpha");
+   ASSERT_EQ(alphaDefinition.size(), 1);
 
-   const std::vector<const ftags::Record*> betaReferences = tagsDb.findReference("beta");
-   ASSERT_EQ(1, betaReferences.size());
+   const std::vector<const ftags::Record*> alphaDeclaration = tagsDb->findDeclaration("alpha");
+   ASSERT_EQ(alphaDeclaration.size(), 1);
+
+   const std::vector<const ftags::Record*> betaDefinition = tagsDb->findDefinition("beta");
+   ASSERT_EQ(betaDefinition.size(), 1);
+
+   const std::vector<const ftags::Record*> betaDeclaration = tagsDb->findDeclaration("beta");
+   ASSERT_EQ(betaDeclaration.size(), 1);
+
+   const std::vector<const ftags::Record*> betaReferences = tagsDb->findReference("beta");
+   ASSERT_EQ(betaReferences.size(), 1);
 
    ASSERT_EQ(ftags::SymbolType::FunctionCallExpression, betaReferences[0]->getType());
 }
@@ -269,70 +249,64 @@ TEST(TagsIndexTest, ManageTwoTranslationUnits)
    ASSERT_EQ(1, alphaDeclaration.size());
 }
 
-TEST(TagsIndexTest, MultiModuleEliminateDuplicates)
+class TagsIndexTestMulti : public ::testing::Test
 {
-   ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
-
-   const auto path = std::filesystem::current_path();
-
-   const std::vector<const char*> arguments = {
-      "-Wall",
-      "-Wextra",
-      "-isystem",
-      "/usr/include",
-   };
-
+protected:
+   static void SetUpTestCase()
    {
-      const auto libPath = path / "test" / "db" / "data" / "multi-module" / "lib.cc";
+      /*
+       * This assumes we run the test from the root of the build directory.
+       * There's no portable way yet to get the path of the current running
+       * binary.
+       */
+      const auto rootPath = std::filesystem::current_path();
+
+      const std::vector<const char*> arguments = {
+         "-Wall",
+         "-Wextra",
+      };
+
+      tagsDb = std::make_unique<ftags::ProjectDb>(/* name = */ "multi", /* rootDirectory = */ rootPath.string());
+
+      libPath = rootPath / "test" / "db" / "data" / "multi-module" / "lib.cc";
       ASSERT_TRUE(std::filesystem::exists(libPath));
-      tagsDb.parseOneFile(libPath, arguments);
-   }
+      tagsDb->parseOneFile(libPath, arguments);
 
-   {
-      const auto testPath = path / "test" / "db" / "data" / "multi-module" / "test.cc";
+      const auto testPath = rootPath / "test" / "db" / "data" / "multi-module" / "test.cc";
       ASSERT_TRUE(std::filesystem::exists(testPath));
-      tagsDb.parseOneFile(testPath, arguments);
+      tagsDb->parseOneFile(testPath, arguments);
    }
 
-   const std::vector<const ftags::Record*> mainDefinition = tagsDb.findDefinition("main");
-   ASSERT_EQ(1, mainDefinition.size());
+   static void TearDownTestCase()
+   {
+      tagsDb.release();
+   }
 
-   const std::vector<const ftags::Record*> functionDefinition = tagsDb.findDefinition("function");
-   ASSERT_EQ(1, functionDefinition.size());
+   static std::filesystem::path             libPath;
+   static std::unique_ptr<ftags::ProjectDb> tagsDb;
+};
 
-   const std::vector<const ftags::Record*> functionDeclaration = tagsDb.findDeclaration("function");
-   ASSERT_EQ(1, functionDeclaration.size());
+std::filesystem::path             TagsIndexTestMulti::libPath;
+std::unique_ptr<ftags::ProjectDb> TagsIndexTestMulti::tagsDb;
+
+TEST_F(TagsIndexTestMulti, EliminateDuplicates)
+{
+   const std::vector<const ftags::Record*> mainDefinition = tagsDb->findDefinition("main");
+   ASSERT_EQ(mainDefinition.size(), 1);
+
+   const std::vector<const ftags::Record*> functionDefinition = tagsDb->findDefinition("function");
+   ASSERT_EQ(functionDefinition.size(), 1);
+
+   const std::vector<const ftags::Record*> functionDeclaration = tagsDb->findDeclaration("function");
+   ASSERT_EQ(functionDeclaration.size(), 1);
 }
 
-TEST(TagsIndexTest, InflateResults)
+TEST_F(TagsIndexTestMulti, InflateResults)
 {
-   ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
+   const std::vector<const ftags::Record*> functionDeclaration = tagsDb->findDeclaration("function");
+   ASSERT_EQ(functionDeclaration.size(), 1);
 
-   const auto path = std::filesystem::current_path();
-
-   const std::vector<const char*> arguments = {
-      "-Wall",
-      "-Wextra",
-      "-isystem",
-      "/usr/include",
-   };
-
-   {
-      const auto libPath = path / "test" / "db" / "data" / "multi-module" / "lib.cc";
-      ASSERT_TRUE(std::filesystem::exists(libPath));
-      tagsDb.parseOneFile(libPath, arguments);
-   }
-
-   {
-      const auto testPath = path / "test" / "db" / "data" / "multi-module" / "test.cc";
-      ASSERT_TRUE(std::filesystem::exists(testPath));
-      tagsDb.parseOneFile(testPath, arguments);
-   }
-
-   const std::vector<const ftags::Record*> functionDeclaration = tagsDb.findDeclaration("function");
-   ASSERT_EQ(1, functionDeclaration.size());
-
-   const ftags::CursorSet originalCursorSet = tagsDb.inflateRecords(functionDeclaration);
+   const ftags::CursorSet originalCursorSet = tagsDb->inflateRecords(functionDeclaration);
 
    auto iter = originalCursorSet.begin();
    ASSERT_NE(iter, originalCursorSet.end());
@@ -344,35 +318,12 @@ TEST(TagsIndexTest, InflateResults)
    ASSERT_EQ(iter, originalCursorSet.end());
 }
 
-TEST(TagsIndexTest, SerializeDeserializeResults)
+TEST_F(TagsIndexTestMulti, SerializeDeserializeResults)
 {
-   ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
+   const std::vector<const ftags::Record*> functionDeclaration = tagsDb->findDeclaration("function");
+   ASSERT_EQ(functionDeclaration.size(), 1);
 
-   const auto path = std::filesystem::current_path();
-
-   const std::vector<const char*> arguments = {
-      "-Wall",
-      "-Wextra",
-      "-isystem",
-      "/usr/include",
-   };
-
-   {
-      const auto libPath = path / "test" / "db" / "data" / "multi-module" / "lib.cc";
-      ASSERT_TRUE(std::filesystem::exists(libPath));
-      tagsDb.parseOneFile(libPath, arguments);
-   }
-
-   {
-      const auto testPath = path / "test" / "db" / "data" / "multi-module" / "test.cc";
-      ASSERT_TRUE(std::filesystem::exists(testPath));
-      tagsDb.parseOneFile(testPath, arguments);
-   }
-
-   const std::vector<const ftags::Record*> functionDeclaration = tagsDb.findDeclaration("function");
-   ASSERT_EQ(1, functionDeclaration.size());
-
-   const ftags::CursorSet originalCursorSet = tagsDb.inflateRecords(functionDeclaration);
+   const ftags::CursorSet originalCursorSet = tagsDb->inflateRecords(functionDeclaration);
 
    const std::size_t      bufferSpace = originalCursorSet.computeSerializedSize();
    std::vector<std::byte> buffer(/* size = */ bufferSpace);
@@ -386,164 +337,73 @@ TEST(TagsIndexTest, SerializeDeserializeResults)
    ASSERT_NE(iter, restoredCursorSet.end());
 
    const ftags::Cursor cursor = restoredCursorSet.inflateRecord(*iter);
-   ASSERT_STREQ("function", cursor.symbolName);
+   ASSERT_STREQ(cursor.symbolName, "function");
 
    ++iter;
    ASSERT_EQ(iter, restoredCursorSet.end());
 }
 
-TEST(TagsIndexTest, FindVariables)
+TEST_F(TagsIndexTestMulti, FindVariables)
 {
-   ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
+   const std::vector<const ftags::Record*> countDefinition = tagsDb->findDefinition("count");
+   ASSERT_EQ(countDefinition.size(), 1);
 
-   const auto path = std::filesystem::current_path();
+   const std::vector<const ftags::Record*> countReference = tagsDb->findReference("count");
+   ASSERT_EQ(countReference.size(), 1);
 
-   const std::vector<const char*> arguments = {
-      "-Wall",
-      "-Wextra",
-      "-isystem",
-      "/usr/include",
-   };
+   const std::vector<const ftags::Record*> allCount = tagsDb->findSymbol("count");
+   ASSERT_EQ(allCount.size(), 2);
 
-   {
-      const auto libPath = path / "test" / "db" / "data" / "multi-module" / "lib.cc";
-      ASSERT_TRUE(std::filesystem::exists(libPath));
-      tagsDb.parseOneFile(libPath, arguments);
-   }
+   const std::vector<const ftags::Record*> argReference = tagsDb->findReference("arg");
+   ASSERT_EQ(argReference.size(), 7);
 
-   {
-      const auto testPath = path / "test" / "db" / "data" / "multi-module" / "test.cc";
-      ASSERT_TRUE(std::filesystem::exists(testPath));
-      tagsDb.parseOneFile(testPath, arguments);
-   }
-
-   const std::vector<const ftags::Record*> countDefinition = tagsDb.findDefinition("count");
-   ASSERT_EQ(1, countDefinition.size());
-
-   const std::vector<const ftags::Record*> countReference = tagsDb.findReference("count");
-   ASSERT_EQ(1, countReference.size());
-
-   const std::vector<const ftags::Record*> allCount = tagsDb.findSymbol("count");
-   ASSERT_EQ(2, allCount.size());
-
-   const std::vector<const ftags::Record*> argReference = tagsDb.findReference("arg");
-   ASSERT_EQ(3, argReference.size());
-
-   const std::vector<const ftags::Record*> allArg = tagsDb.findSymbol("arg");
-   ASSERT_EQ(6, allArg.size());
+   const std::vector<const ftags::Record*> allArg = tagsDb->findSymbol("arg");
+   ASSERT_EQ(allArg.size(), 10);
 }
 
-TEST(TagsIndexTest, MergeProjectDatabases)
+TEST_F(TagsIndexTestMulti, MergeProjectDatabases)
 {
    ftags::ProjectDb mergedDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
 
-   const auto path = std::filesystem::current_path();
-
-   const std::vector<const char*> arguments = {
-      "-Wall",
-      "-Wextra",
-      "-isystem",
-      "/usr/include",
-   };
-
-   {
-      const auto libPath = path / "test" / "db" / "data" / "multi-module" / "lib.cc";
-      ASSERT_TRUE(std::filesystem::exists(libPath));
-
-      ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
-      tagsDb.parseOneFile(libPath, arguments);
-
-      mergedDb.mergeFrom(tagsDb);
-   }
-
-   {
-      const auto testPath = path / "test" / "db" / "data" / "multi-module" / "test.cc";
-      ASSERT_TRUE(std::filesystem::exists(testPath));
-
-      ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
-      tagsDb.parseOneFile(testPath, arguments);
-
-      mergedDb.mergeFrom(tagsDb);
-   }
+   mergedDb.mergeFrom(*tagsDb);
+   mergedDb.mergeFrom(*tagsDb);
 
    const std::vector<const ftags::Record*> countDefinition = mergedDb.findDefinition("count");
-   ASSERT_EQ(1, countDefinition.size());
+   ASSERT_EQ(countDefinition.size(), 1);
 
    const std::vector<const ftags::Record*> countReference = mergedDb.findReference("count");
-   ASSERT_EQ(1, countReference.size());
+   ASSERT_EQ(countReference.size(), 1);
 
    const std::vector<const ftags::Record*> allCount = mergedDb.findSymbol("count");
-   ASSERT_EQ(2, allCount.size());
+   ASSERT_EQ(allCount.size(), 2);
 
    const std::vector<const ftags::Record*> argReference = mergedDb.findReference("arg");
-   ASSERT_EQ(3, argReference.size());
+   ASSERT_EQ(argReference.size(), 7);
 
    const std::vector<const ftags::Record*> allArg = mergedDb.findSymbol("arg");
-   ASSERT_EQ(6, allArg.size());
+   ASSERT_EQ(allArg.size(), 10);
 }
 
-TEST(TagsIndexTest, IdentifySymbols)
+TEST_F(TagsIndexTestMulti, IdentifySymbols)
 {
-   ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
+   ASSERT_EQ(tagsDb->identifySymbol(libPath.string(), 3, 4).size(), 0);
 
-   const auto path = std::filesystem::current_path();
-
-   const std::vector<const char*> arguments = {
-      "-Wall",
-      "-Wextra",
-      "-isystem",
-      "/usr/include",
-   };
-
-   const auto libPath = path / "test" / "db" / "data" / "multi-module" / "lib.cc";
-   ASSERT_TRUE(std::filesystem::exists(libPath));
-   tagsDb.parseOneFile(libPath, arguments);
-
-   const auto testPath = path / "test" / "db" / "data" / "multi-module" / "test.cc";
-   ASSERT_TRUE(std::filesystem::exists(testPath));
-   tagsDb.parseOneFile(testPath, arguments);
-
-   ASSERT_EQ(tagsDb.identifySymbol(libPath.string(), 3, 4).size(), 0);
-
-   const std::vector<const ftags::Record*> line3Records = tagsDb.identifySymbol(libPath.string(), 3, 5);
+   const std::vector<const ftags::Record*> line3Records = tagsDb->identifySymbol(libPath.string(), 3, 5);
    ASSERT_EQ(line3Records.size(), 1);
 
-   ASSERT_EQ(tagsDb.identifySymbol(libPath.string(), 3, 6).size(), 1);
-   ASSERT_EQ(tagsDb.identifySymbol(libPath.string(), 3, 7).size(), 1);
-   ASSERT_EQ(tagsDb.identifySymbol(libPath.string(), 3, 8).size(), 1);
-   ASSERT_EQ(tagsDb.identifySymbol(libPath.string(), 3, 9).size(), 1);
-   ASSERT_EQ(tagsDb.identifySymbol(libPath.string(), 3, 10).size(), 0);
+   ASSERT_EQ(tagsDb->identifySymbol(libPath.string(), 3, 6).size(), 1);
+   ASSERT_EQ(tagsDb->identifySymbol(libPath.string(), 3, 7).size(), 1);
+   ASSERT_EQ(tagsDb->identifySymbol(libPath.string(), 3, 8).size(), 1);
+   ASSERT_EQ(tagsDb->identifySymbol(libPath.string(), 3, 9).size(), 1);
+   ASSERT_EQ(tagsDb->identifySymbol(libPath.string(), 3, 10).size(), 0);
 
-   const std::vector<const ftags::Record*> line11Records = tagsDb.identifySymbol(libPath.string(), 11, 14);
+   const std::vector<const ftags::Record*> line11Records = tagsDb->identifySymbol(libPath.string(), 11, 14);
    ASSERT_EQ(line11Records.size(), 1);
 }
 
-TEST(TagsIndexTest, FindMacroDefinition)
+TEST_F(TagsIndexTestMulti, FindMacroDefinition)
 {
-   ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
-
-   const auto path = std::filesystem::current_path();
-
-   const std::vector<const char*> arguments = {
-      "-Wall",
-      "-Wextra",
-      "-isystem",
-      "/usr/include",
-   };
-
-   const auto libPath = path / "test" / "db" / "data" / "multi-module" / "lib.cc";
-   ASSERT_TRUE(std::filesystem::exists(libPath));
-   tagsDb.parseOneFile(libPath, arguments);
-
-   // finds one definition only
-   const std::vector<const ftags::Record*> doubleMacro = tagsDb.findSymbol("DOUBLY_SO");
-   ASSERT_EQ(1, doubleMacro.size());
-
-   const auto testPath = path / "test" / "db" / "data" / "multi-module" / "test.cc";
-   ASSERT_TRUE(std::filesystem::exists(testPath));
-   tagsDb.parseOneFile(testPath, arguments);
-
    // finds definition and declaration
-   const std::vector<const ftags::Record*> doubleMacroAgain = tagsDb.findSymbol("DOUBLY_SO");
-   ASSERT_EQ(2, doubleMacroAgain.size());
+   const std::vector<const ftags::Record*> doubleMacroAgain = tagsDb->findSymbol("DOUBLY_SO");
+   ASSERT_EQ(doubleMacroAgain.size(), 2);
 }
