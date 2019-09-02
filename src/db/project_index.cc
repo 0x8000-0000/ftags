@@ -33,8 +33,11 @@ const ftags::ProjectDb::TranslationUnit& ftags::ProjectDb::parseOneFile(const st
          filterPath = m_root;
       }
 
-      ftags::ProjectDb::TranslationUnit translationUnit = ftags::ProjectDb::TranslationUnit::parse(
-         fileName, arguments, m_symbolTable, m_fileNameTable, m_recordSpanManager, filterPath);
+      TranslationUnit::ParsingContext parsingContext{
+         m_symbolTable, m_namespaceTable, m_fileNameTable, m_recordSpanManager, filterPath};
+
+      ftags::ProjectDb::TranslationUnit translationUnit =
+         ftags::ProjectDb::TranslationUnit::parse(fileName, arguments, parsingContext);
 
       spdlog::debug("Loaded {:n} records from {}, {:n} from main file",
                     translationUnit.getRecordCount(m_recordSpanManager),

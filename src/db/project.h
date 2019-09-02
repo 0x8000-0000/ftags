@@ -346,12 +346,30 @@ public:
 
       std::vector<Record*> findDefinition(const std::string& symbolName) const;
 
-      static TranslationUnit parse(const std::string&              fileName,
-                                   const std::vector<const char*>& arguments,
-                                   ftags::util::StringTable&       symbolTable,
-                                   ftags::util::StringTable&       fileNameTable,
-                                   RecordSpanManager&              recordSpanManager,
-                                   const std::string&              filterPath);
+      struct ParsingContext
+      {
+         ftags::util::StringTable& symbolTable;
+         ftags::util::StringTable& namespaceTable;
+         ftags::util::StringTable& fileNameTable;
+         RecordSpanManager&        recordSpanManager;
+         const std::string&        filterPath;
+
+         ParsingContext(ftags::util::StringTable& symbolTable_,
+                        ftags::util::StringTable& namespaceTable_,
+                        ftags::util::StringTable& fileNameTable_,
+                        RecordSpanManager&        recordSpanManager_,
+                        const std::string&        filterPath_) :
+            symbolTable{symbolTable_},
+            namespaceTable{namespaceTable_},
+            fileNameTable{fileNameTable_},
+            recordSpanManager{recordSpanManager_},
+            filterPath{filterPath_}
+         {
+         }
+      };
+
+      static TranslationUnit
+      parse(const std::string& fileName, const std::vector<const char*>& arguments, ParsingContext& parsingContext);
 
       void addCursor(const Cursor&                 cursor,
                      ftags::util::StringTable::Key symbolNameKey,
@@ -457,8 +475,7 @@ public:
                           ftags::util::StringTable::Key fileKey,
                           uint32_t                      line,
                           uint32_t                      column) :
-            symbolKey{symbolKey_},
-            location{fileKey, line, column}
+            symbolKey{symbolKey_}, location{fileKey, line, column}
          {
          }
 

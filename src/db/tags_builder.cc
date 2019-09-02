@@ -306,22 +306,21 @@ struct TranslationUnitAccumulator
 {
    ftags::ProjectDb::TranslationUnit& translationUnit;
    ftags::util::StringTable&          symbolTable;
+   ftags::util::StringTable&          namespaceTable;
    ftags::util::StringTable&          fileNameTable;
    ftags::RecordSpanManager&          recordSpanManager;
    std::string                        filterPath;
 
    std::map<std::string, ftags::util::StringTable::Key> fileKeyCache;
 
-   TranslationUnitAccumulator(ftags::ProjectDb::TranslationUnit& translationUnit_,
-                              ftags::util::StringTable&          symbolTable_,
-                              ftags::util::StringTable&          fileNameTable_,
-                              ftags::RecordSpanManager&          recordSpanManager_,
-                              std::string                        filterPath_) :
+   TranslationUnitAccumulator(ftags::ProjectDb::TranslationUnit&                translationUnit_,
+                              ftags::ProjectDb::TranslationUnit::ParsingContext parsingContext) :
       translationUnit{translationUnit_},
-      symbolTable{symbolTable_},
-      fileNameTable{fileNameTable_},
-      recordSpanManager{recordSpanManager_},
-      filterPath{filterPath_}
+      symbolTable{parsingContext.symbolTable},
+      namespaceTable{parsingContext.namespaceTable},
+      fileNameTable{parsingContext.fileNameTable},
+      recordSpanManager{parsingContext.recordSpanManager},
+      filterPath{parsingContext.filterPath}
    {
    }
 
@@ -487,16 +486,13 @@ CXChildVisitResult visitTranslationUnit(CXCursor cursor, CXCursor /* parent */, 
 
 ftags::ProjectDb::TranslationUnit ftags::ProjectDb::TranslationUnit::parse(const std::string&              fileName,
                                                                            const std::vector<const char*>& arguments,
-                                                                           ftags::util::StringTable& symbolTable,
-                                                                           ftags::util::StringTable& fileNameTable,
-                                                                           RecordSpanManager& recordSpanManager,
-                                                                           const std::string& filterPath)
+                                                                           ParsingContext& parsingContext)
 {
    ftags::ProjectDb::TranslationUnit translationUnit;
 
-   TranslationUnitAccumulator accumulator{translationUnit, symbolTable, fileNameTable, recordSpanManager, filterPath};
+   TranslationUnitAccumulator accumulator{translationUnit, parsingContext};
 
-   ftags::util::StringTable::Key fileKey = fileNameTable.addKey(fileName.c_str());
+   ftags::util::StringTable::Key fileKey = parsingContext.fileNameTable.addKey(fileName.c_str());
    translationUnit.beginParsingUnit(fileKey);
 
    auto clangIndex = std::unique_ptr<void, CXIndexDestroyer>(clang_createIndex(/* excludeDeclarationsFromPCH = */ 0,
@@ -553,7 +549,7 @@ ftags::ProjectDb::TranslationUnit ftags::ProjectDb::TranslationUnit::parse(const
       throw std::runtime_error("Failed to parse input");
    }
 
-   translationUnit.finalizeParsingUnit(recordSpanManager);
+   translationUnit.finalizeParsingUnit(parsingContext.recordSpanManager);
 
    return translationUnit;
 }
