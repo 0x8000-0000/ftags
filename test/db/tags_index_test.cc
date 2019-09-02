@@ -503,11 +503,19 @@ TEST(TagsIndexTest, IdentifySymbols)
    ASSERT_TRUE(std::filesystem::exists(testPath));
    tagsDb.parseOneFile(testPath, arguments);
 
+   ASSERT_EQ(tagsDb.identifySymbol(libPath.string(), 3, 4).size(), 0);
+
    const std::vector<const ftags::Record*> line3Records = tagsDb.identifySymbol(libPath.string(), 3, 5);
-   ASSERT_EQ(3, line3Records.size());
+   ASSERT_EQ(line3Records.size(), 1);
+
+   ASSERT_EQ(tagsDb.identifySymbol(libPath.string(), 3, 6).size(), 1);
+   ASSERT_EQ(tagsDb.identifySymbol(libPath.string(), 3, 7).size(), 1);
+   ASSERT_EQ(tagsDb.identifySymbol(libPath.string(), 3, 8).size(), 1);
+   ASSERT_EQ(tagsDb.identifySymbol(libPath.string(), 3, 9).size(), 1);
+   ASSERT_EQ(tagsDb.identifySymbol(libPath.string(), 3, 10).size(), 0);
 
    const std::vector<const ftags::Record*> line11Records = tagsDb.identifySymbol(libPath.string(), 11, 14);
-   ASSERT_EQ(1, line11Records.size());
+   ASSERT_EQ(line11Records.size(), 1);
 }
 
 TEST(TagsIndexTest, FindMacroDefinition)

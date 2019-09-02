@@ -133,11 +133,32 @@ std::size_t ftags::RecordSpanManager::getSymbolCount() const
    return getSymbolKeys().size();
 }
 
-std::vector<const ftags::Record*> ftags::RecordSpanManager::findClosestRecord(
-   ftags::util::StringTable::Key fileNameKey, unsigned lineNumber, unsigned /* columnNumber */) const
+std::vector<const ftags::Record*>
+ftags::RecordSpanManager::findClosestRecord(ftags::util::StringTable::Key   fileNameKey,
+                                            const ftags::util::StringTable& symbolTable,
+                                            unsigned                        lineNumber,
+                                            unsigned                        columnNumber) const
 {
-   return filterRecordsFromFile(fileNameKey,
-                                [lineNumber](const Record* record) { return record->location.line == lineNumber; });
+   std::vector<const ftags::Record*> recordsOnLine = filterRecordsFromFile(
+      fileNameKey, [lineNumber](const Record* record) { return record->location.line == lineNumber; });
+
+   std::sort(recordsOnLine.begin(), recordsOnLine.end(), [](const Record* left, const Record* right) -> bool {
+      return left->location.column < right->location.column;
+   });
+
+   std::vector<const ftags::Record*> results;
+   results.reserve(recordsOnLine.size());
+
+   for (const auto record : recordsOnLine)
+   {
+      const std::size_t symbolLength = symbolTable.getStringView(record->symbolNameKey).size();
+      if ((record->location.column <= columnNumber) && (columnNumber <= (record->location.column + symbolLength)))
+      {
+         results.push_back(record);
+      }
+   }
+
+   return results;
 }
 
 #if (!defined(NDEBUG)) && (defined(ENABLE_THOROUGH_VALIDITY_CHECKS))

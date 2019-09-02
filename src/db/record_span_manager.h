@@ -186,8 +186,10 @@ public:
       return results;
    }
 
-   std::vector<const Record*>
-   findClosestRecord(ftags::util::StringTable::Key fileNameKey, unsigned lineNumber, unsigned columnNumber) const;
+   std::vector<const Record*> findClosestRecord(ftags::util::StringTable::Key   fileNameKey,
+                                                const ftags::util::StringTable& symbolTable,
+                                                unsigned                        lineNumber,
+                                                unsigned                        columnNumber) const;
 
    std::size_t getRecordCount() const
    {

@@ -227,7 +227,7 @@ ftags::ProjectDb::identifySymbol(const std::string& fileName, unsigned lineNumbe
 {
    const auto key = m_fileNameTable.getKey(fileName.data());
 
-   return m_recordSpanManager.findClosestRecord(key, lineNumber, columnNumber);
+   return m_recordSpanManager.findClosestRecord(key, m_symbolTable, lineNumber, columnNumber);
 }
 
 std::vector<const ftags::Record*> ftags::ProjectDb::dumpTranslationUnit(const std::string& fileName) const
