@@ -1,5 +1,4 @@
-#include <iostream>
-#include <string>
+#include <cstdlib>
 
 #include "lib.h"
 
@@ -10,15 +9,13 @@ int main(int argc, char* argv[])
       return -1;
    }
 
-   const int count = std::stoi(argv[1]);
-   int arg = std::stoi(argv[2]);
+   const int count = atoi(argv[1]);
+   int       arg   = atoi(argv[2]);
 
    for (int ii = 0; ii < count; ++ii)
    {
       arg = test::function(arg);
    }
 
-   std::cout << arg << ' ' << DOUBLY_SO(arg) << std::endl;
-
-   return 0;
+   return DOUBLY_SO(arg);
 }

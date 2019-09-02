@@ -50,7 +50,7 @@ protected:
 
    static void TearDownTestCase()
    {
-      tagsDb.release();
+      tagsDb.reset();
    }
 
    // static std::filesystem::path rootPath;
@@ -123,7 +123,7 @@ protected:
 
    static void TearDownTestCase()
    {
-      tagsDb.release();
+      tagsDb.reset();
    }
 
    static std::filesystem::path             helloPath;
@@ -177,7 +177,7 @@ protected:
 
    static void TearDownTestCase()
    {
-      tagsDb.release();
+      tagsDb.reset();
    }
 
    static std::unique_ptr<ftags::ProjectDb> tagsDb;
@@ -279,7 +279,7 @@ protected:
 
    static void TearDownTestCase()
    {
-      tagsDb.release();
+      tagsDb.reset();
    }
 
    static std::filesystem::path             libPath;
@@ -355,10 +355,10 @@ TEST_F(TagsIndexTestMulti, FindVariables)
    ASSERT_EQ(allCount.size(), 2);
 
    const std::vector<const ftags::Record*> argReference = tagsDb->findReference("arg");
-   ASSERT_EQ(argReference.size(), 7);
+   ASSERT_EQ(argReference.size(), 6);
 
    const std::vector<const ftags::Record*> allArg = tagsDb->findSymbol("arg");
-   ASSERT_EQ(allArg.size(), 10);
+   ASSERT_EQ(allArg.size(), 9);
 }
 
 TEST_F(TagsIndexTestMulti, MergeProjectDatabases)
@@ -378,10 +378,10 @@ TEST_F(TagsIndexTestMulti, MergeProjectDatabases)
    ASSERT_EQ(allCount.size(), 2);
 
    const std::vector<const ftags::Record*> argReference = mergedDb.findReference("arg");
-   ASSERT_EQ(argReference.size(), 7);
+   ASSERT_EQ(argReference.size(), 6);
 
    const std::vector<const ftags::Record*> allArg = mergedDb.findSymbol("arg");
-   ASSERT_EQ(allArg.size(), 10);
+   ASSERT_EQ(allArg.size(), 9);
 }
 
 TEST_F(TagsIndexTestMulti, IdentifySymbols)

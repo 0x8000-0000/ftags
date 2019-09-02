@@ -154,19 +154,19 @@ TEST(ProjectSerializationTest, FindVariablesInDeserializedProjectDb)
 
       {
          const std::vector<const ftags::Record*> countDefinition = tagsDb.findDefinition("count");
-         ASSERT_EQ(1, countDefinition.size());
+         ASSERT_EQ(countDefinition.size(), 1);
 
          const std::vector<const ftags::Record*> countReference = tagsDb.findReference("count");
-         ASSERT_EQ(1, countReference.size());
+         ASSERT_EQ(countReference.size(), 1);
 
          const std::vector<const ftags::Record*> allCount = tagsDb.findSymbol("count");
-         ASSERT_EQ(2, allCount.size());
+         ASSERT_EQ(allCount.size(), 2);
 
          const std::vector<const ftags::Record*> argReference = tagsDb.findReference("arg");
-         ASSERT_EQ(3, argReference.size());
+         ASSERT_EQ(argReference.size(), 6);
 
          const std::vector<const ftags::Record*> allArg = tagsDb.findSymbol("arg");
-         ASSERT_EQ(6, allArg.size());
+         ASSERT_EQ(allArg.size(), 9);
       }
    }
 
@@ -178,18 +178,18 @@ TEST(ProjectSerializationTest, FindVariablesInDeserializedProjectDb)
 
    {
       const std::vector<const ftags::Record*> countDefinition = restoredTagsDb.findDefinition("count");
-      ASSERT_EQ(1, countDefinition.size());
+      ASSERT_EQ(countDefinition.size(), 1);
 
       const std::vector<const ftags::Record*> countReference = restoredTagsDb.findReference("count");
-      ASSERT_EQ(1, countReference.size());
+      ASSERT_EQ(countReference.size(), 1);
 
       const std::vector<const ftags::Record*> allCount = restoredTagsDb.findSymbol("count");
-      ASSERT_EQ(2, allCount.size());
+      ASSERT_EQ(allCount.size(), 2);
 
       const std::vector<const ftags::Record*> argReference = restoredTagsDb.findReference("arg");
-      ASSERT_EQ(3, argReference.size());
+      ASSERT_EQ(argReference.size(), 6);
 
       const std::vector<const ftags::Record*> allArg = restoredTagsDb.findSymbol("arg");
-      ASSERT_EQ(6, allArg.size());
+      ASSERT_EQ(allArg.size(), 9);
    }
 }
