@@ -68,7 +68,7 @@ public:
 
    StringTable& operator=(const StringTable& other) = delete;
 
-   StringTable& operator=(StringTable&& other)
+   StringTable& operator=(StringTable&& other) noexcept
    {
       if (this != &other)
       {
@@ -79,7 +79,7 @@ public:
       return *this;
    }
 
-   bool operator==(const StringTable& other) const
+   bool operator==(const StringTable& other) const noexcept
    {
       if (this == &other)
       {
@@ -109,18 +109,33 @@ public:
 
    static constexpr Key InvalidKey = 0;
 
-   const char* getString(Key stringKey) const noexcept;
+   const char* getString(Key stringKey) const noexcept
+   {
+      const auto location = m_store.get(stringKey);
 
-   std::string_view getStringView(Key stringKey) const noexcept;
+      if (location.first == location.second)
+      {
+         return nullptr;
+      }
+      else
+      {
+         return &*location.first;
+      }
+   }
 
-   std::size_t getSize() const
+   std::string_view getStringView(Key stringKey) const noexcept
+   {
+      return std::string_view(getString(stringKey));
+   }
+
+   std::size_t getSize() const noexcept
    {
       return m_index.size();
    }
 
-   Key getKey(std::string_view string) const noexcept;
-   Key addKey(std::string_view string);
-   void removeKey(std::string_view string);
+   Key  getKey(std::string_view string) const noexcept;
+   Key  addKey(std::string_view string) noexcept;
+   void removeKey(std::string_view string) noexcept;
 
    /* Add all the keys from other that are missing in this table.
     *
@@ -131,14 +146,14 @@ public:
    /*
     * Serialization interface
     */
-   std::size_t computeSerializedSize() const;
+   std::size_t computeSerializedSize() const noexcept;
 
-   void serialize(BufferInsertor& insertor) const;
+   void serialize(BufferInsertor& insertor) const noexcept;
 
-   static StringTable deserialize(BufferExtractor& extractor);
+   static StringTable deserialize(BufferExtractor& extractor) noexcept;
 
 private:
-   Key insertString(std::string_view string);
+   Key insertString(std::string_view string) noexcept;
 
    static constexpr uint32_t k_bucketSize = 24;
 

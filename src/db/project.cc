@@ -42,7 +42,7 @@ bool ftags::ProjectDb::operator==(const ftags::ProjectDb& other) const
 
    for (const auto& translationUnit : m_translationUnits)
    {
-      const char* translationUnitName = m_fileNameTable.getString(translationUnit.getFileNameKey());
+      const std::string_view translationUnitName = m_fileNameTable.getStringView(translationUnit.getFileNameKey());
 
       const std::vector<const Record*> records = translationUnit.getRecords(false, m_recordSpanManager);
 
@@ -51,7 +51,8 @@ bool ftags::ProjectDb::operator==(const ftags::ProjectDb& other) const
 
    for (const auto& translationUnit : other.m_translationUnits)
    {
-      const char* translationUnitName = other.m_fileNameTable.getString(translationUnit.getFileNameKey());
+      const std::string_view translationUnitName =
+         other.m_fileNameTable.getStringView(translationUnit.getFileNameKey());
 
       const std::vector<const Record*> records = translationUnit.getRecords(false, other.m_recordSpanManager);
 

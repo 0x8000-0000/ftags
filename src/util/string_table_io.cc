@@ -18,12 +18,12 @@
 
 #include <serialization.h>
 
-std::size_t ftags::util::StringTable::computeSerializedSize() const
+std::size_t ftags::util::StringTable::computeSerializedSize() const noexcept
 {
    return sizeof(SerializedObjectHeader) + m_store.computeSerializedSize();
 }
 
-void ftags::util::StringTable::serialize(ftags::util::BufferInsertor& insertor) const
+void ftags::util::StringTable::serialize(ftags::util::BufferInsertor& insertor) const noexcept
 {
    SerializedObjectHeader header{"ftags::StringTable"};
    insertor << header;
@@ -31,7 +31,7 @@ void ftags::util::StringTable::serialize(ftags::util::BufferInsertor& insertor) 
    m_store.serialize(insertor);
 }
 
-ftags::util::StringTable ftags::util::StringTable::deserialize(ftags::util::BufferExtractor& extractor)
+ftags::util::StringTable ftags::util::StringTable::deserialize(ftags::util::BufferExtractor& extractor) noexcept
 {
    StringTable retval;
 
@@ -48,22 +48,22 @@ ftags::util::StringTable ftags::util::StringTable::deserialize(ftags::util::Buff
    {
       auto iter = retval.m_store.get(allocSeq.key).first;
 
-      const char* symbol = &*iter;
-      StoreType::block_size_type key = allocSeq.key;
+      const char*                symbol = &*iter;
+      StoreType::block_size_type key    = allocSeq.key;
       for (StoreType::block_size_type ii = 0; ii < allocSeq.size; ii++)
       {
          if (*iter == '\0')
          {
             retval.m_index[symbol] = key;
 
-            ++ iter;
+            ++iter;
 
             symbol = &*iter;
-            key = allocSeq.key + ii + 1;
+            key    = allocSeq.key + ii + 1;
          }
          else
          {
-            ++ iter;
+            ++iter;
          }
       }
 

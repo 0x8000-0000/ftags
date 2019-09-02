@@ -22,34 +22,6 @@
 #include <cassert>
 #include <cstring>
 
-const char* ftags::util::StringTable::getString(Key stringKey) const noexcept
-{
-   auto location = m_store.get(stringKey);
-
-   if (location.first == location.second)
-   {
-      return nullptr;
-   }
-   else
-   {
-      return &*location.first;
-   }
-}
-
-std::string_view ftags::util::StringTable::getStringView(Key stringKey) const noexcept
-{
-   auto location = m_store.get(stringKey);
-
-   if (location.first == location.second)
-   {
-      return std::string_view();
-   }
-   else
-   {
-      return std::string_view(&*location.first);
-   }
-}
-
 ftags::util::StringTable::Key ftags::util::StringTable::getKey(std::string_view inputString) const noexcept
 {
    auto iter = m_index.find(inputString);
@@ -64,7 +36,7 @@ ftags::util::StringTable::Key ftags::util::StringTable::getKey(std::string_view 
    }
 }
 
-ftags::util::StringTable::Key ftags::util::StringTable::addKey(std::string_view inputString)
+ftags::util::StringTable::Key ftags::util::StringTable::addKey(std::string_view inputString) noexcept
 {
    const Key currentPosition{getKey(inputString)};
 
@@ -78,7 +50,7 @@ ftags::util::StringTable::Key ftags::util::StringTable::addKey(std::string_view 
    return key;
 }
 
-ftags::util::StringTable::Key ftags::util::StringTable::insertString(std::string_view string)
+ftags::util::StringTable::Key ftags::util::StringTable::insertString(std::string_view string) noexcept
 {
    // allocate extra byte for NUL
    auto allocation{m_store.allocate(static_cast<StoreType::block_size_type>(string.size() + 1))};
@@ -93,7 +65,7 @@ ftags::util::StringTable::Key ftags::util::StringTable::insertString(std::string
    return allocation.key;
 }
 
-void ftags::util::StringTable::removeKey(std::string_view inputString)
+void ftags::util::StringTable::removeKey(std::string_view inputString) noexcept
 {
    auto iter = m_index.find(inputString);
 

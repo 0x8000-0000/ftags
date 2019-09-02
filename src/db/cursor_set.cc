@@ -33,17 +33,17 @@ ftags::CursorSet::CursorSet(std::vector<const Record*>      records,
       auto& newRecord = m_records.back();
 
       {
-         const char* symbolName  = symbolTable.getString(record->symbolNameKey);
-         newRecord.symbolNameKey = m_symbolTable.addKey(symbolName);
+         const std::string_view symbolName = symbolTable.getStringView(record->symbolNameKey);
+         newRecord.symbolNameKey           = m_symbolTable.addKey(symbolName);
       }
 
       {
-         const char* fileName = fileNameTable.getString(record->location.fileNameKey);
+         const std::string_view fileName = fileNameTable.getStringView(record->location.fileNameKey);
          newRecord.setLocationFileKey(m_fileNameTable.addKey(fileName));
       }
 
       {
-         const char* referenceFileName = fileNameTable.getString(record->definition.fileNameKey);
+         const std::string_view referenceFileName = fileNameTable.getStringView(record->definition.fileNameKey);
          newRecord.setDefinitionFileKey(m_fileNameTable.addKey(referenceFileName));
       }
    }
