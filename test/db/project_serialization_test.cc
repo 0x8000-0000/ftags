@@ -25,7 +25,7 @@ using ftags::util::BufferExtractor;
 using ftags::util::BufferInsertor;
 using ftags::util::StringTable;
 
-TEST(ProjectSerializationTest, CursorSet)
+TEST(ProjectSerializationTestSynthetic, CursorSet)
 {
    std::vector<const ftags::Record*> input;
 
@@ -77,95 +77,85 @@ TEST(ProjectSerializationTest, CursorSet)
    ASSERT_STREQ("alpha", outputOne.symbolName);
 }
 
-TEST(ProjectSerializationTest, DeserializedProjectDbEqualsInput)
+class ProjectSerializationTest : public ::testing::Test
 {
-   ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
-
-   const auto path = std::filesystem::current_path();
-
-   const std::vector<const char*> arguments = {
-      "-Wall",
-      "-Wextra",
-      "-isystem",
-      "/usr/include",
-   };
-
+protected:
+   static void SetUpTestCase()
    {
-      const auto libPath = path / "test" / "db" / "data" / "multi-module" / "lib.cc";
-      ASSERT_TRUE(std::filesystem::exists(libPath));
-      tagsDb.parseOneFile(libPath, arguments);
-   }
-
-   tagsDb.assertValid();
-
-   {
-      const auto testPath = path / "test" / "db" / "data" / "multi-module" / "test.cc";
-      ASSERT_TRUE(std::filesystem::exists(testPath));
-      tagsDb.parseOneFile(testPath, arguments);
-   }
-
-   tagsDb.assertValid();
-
-   std::vector<std::byte> buffer(/* size = */ tagsDb.computeSerializedSize());
-
-   BufferInsertor insertor{buffer};
-
-   tagsDb.serialize(insertor);
-
-   BufferExtractor  extractor{buffer};
-   ftags::ProjectDb restoredTagsDb = ftags::ProjectDb::deserialize(extractor);
-
-   ASSERT_TRUE(tagsDb.operator==(restoredTagsDb));
-}
-
-TEST(ProjectSerializationTest, FindVariablesInDeserializedProjectDb)
-{
-   std::vector<std::byte> buffer;
-
-   {
-      ftags::ProjectDb tagsDb{/* name = */ "test", /* rootDirectory = */ "/tmp"};
-
-      const auto path = std::filesystem::current_path();
+      /*
+       * This assumes we run the test from the root of the build directory.
+       * There's no portable way yet to get the path of the current running
+       * binary.
+       */
+      const auto rootPath = std::filesystem::current_path();
 
       const std::vector<const char*> arguments = {
          "-Wall",
          "-Wextra",
-         "-isystem",
-         "/usr/include",
       };
 
-      {
-         const auto libPath = path / "test" / "db" / "data" / "multi-module" / "lib.cc";
-         ASSERT_TRUE(std::filesystem::exists(libPath));
-         tagsDb.parseOneFile(libPath, arguments);
-      }
+      tagsDb = std::make_unique<ftags::ProjectDb>(/* name = */ "multi", /* rootDirectory = */ rootPath.string());
 
-      {
-         const auto testPath = path / "test" / "db" / "data" / "multi-module" / "test.cc";
-         ASSERT_TRUE(std::filesystem::exists(testPath));
-         tagsDb.parseOneFile(testPath, arguments);
-      }
+      const auto libPath = rootPath / "test" / "db" / "data" / "multi-module" / "lib.cc";
+      ASSERT_TRUE(std::filesystem::exists(libPath));
+      tagsDb->parseOneFile(libPath, arguments);
 
-      buffer.resize(tagsDb.computeSerializedSize());
+      const auto testPath = rootPath / "test" / "db" / "data" / "multi-module" / "test.cc";
+      ASSERT_TRUE(std::filesystem::exists(testPath));
+      tagsDb->parseOneFile(testPath, arguments);
+   }
+
+   static void TearDownTestCase()
+   {
+      tagsDb.reset();
+   }
+
+   static std::unique_ptr<ftags::ProjectDb> tagsDb;
+};
+
+std::unique_ptr<ftags::ProjectDb> ProjectSerializationTest::tagsDb;
+
+TEST_F(ProjectSerializationTest, DeserializedProjectDbEqualsInput)
+{
+   tagsDb->assertValid();
+
+   std::vector<std::byte> buffer(/* size = */ tagsDb->computeSerializedSize());
+
+   BufferInsertor insertor{buffer};
+
+   tagsDb->serialize(insertor);
+
+   BufferExtractor  extractor{buffer};
+   ftags::ProjectDb restoredTagsDb = ftags::ProjectDb::deserialize(extractor);
+
+   ASSERT_EQ(*tagsDb, restoredTagsDb);
+}
+
+TEST_F(ProjectSerializationTest, FindVariablesInDeserializedProjectDb)
+{
+   std::vector<std::byte> buffer;
+
+   {
+      buffer.resize(tagsDb->computeSerializedSize());
 
       BufferInsertor insertor{buffer};
 
-      tagsDb.serialize(insertor);
+      tagsDb->serialize(insertor);
 
       {
-         const std::vector<const ftags::Record*> countDefinition = tagsDb.findDefinition("count");
+         const std::vector<const ftags::Record*> countDefinition = tagsDb->findDefinition("count");
          ASSERT_EQ(countDefinition.size(), 1);
 
-         const std::vector<const ftags::Record*> countReference = tagsDb.findReference("count");
+         const std::vector<const ftags::Record*> countReference = tagsDb->findReference("count");
          ASSERT_EQ(countReference.size(), 1);
 
-         const std::vector<const ftags::Record*> allCount = tagsDb.findSymbol("count");
+         const std::vector<const ftags::Record*> allCount = tagsDb->findSymbol("count");
          ASSERT_EQ(allCount.size(), 2);
 
-         const std::vector<const ftags::Record*> argReference = tagsDb.findReference("arg");
+         const std::vector<const ftags::Record*> argReference = tagsDb->findReference("arg");
          ASSERT_EQ(argReference.size(), 6);
 
-         const std::vector<const ftags::Record*> allArg = tagsDb.findSymbol("arg");
+         const std::vector<const ftags::Record*> allArg = tagsDb->findSymbol("arg");
          ASSERT_EQ(allArg.size(), 9);
       }
    }
@@ -174,7 +164,7 @@ TEST(ProjectSerializationTest, FindVariablesInDeserializedProjectDb)
    ftags::ProjectDb restoredTagsDb = ftags::ProjectDb::deserialize(extractor);
 
    std::string restoredName = restoredTagsDb.getName();
-   ASSERT_STREQ("test", restoredName.data());
+   ASSERT_STREQ(restoredName.data(), "multi");
 
    {
       const std::vector<const ftags::Record*> countDefinition = restoredTagsDb.findDefinition("count");
