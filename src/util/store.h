@@ -196,10 +196,11 @@ public:
    static Store deserialize(ftags::util::BufferExtractor& extractor);
 
 private:
-   static constexpr block_size_type MaxSegmentSize      = (1U << SegmentSizeBits);
-   static constexpr block_size_type MaxSegmentCount     = (1U << ((sizeof(K) * 8) - SegmentSizeBits));
-   static constexpr block_size_type OffsetInSegmentMask = (MaxSegmentSize - 1);
-   static constexpr block_size_type SegmentIndexMask    = ((MaxSegmentCount - 1) << SegmentSizeBits);
+   static constexpr block_size_type MaxSegmentSize          = (1U << SegmentSizeBits);
+   static constexpr block_size_type MaxSegmentCount         = (1U << ((sizeof(K) * 8) - SegmentSizeBits));
+   static constexpr block_size_type OffsetInSegmentMask     = (MaxSegmentSize - 1);
+   static constexpr block_size_type SegmentIndexMask        = ((MaxSegmentCount - 1) << SegmentSizeBits);
+   static constexpr block_size_type MaxContiguousAllocation = (MaxSegmentSize - FirstKeyValue);
 
    static block_size_type getOffsetInSegment(K key)
    {
@@ -232,11 +233,13 @@ private:
 
       const K key{makeKey(segmentsInUse, FirstKeyValue)};
 
-      recordFreeBlock(key, MaxSegmentSize - FirstKeyValue);
+      recordFreeBlock(key, MaxContiguousAllocation);
    }
 
    void recordFreeBlock(K key, block_size_type size)
    {
+      assert(key >= FirstKeyValue);
+      assert(size <= MaxContiguousAllocation);
       m_freeBlocks.insert({size, key});
       m_freeBlocksIndex.insert({key, size});
    }
@@ -664,9 +667,10 @@ Store<T, K, SegmentSizeBits> Store<T, K, SegmentSizeBits>::deserialize(ftags::ut
       retval.m_freeBlocksIndex = Serializer<std::map<K, block_size_type>>::deserialize(extractor);
 
       // reconstruct free blocks index from free block
-      for (const auto& iter : retval.m_freeBlocksIndex)
+      for (const auto& [key, size] : retval.m_freeBlocksIndex)
       {
-         retval.m_freeBlocks.insert({iter.second, iter.first});
+         assert(size <= MaxContiguousAllocation);
+         retval.m_freeBlocks.insert({size, key});
       }
    }
    else

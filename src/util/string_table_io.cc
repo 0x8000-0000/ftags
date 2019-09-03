@@ -46,12 +46,16 @@ ftags::util::StringTable ftags::util::StringTable::deserialize(ftags::util::Buff
    auto allocSeq = retval.m_store.getFirstAllocatedSequence();
    while (retval.m_store.isValidAllocatedSequence(allocSeq))
    {
-      auto iter = retval.m_store.get(allocSeq.key).first;
+      const auto& [iterStart, rangeEnd] = retval.m_store.get(allocSeq.key);
+
+      auto iter = iterStart;
 
       const char*                symbol = &*iter;
       StoreType::block_size_type key    = allocSeq.key;
       for (StoreType::block_size_type ii = 0; ii < allocSeq.size; ii++)
       {
+         assert(iter != rangeEnd);
+
          if (*iter == '\0')
          {
             retval.m_index[symbol] = key;
