@@ -30,6 +30,8 @@ configure_file (data/multi-module/lib.cc data/multi-module/lib.cc)
 configure_file (data/multi-module/lib.h data/multi-module/lib.h)
 configure_file (data/multi-module/test.cc data/multi-module/test.cc)
 
+configure_file (data/compound/test1.cc data/compound/test1.cc)
+
 #
 # Stand-alone tests
 #
