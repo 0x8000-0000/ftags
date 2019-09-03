@@ -78,11 +78,14 @@ Running
 
 At this stage, the service components need to be started manually:
 
-* src/worker/ft\_logger
-* src/server/ft\_server
-* src/worker/ft\_indexer # you may launch several instances
-* src/worker/ft\_scanner -p tags .
-* src/client/ft\_client --all --symbol main      # to test
+* build$ src/worker/ft\_logger
+* build$ src/server/ft\_server
+* build$ src/worker/ft\_indexer      # you may launch several instances
+
+* src$ ../build/src/worker/ft\_scanner -p tags .        # run this from the source directory
+
+Once the scanning and indexing is complete, we can ask questions:
+* src$ ../build/src/client/ft\_client find symbol main      # to test
 
 
 License
