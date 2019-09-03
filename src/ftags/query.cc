@@ -101,7 +101,7 @@ struct symbol_name : pegtl::seq<pegtl::identifier>
 {
 };
 
-struct path_element : pegtl::star<pegtl::sor<pegtl::alnum, pegtl::one<'.', '-', '_'>>>
+struct path_element : pegtl::star<pegtl::sor<pegtl::alnum, pegtl::one<'.', '-', '_', '+'>>>
 {
 };
 
