@@ -197,9 +197,18 @@ void dispatchIdentifySymbol(zmq::socket_t&     socket,
       {
          const ftags::Cursor cursor = output.inflateRecord(*iter);
 
-         std::cout << cursor.location.fileName << ':' << cursor.location.line << ':' << cursor.location.column << "  "
-                   << cursor.attributes.getRecordFlavor() << ' ' << cursor.attributes.getRecordType() << " >> "
-                   << cursor.symbolName << std::endl;
+         std::cout << fmt::format("{}:{}:{}  {} {} >> {}\n",
+                                  cursor.location.fileName,
+                                  cursor.location.line,
+                                  cursor.location.column,
+                                  cursor.attributes.getRecordFlavor(),
+                                  cursor.attributes.getRecordType(),
+                                  cursor.symbolName)
+                   << fmt::format("  \\- declared at {}:{}:{}",
+                                  cursor.definition.fileName,
+                                  cursor.definition.line,
+                                  cursor.definition.column)
+                   << std::endl;
       }
    }
    else if (status.type() == ftags::Status_Type::Status_Type_UNKNOWN_PROJECT)
