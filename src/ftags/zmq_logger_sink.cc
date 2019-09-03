@@ -18,6 +18,8 @@
 
 #include <spdlog/spdlog.h>
 
+#include <cstdlib>
+
 #include <unistd.h>
 
 ftags::ZmqPublisher::ZmqPublisher(zmq::context_t& context, const std::string& name) :
@@ -32,7 +34,7 @@ ftags::ZmqPublisher::ZmqPublisher(zmq::context_t& context, const std::string& na
    m_pid = getpid();
 }
 
-void ftags::ZmqPublisher::publish(spdlog::level::level_enum level, const std::string& msg)
+void ftags::ZmqPublisher::publish(::spdlog::level::level_enum level, const std::string& msg)
 {
    zmq::message_t sourceMsg{m_name.size()};
    memcpy(sourceMsg.data(), m_name.data(), m_name.size());

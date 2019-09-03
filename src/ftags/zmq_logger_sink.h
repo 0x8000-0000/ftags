@@ -19,7 +19,11 @@
 
 #include <zmq.hpp>
 
+#include <spdlog/details/null_mutex.h>
 #include <spdlog/sinks/base_sink.h>
+
+#include <mutex>
+#include <string>
 
 #include <sys/types.h>
 
@@ -59,8 +63,8 @@ public:
 protected:
    void sink_it_(const spdlog::details::log_msg& msg) override
    {
-      fmt::memory_buffer formatted;
-      spdlog::sinks::sink::formatter_->format(msg, formatted);
+      spdlog::memory_buf_t formatted;
+      spdlog::sinks::base_sink<Mutex>::formatter_->format(msg, formatted);
       m_publisher.publish(msg.level, fmt::to_string(formatted));
    }
 
@@ -72,9 +76,6 @@ protected:
 private:
    ZmqPublisher m_publisher;
 };
-
-#include <mutex>
-#include <spdlog/details/null_mutex.h>
 
 using ZmqLoggerSinkMultithreaded  = ZmqLoggerSink<std::mutex>;
 using ZmqLoggerSinkSinglethreaded = ZmqLoggerSink<spdlog::details::null_mutex>;
