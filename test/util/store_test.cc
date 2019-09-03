@@ -552,3 +552,17 @@ TEST(StoreAllocatorIteratorTest, ThreeAllocationsWithTwoGapsOverflow)
    ASSERT_FALSE(nextSeqValid3);
    ASSERT_FALSE(store.isValidAllocatedSequence(allocSeq));
 }
+
+TEST(StoreAllocatorIteratorTest, OneAllocationThatFillsTheFirstBlock)
+{
+   SmallStore store;
+
+   const auto blockOne = store.allocate(SmallStore::MaxContiguousAllocation);
+   ASSERT_EQ(blockOne.key, SmallStore::FirstKeyValue); // intrusive
+
+   SmallStore::AllocatedSequence allocOne = store.getFirstAllocatedSequence();
+   ASSERT_TRUE(store.isValidAllocatedSequence(allocOne));
+
+   const bool nextSeqValid = store.getNextAllocatedSequence(allocOne);
+   ASSERT_FALSE(nextSeqValid);
+}

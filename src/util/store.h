@@ -44,16 +44,23 @@ namespace ftags::util
 template <typename T, typename K, unsigned SegmentSizeBits = 24>
 class Store
 {
+public:
+   using block_size_type = uint32_t;
+
+   static constexpr block_size_type MaxSegmentSize      = (1U << SegmentSizeBits);
+   static constexpr block_size_type MaxSegmentCount     = (1U << ((sizeof(K) * 8) - SegmentSizeBits));
+   static constexpr block_size_type OffsetInSegmentMask = (MaxSegmentSize - 1);
+   static constexpr block_size_type SegmentIndexMask    = ((MaxSegmentCount - 1) << SegmentSizeBits);
 
 public:
-   using iterator        = T*;
-   using const_iterator  = const T*;
-   using block_size_type = uint32_t;
+   using iterator       = T*;
+   using const_iterator = const T*;
 
    using key_type = K;
    using Key      = K;
 
-   static constexpr block_size_type FirstKeyValue = 4;
+   static constexpr block_size_type FirstKeyValue           = 4;
+   static constexpr block_size_type MaxContiguousAllocation = (MaxSegmentSize - FirstKeyValue);
 
    struct Allocation
    {
@@ -196,12 +203,6 @@ public:
    static Store deserialize(ftags::util::BufferExtractor& extractor);
 
 private:
-   static constexpr block_size_type MaxSegmentSize          = (1U << SegmentSizeBits);
-   static constexpr block_size_type MaxSegmentCount         = (1U << ((sizeof(K) * 8) - SegmentSizeBits));
-   static constexpr block_size_type OffsetInSegmentMask     = (MaxSegmentSize - 1);
-   static constexpr block_size_type SegmentIndexMask        = ((MaxSegmentCount - 1) << SegmentSizeBits);
-   static constexpr block_size_type MaxContiguousAllocation = (MaxSegmentSize - FirstKeyValue);
-
    static block_size_type getOffsetInSegment(K key)
    {
       return (key & OffsetInSegmentMask);
@@ -740,18 +741,29 @@ bool Store<T, K, SegmentSizeBits>::getNextAllocatedSequence(
    const K endOfAllocatedSequence = allocatedSequence.key + allocatedSequence.size;
 
    /*
-    * Then we need to find the next two free blocks that occur after the
+    * Then we need to find the next free block that occurs after the
     * end of the current allocated sequence.
     */
    const auto nextFreeBlock{m_freeBlocksIndex.find(endOfAllocatedSequence)};
 
-   /*
-    * There is always a free block after an allocated block so we should find
-    * it here.
-    */
-   assert(nextFreeBlock != m_freeBlocksIndex.end());
+   if (nextFreeBlock == m_freeBlocksIndex.end())
+   {
+#ifndef NDEBUG
+      const block_size_type offsetInSegment{getOffsetInSegment(endOfAllocatedSequence)};
+#endif
+      assert(offsetInSegment == 0u);
+
+      /*
+       * There is no free block after this
+       */
+      allocatedSequence.key  = 0;
+      allocatedSequence.size = 0;
+      return false;
+   }
 
    /*
+    * Found a free block.
+    *
     * After this free block, there *might* be another allocated sequence
     * and another free block.
     */
