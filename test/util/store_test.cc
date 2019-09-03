@@ -563,6 +563,30 @@ TEST(StoreAllocatorIteratorTest, OneAllocationThatFillsTheFirstBlock)
    SmallStore::AllocatedSequence allocOne = store.getFirstAllocatedSequence();
    ASSERT_TRUE(store.isValidAllocatedSequence(allocOne));
 
+   ASSERT_EQ(allocOne.key, blockOne.key);
+
    const bool nextSeqValid = store.getNextAllocatedSequence(allocOne);
    ASSERT_FALSE(nextSeqValid);
+}
+
+TEST(StoreAllocatorIteratorTest, TwoAllocationsThatFillTheFirstSegments)
+{
+   SmallStore store;
+
+   const auto blockOne = store.allocate(SmallStore::MaxContiguousAllocation);
+   ASSERT_EQ(blockOne.key, SmallStore::FirstKeyValue); // intrusive
+
+   const auto blockTwo = store.allocate(SmallStore::MaxContiguousAllocation);
+   ASSERT_EQ(blockOne.key, SmallStore::FirstKeyValue); // intrusive
+
+   SmallStore::AllocatedSequence alloc = store.getFirstAllocatedSequence();
+   ASSERT_TRUE(store.isValidAllocatedSequence(alloc));
+   ASSERT_EQ(alloc.key, blockOne.key);
+
+   const bool secondSeqValid = store.getNextAllocatedSequence(alloc);
+   ASSERT_TRUE(secondSeqValid);
+   ASSERT_EQ(alloc.key, blockTwo.key);
+
+   const bool thirdSeqValid = store.getNextAllocatedSequence(alloc);
+   ASSERT_FALSE(thirdSeqValid);
 }
