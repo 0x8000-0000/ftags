@@ -220,6 +220,10 @@ void dispatchIdentifySymbol(zmq::socket_t&     socket,
          std::cout << status.remarks(ii) << std::endl;
       }
    }
+   else if (status.type() == ftags::Status_Type::Status_Type_QUERY_NO_RESULTS)
+   {
+      std::cout << "Query returned no results." << std::endl;
+   }
 }
 
 void dispatchDumpTranslationUnit(zmq::socket_t&     socket,
