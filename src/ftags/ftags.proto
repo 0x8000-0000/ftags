@@ -71,8 +71,9 @@ message Status
 
       UNKNOWN_PROJECT = 10;
 
-      QUERY_RESULTS = 60;
-      QUERY_NO_RESULTS = 61;
+      QUERY_NO_RESULTS = 60;
+      QUERY_RESULTS = 61;           // single cursor with results
+      QUERY_RESULT_GROUP = 62;      // multiple cursors
 
       TRANSLATION_UNIT_UPDATED = 70;
 
@@ -84,6 +85,8 @@ message Status
    string timestamp = 2;
 
    string projectName = 3;
+
+   int32 resultCount = 10;
 
    repeated string remarks = 99;
 }

@@ -202,9 +202,10 @@ public:
    Record* getDeclaration(Record* record) const;
 
    std::vector<const Record*>
-           identifySymbol(const std::string& fileName, unsigned lineNumber, unsigned columnNumber) const;
-   Record* followLocation(const Record::Location& location) const;
-   Record* followLocation(const Record::Location& location, int endLine, int endColumn) const;
+   identifySymbol(const std::string& fileName, unsigned lineNumber, unsigned columnNumber) const;
+
+   std::vector<std::vector<const Record*>>
+   identifySymbolExtended(const std::string& fileName, unsigned lineNumber, unsigned columnNumber) const;
 
    std::vector<const Record*> dumpTranslationUnit(const std::string& fileName) const;
 

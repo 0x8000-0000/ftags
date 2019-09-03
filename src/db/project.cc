@@ -232,6 +232,26 @@ ftags::ProjectDb::identifySymbol(const std::string& fileName, unsigned lineNumbe
    return m_recordSpanManager.findClosestRecord(key, m_symbolTable, lineNumber, columnNumber);
 }
 
+std::vector<std::vector<const ftags::Record*>> ftags::ProjectDb::identifySymbolExtended(const std::string& fileName,
+                                                                                        unsigned           lineNumber,
+                                                                                        unsigned columnNumber) const
+{
+   std::vector<const ftags::Record*> symbolRecords = identifySymbol(fileName, lineNumber, columnNumber);
+
+   std::vector<std::vector<const ftags::Record*>> results;
+
+   std::for_each(symbolRecords.cbegin(), symbolRecords.cend(), [&results, this](const Record* record) {
+      std::vector<const ftags::Record*> otherRefs = m_recordSpanManager.findClosestRecord(
+         record->definition.fileNameKey, m_symbolTable, record->definition.line, record->definition.column);
+
+      otherRefs.push_back(record);
+
+      results.emplace_back(std::move(otherRefs));
+   });
+
+   return results;
+}
+
 std::vector<const ftags::Record*> ftags::ProjectDb::dumpTranslationUnit(const std::string& fileName) const
 {
    const ftags::util::StringTable::Key      fileKey            = m_fileNameTable.getKey(fileName.data());
