@@ -41,6 +41,56 @@ TEST(QueryTest, FindFunction)
    ASSERT_TRUE(query.nameSpace.empty());
 }
 
+TEST(QueryTest, FindFunctionDefinition)
+{
+   ftags::query::Query query = ftags::query::Query::parse("find function definition main");
+
+   ASSERT_EQ("main", query.symbolName);
+   ASSERT_EQ(query.type, ftags::query::Query::Type::Function);
+   ASSERT_TRUE(query.nameSpace.empty());
+}
+
+TEST(QueryTest, FindFunctionDeclaration)
+{
+   ftags::query::Query query = ftags::query::Query::parse("find function declaration main");
+
+   ASSERT_EQ("main", query.symbolName);
+   ASSERT_EQ(query.type, ftags::query::Query::Type::Function);
+   ASSERT_TRUE(query.nameSpace.empty());
+}
+
+TEST(QueryTest, FindFunctionReference)
+{
+   ftags::query::Query query = ftags::query::Query::parse("find function reference main");
+
+   ASSERT_EQ("main", query.symbolName);
+   ASSERT_EQ(query.type, ftags::query::Query::Type::Function);
+   ASSERT_TRUE(query.nameSpace.empty());
+}
+
+TEST(QueryTest, FindReferenceFunction)
+{
+   try
+   {
+      ftags::query::Query query = ftags::query::Query::parse("find reference function main");
+      FAIL();
+      ASSERT_EQ("main", query.symbolName);
+   }
+   catch (std::exception& /* ex */)
+   {
+      SUCCEED();
+   }
+}
+
+TEST(QueryTest, FindVariable)
+{
+   ftags::query::Query query = ftags::query::Query::parse("find variable result");
+
+   ASSERT_EQ("result", query.symbolName);
+   ASSERT_EQ(query.type, ftags::query::Query::Type::Variable);
+   ASSERT_TRUE(query.nameSpace.empty());
+}
+
 TEST(QueryTest, FindAttribute)
 {
    ftags::query::Query query = ftags::query::Query::parse("find attribute m_size");

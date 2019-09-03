@@ -35,10 +35,12 @@ namespace
 
 bool beVerbose = false;
 
-void dispatchFindAll(zmq::socket_t&     socket,
-                     const std::string& projectName,
-                     const std::string& dirName,
-                     const std::string& symbolName)
+void dispatchFind(zmq::socket_t&                 socket,
+                  const std::string&             projectName,
+                  const std::string&             dirName,
+                  ftags::query::Query::Type      type,
+                  ftags::query::Query::Qualifier qualifier,
+                  const std::string&             symbolName)
 {
    if (beVerbose)
    {
@@ -53,6 +55,51 @@ void dispatchFindAll(zmq::socket_t&     socket,
    command.set_projectname(projectName);
    command.set_directoryname(dirName);
    command.set_symbolname(symbolName);
+
+   switch (type)
+   {
+   case ftags::query::Query::Function:
+      command.set_querytype(ftags::Command::QueryType::Command_QueryType_FUNCTION);
+      break;
+
+   case ftags::query::Query::Class:
+      command.set_querytype(ftags::Command::QueryType::Command_QueryType_CLASS);
+      break;
+
+   case ftags::query::Query::Parameter:
+      command.set_querytype(ftags::Command::QueryType::Command_QueryType_PARAMETER);
+      break;
+
+   case ftags::query::Query::Variable:
+      command.set_querytype(ftags::Command::QueryType::Command_QueryType_VARIABLE);
+      break;
+
+   default:
+   case ftags::query::Query::Symbol:
+      command.set_querytype(ftags::Command::QueryType::Command_QueryType_SYMBOL);
+      break;
+   }
+
+   switch (qualifier)
+   {
+   case ftags::query::Query::Reference:
+      command.set_queryqualifier(ftags::Command::QueryQualifier::Command_QueryQualifier_REFERENCE);
+      break;
+
+   case ftags::query::Query::Definition:
+      command.set_queryqualifier(ftags::Command::QueryQualifier::Command_QueryQualifier_DEFINITION);
+      break;
+
+   case ftags::query::Query::Declaration:
+      command.set_queryqualifier(ftags::Command::QueryQualifier::Command_QueryQualifier_DECLARATION);
+      break;
+
+   default:
+   case ftags::query::Query::Any:
+      command.set_queryqualifier(ftags::Command::QueryQualifier::Command_QueryQualifier_ANY);
+      break;
+   }
+
    command.SerializeToString(&serializedCommand);
 
    zmq::message_t request(serializedCommand.size());
@@ -344,7 +391,7 @@ int main(int argc, char* argv[])
    }
    else if (query.verb == ftags::query::Query::Verb::Find)
    {
-      dispatchFindAll(socket, projectName, dirName, query.symbolName);
+      dispatchFind(socket, projectName, dirName, query.type, query.qualifier, query.symbolName);
    }
    else if (query.verb == ftags::query::Query::Verb::Identify)
    {

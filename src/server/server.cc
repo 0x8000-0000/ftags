@@ -71,14 +71,22 @@ void reportUnknownProject(zmq::socket_t&                                 socket,
    socket.send(reply);
 }
 
-void dispatchFindAll(zmq::socket_t& socket, const ftags::ProjectDb* projectDb, const std::string& symbolName)
+void dispatchFind(zmq::socket_t&                socket,
+                  const ftags::ProjectDb*       projectDb,
+                  ftags::Command_QueryType      queryType,
+                  ftags::Command_QueryQualifier queryQualifier,
+                  const std::string&            symbolName)
 {
    ftags::Status status{};
    status.set_timestamp(getTimeStamp());
 
-   spdlog::info("Received query for {} in project {}", symbolName, projectDb->getName());
+   spdlog::info("Received {} {} query for '{}' in project {}",
+                ftags::Command_QueryType_Name(queryType),
+                ftags::Command::QueryQualifier_Name(queryQualifier),
+                symbolName,
+                projectDb->getName());
    const std::vector<const ftags::Record*> queryResultsVector = projectDb->findSymbol(symbolName);
-   spdlog::info("Found {} occurrences for {}", queryResultsVector.size(), symbolName);
+   spdlog::info("Found {} occurrences for '{}'", queryResultsVector.size(), symbolName);
 
    std::string serializedStatus;
 
@@ -379,7 +387,7 @@ int main(int argc, char* argv[])
                   socket, projectDb, command.filename(), command.linenumber(), command.columnnumber());
                break;
             default:
-               dispatchFindAll(socket, projectDb, command.symbolname());
+               dispatchFind(socket, projectDb, command.querytype(), command.queryqualifier(), command.symbolname());
                break;
             }
          }

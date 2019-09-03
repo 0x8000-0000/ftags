@@ -61,6 +61,7 @@ struct str_struct : TAO_PEGTL_STRING("struct") {};
 struct str_method: TAO_PEGTL_STRING("method") {};
 struct str_attribute: TAO_PEGTL_STRING("attribute") {};
 struct str_parameter: TAO_PEGTL_STRING("parameter") {};
+struct str_variable: TAO_PEGTL_STRING("variable") {};
 struct str_statistics : TAO_PEGTL_STRING("statistics") {};
 
 struct str_callers: TAO_PEGTL_STRING("callers") {};
@@ -73,7 +74,7 @@ struct str_reference: TAO_PEGTL_STRING("reference") {};
 struct str_instantiation: TAO_PEGTL_STRING("instantiation") {};
 struct str_destruction: TAO_PEGTL_STRING("destruction") {};
 
-struct str_type : pegtl::sor<str_symbol, str_function, str_parameter, str_class, str_struct, str_attribute, str_method> {};
+struct str_type : pegtl::sor<str_symbol, str_function, str_parameter, str_class, str_struct, str_attribute, str_method, str_variable> {};
 struct str_qualifier : pegtl::sor<str_declaration, str_definition, str_reference, str_instantiation, str_destruction> {};
 
 struct key_find: key<str_find> {};
@@ -245,6 +246,16 @@ struct action<str_function>
    static void apply(const Input& /* in */, ftags::query::Query& query)
    {
       query.type = ftags::query::Query::Type::Function;
+   }
+};
+
+template <>
+struct action<str_variable>
+{
+   template <typename Input>
+   static void apply(const Input& /* in */, ftags::query::Query& query)
+   {
+      query.type = ftags::query::Query::Type::Variable;
    }
 };
 

@@ -25,26 +25,39 @@ message Command
 
    string source = 2;
 
+   string projectName = 3;
+   string directoryName = 4;
+
    enum QueryType
    {
-      FUNCTION = 0;
-      CLASS = 1;
-      VARIABLE = 2;
-      PARAMETER = 3;
-      IDENTIFY = 4;
+      SYMBOL = 0;
+      FUNCTION = 1;
+      CLASS = 2;
+      VARIABLE = 3;
+      PARAMETER = 4;
+      IDENTIFY = 5;
    }
 
-   QueryType queryType = 3;
+   enum QueryQualifier
+   {
+      ANY = 0;
+      DECLARATION = 1;
+      DEFINITION = 2;
+      REFERENCE = 3;
+      INSTANTIATION = 4;
+      DESTRUCTION = 5;
+   }
 
-   string projectName = 4;
-   string directoryName = 5;
-   string symbolName = 6;
-   string namespaceName = 7;
-   string fileName = 8;
-   uint32 lineNumber = 9;
-   uint32 columnNumber = 10;
+   string namespaceName = 10;
+   string symbolName = 11;
+   QueryType queryType = 12;
+   QueryQualifier queryQualifier = 13;
 
-   repeated string translationUnit = 20;
+   string fileName = 20;
+   uint32 lineNumber = 21;
+   uint32 columnNumber = 22;
+
+   repeated string translationUnit = 30;
 }
 
 message Status

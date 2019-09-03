@@ -48,6 +48,7 @@ struct Query
       Attribute,
       Parameter,
       Override,
+      Variable,
       Project,
       Dependency,
       Statistics,
