@@ -15,8 +15,9 @@ endif ()
 execute_process (COMMAND ${LIBCLANG_LLVM_CONFIG_EXECUTABLE} --includedir OUTPUT_VARIABLE LIBCLANG_INCLUDEDIR OUTPUT_STRIP_TRAILING_WHITESPACE)
 execute_process (COMMAND ${LIBCLANG_LLVM_CONFIG_EXECUTABLE} --libdir OUTPUT_VARIABLE LIBCLANG_LIBDIR OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-option(StrictChecking "Enable Strict Checking" OFF)
-option(Profile "Enable Profiling" OFF)
+option(FTAGS_STRICT_CHECKING "Enable Strict Checking" OFF)
+option(FTAGS_PROFILE "Enable Profiling" OFF)
+option(FTAGS_COVERAGE "Enable Collecting Coverage" OFF)
 
 #
 # Link this 'library' to set the c++ standard / compile-time options requested
@@ -25,14 +26,20 @@ add_library (project_options INTERFACE)
 
 target_compile_features (project_options INTERFACE cxx_std_17)
 
-if (StrictChecking)
+if (FTAGS_STRICT_CHECKING)
 target_compile_options (project_options INTERFACE
    -DFTAGS_STRICT_CHECKING -DENABLE_THOROUGH_VALIDITY_CHECKS)
 endif ()
 
-if (Profile)
+if (FTAGS_PROFILE)
 target_compile_options (project_options INTERFACE -pg)
 target_link_options (project_options INTERFACE -pg)
+endif ()
+
+if (FTAGS_COVERAGE)
+   target_compile_options (project_options INTERFACE --coverage)
+   target_link_options (project_options INTERFACE --coverage)
+   # After build and test run: gcov -p -f -m -w -j -a $(find . -name \*.gcno)
 endif ()
 
 if (SANITIZE_ADDRESS)
@@ -49,6 +56,7 @@ if (SANITIZE_THREAD)
    target_compile_options (project_options INTERFACE -fsanitize=thread)
    target_link_options (project_options INTERFACE -fsanitize=thread)
 endif ()
+
 
 
 #
@@ -80,6 +88,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
       -Wunused-label
       # disabled by fmt -Wfloat-equal
    )
+
 else ()
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
    target_compile_options (project_warnings INTERFACE -Weverything
