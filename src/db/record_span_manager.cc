@@ -24,34 +24,31 @@ ftags::RecordSpanManager::Key ftags::RecordSpanManager::addSpan(const std::vecto
 {
    RecordSpan::Hash hashValue = RecordSpan::computeHash(records);
 
-   auto iterPair = m_cache.equal_range(hashValue);
+   auto [beginRange, endRange] = m_cache.equal_range(hashValue);
 
-   for (auto iter = iterPair.first; iter != iterPair.second; ++iter)
+   for (auto iter = beginRange; iter != endRange; ++iter)
    {
       const RecordSpan::Store::Key match = iter->second;
 
-      auto spanIterPair = m_recordSpanStore.get(match);
+      const auto& [spanIter, spanRangeEnd] = m_recordSpanStore.get(match);
 
-      RecordSpan& span = *spanIterPair.first;
-
-      if (span.isEqualTo(records))
+      if (spanIter->isEqualTo(records))
       {
-         span.addRef();
+         spanIter->addRef();
          return match;
       }
    }
 
-   auto alloc = m_recordSpanStore.allocate(1);
-   memset(static_cast<void*>(alloc.iterator), 0, sizeof(RecordSpan));
-   RecordSpan& newSpan = *alloc.iterator;
-   newSpan.setRecordsFrom(records, m_recordStore, m_symbolIndexStore);
-   newSpan.addRef();
+   auto [newSpanKey, newSpanIterator] = m_recordSpanStore.allocate(1);
+   memset(static_cast<void*>(newSpanIterator), 0, sizeof(RecordSpan));
+   newSpanIterator->setRecordsFrom(records, m_recordStore, m_symbolIndexStore);
+   newSpanIterator->addRef();
 
-   m_cache.emplace(hashValue, alloc.key);
+   m_cache.emplace(hashValue, newSpanKey);
 
-   indexRecordSpan(newSpan, alloc.key);
+   indexRecordSpan(*newSpanIterator, newSpanKey);
 
-   return alloc.key;
+   return newSpanKey;
 }
 
 void ftags::RecordSpanManager::indexRecordSpan(const ftags::RecordSpan&      recordSpan,

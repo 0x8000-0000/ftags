@@ -310,8 +310,8 @@ struct TranslationUnitAccumulator
    ftags::RecordSpanManager&          recordSpanManager;
    std::string                        filterPath;
 
-   int                                                  level = 0;
-   std::map<std::string, ftags::util::StringTable::Key> fileKeyCache;
+   int                                                            level = 0;
+   std::unordered_map<std::string, ftags::util::StringTable::Key> fileKeyCache;
 
    TranslationUnitAccumulator(ftags::ProjectDb::TranslationUnit&                translationUnit_,
                               ftags::ProjectDb::TranslationUnit::ParsingContext parsingContext) :
@@ -350,6 +350,8 @@ bool TranslationUnitAccumulator::getCursorLocation(CXCursor                     
    CXSourceLocation location = clang_getCursorLocation(clangCursor);
    clang_getPresumedLocation(location, fileNameWrapper.get(), &cursorLocation.line, &cursorLocation.column);
 
+   *fileNameKey = 0;
+
 #ifdef DUMP_SKIPPED_CURSORS
    fileName = fileNameWrapper.c_str();
 #else
@@ -367,7 +369,7 @@ bool TranslationUnitAccumulator::getCursorLocation(CXCursor                     
       if (std::filesystem::exists(filePath))
       {
          std::filesystem::path canonicalFilePath = std::filesystem::canonical(filePath);
-         *fileNameKey                            = fileNameTable.addKey(canonicalFilePath.string().data());
+         *fileNameKey                            = fileNameTable.addKey(canonicalFilePath.string());
          const auto insertIter                   = fileKeyCache.emplace(std::move(fileName), *fileNameKey);
 #ifdef NDEBUG
          (void)insertIter;
@@ -407,6 +409,8 @@ bool TranslationUnitAccumulator::getCursorLocation(CXCursor                     
 
       cursorLocation.fileName = nullptr;
    }
+
+   assert(*fileNameKey);
 
    return clang_Location_isFromMainFile(location);
 }
