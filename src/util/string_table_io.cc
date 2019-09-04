@@ -44,7 +44,7 @@ ftags::util::StringTable ftags::util::StringTable::deserialize(ftags::util::Buff
     * traverse m_store and find the strings
     */
    auto allocSeq = retval.m_store.getFirstAllocatedSequence();
-   while (retval.m_store.isValidAllocatedSequence(allocSeq))
+   while (allocSeq.isValid)
    {
       const auto& [iterStart, rangeEnd] = retval.m_store.get(allocSeq.key);
 
@@ -71,7 +71,7 @@ ftags::util::StringTable ftags::util::StringTable::deserialize(ftags::util::Buff
          }
       }
 
-      retval.m_store.getNextAllocatedSequence(allocSeq);
+      allocSeq = retval.m_store.getNextAllocatedSequence(allocSeq);
    }
 
    return retval;

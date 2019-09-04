@@ -142,26 +142,35 @@ public:
    // TODO: add begin(), next() and end() for used blocks iterator
    struct AllocatedSequence
    {
-      K               key;
-      block_size_type size;
+      K key;
+
+      block_size_type size : SegmentSizeBits;
+      block_size_type isUsed : 1;
+      block_size_type isValid : 1;
    };
 
-   AllocatedSequence getFirstAllocatedSequence() const;
-   bool              isValidAllocatedSequence(const AllocatedSequence& allocatedSequence) const;
-   bool              getNextAllocatedSequence(AllocatedSequence& allocatedSequence) const;
+   static_assert(sizeof(AllocatedSequence) == (2 * sizeof(block_size_type)),
+                 "AllocatedSequence fits in two pointers");
+
+   AllocatedSequence getFirstAllocatedSequence() const noexcept;
+   AllocatedSequence getNextAllocatedSequence(AllocatedSequence allocatedSequence) const noexcept;
+
+   AllocatedSequence getFirstBlock() const noexcept
+   {
+      return getFirstBlockInSegment(0);
+   }
+   AllocatedSequence getNextBlock(AllocatedSequence allocatedSequence) const noexcept;
 
    template <typename F>
    void forEachAllocatedSequence(F func)
    {
       AllocatedSequence allocation = getFirstAllocatedSequence();
 
-      if (isValidAllocatedSequence(allocation))
+      while (allocation.isValid)
       {
-         do
-         {
-            auto pair = get(allocation.key);
-            func(allocation.key, &*pair.first, allocation.size);
-         } while (getNextAllocatedSequence(allocation));
+         auto pair = get(allocation.key);
+         func(allocation.key, &*pair.first, allocation.size);
+         allocation = getNextAllocatedSequence(allocation);
       }
    }
 
@@ -170,13 +179,11 @@ public:
    {
       AllocatedSequence allocation = getFirstAllocatedSequence();
 
-      if (isValidAllocatedSequence(allocation))
+      while (allocation.isValid)
       {
-         do
-         {
-            auto pair = get(allocation.key);
-            func(allocation.key, &*pair.first, allocation.size);
-         } while (getNextAllocatedSequence(allocation));
+         auto pair = get(allocation.key);
+         func(allocation.key, &*pair.first, allocation.size);
+         allocation = getNextAllocatedSequence(allocation);
       }
    }
 
@@ -203,6 +210,9 @@ public:
    static Store deserialize(ftags::util::BufferExtractor& extractor);
 
 private:
+   AllocatedSequence getFirstBlockInSegment(block_size_type segmentIndex) const noexcept;
+   AllocatedSequence getFirstBlockFollowing(K key) const noexcept;
+
    static block_size_type getOffsetInSegment(K key)
    {
       return (key & OffsetInSegmentMask);
@@ -684,131 +694,158 @@ Store<T, K, SegmentSizeBits> Store<T, K, SegmentSizeBits>::deserialize(ftags::ut
 
 template <typename T, typename K, unsigned SegmentSizeBits>
 typename Store<T, K, SegmentSizeBits>::AllocatedSequence
-Store<T, K, SegmentSizeBits>::getFirstAllocatedSequence() const
+Store<T, K, SegmentSizeBits>::getFirstAllocatedSequence() const noexcept
 {
    Store<T, K, SegmentSizeBits>::AllocatedSequence allocatedSequence = {};
 
-   if (m_segment.size())
+   if (!m_segment.empty())
    {
-      const auto nextFreeBlock{m_freeBlocksIndex.upper_bound(FirstKeyValue - 1)};
+      allocatedSequence.key     = 0;
+      allocatedSequence.size    = FirstKeyValue;
+      allocatedSequence.isUsed  = 0;
+      allocatedSequence.isValid = 1;
 
-      if (nextFreeBlock->first != FirstKeyValue)
-      {
-         allocatedSequence.key  = FirstKeyValue;
-         allocatedSequence.size = nextFreeBlock->first - FirstKeyValue;
-      }
-      else
-      {
-         // TODO: test crossing of segments
-         allocatedSequence.key = nextFreeBlock->first + nextFreeBlock->second;
-
-         const auto subsequentFreeBlock{m_freeBlocksIndex.upper_bound(allocatedSequence.key)};
-
-         if (subsequentFreeBlock == m_freeBlocksIndex.end())
-         {
-            allocatedSequence.key  = 0;
-            allocatedSequence.size = 0;
-         }
-
-         allocatedSequence.size = subsequentFreeBlock->first - allocatedSequence.key;
-      }
+      return getNextAllocatedSequence(allocatedSequence);
    }
 
    return allocatedSequence;
 }
 
 template <typename T, typename K, unsigned SegmentSizeBits>
-bool Store<T, K, SegmentSizeBits>::isValidAllocatedSequence(
-   const Store<T, K, SegmentSizeBits>::AllocatedSequence& allocatedSequence) const
+typename Store<T, K, SegmentSizeBits>::AllocatedSequence Store<T, K, SegmentSizeBits>::getNextAllocatedSequence(
+   Store<T, K, SegmentSizeBits>::AllocatedSequence allocatedSequence) const noexcept
 {
-   return (allocatedSequence.key != 0);
+   if (allocatedSequence.isValid)
+   {
+      do
+      {
+         allocatedSequence = getNextBlock(allocatedSequence);
+      } while ((allocatedSequence.isValid == 1) && (allocatedSequence.isUsed == 0));
+   }
+
+   return allocatedSequence;
 }
 
 template <typename T, typename K, unsigned SegmentSizeBits>
-bool Store<T, K, SegmentSizeBits>::getNextAllocatedSequence(
-   Store<T, K, SegmentSizeBits>::AllocatedSequence& allocatedSequence) const
+typename Store<T, K, SegmentSizeBits>::AllocatedSequence
+Store<T, K, SegmentSizeBits>::getNextBlock(Store<T, K, SegmentSizeBits>::AllocatedSequence allocatedSequence) const
+   noexcept
 {
-   if (allocatedSequence.key == 0)
+   if (allocatedSequence.isValid == 0)
    {
-      return false;
-   }
-
-   /*
-    * Given a key pointing at the beginning of an allocation sequence and the
-    * size of the allocation sequence, we compute the end of the current
-    * allocation sequence.
-    */
-   const K endOfAllocatedSequence = allocatedSequence.key + allocatedSequence.size;
-
-   /*
-    * Then we need to find the next free block that occurs after the
-    * end of the current allocated sequence.
-    */
-   const auto nextFreeBlock{m_freeBlocksIndex.find(endOfAllocatedSequence)};
-
-   if (nextFreeBlock == m_freeBlocksIndex.end())
-   {
-#ifndef NDEBUG
-      const block_size_type offsetInSegment{getOffsetInSegment(endOfAllocatedSequence)};
-#endif
-      assert(offsetInSegment == 0u);
-
-      /*
-       * There is no free block after this
-       */
       allocatedSequence.key  = 0;
       allocatedSequence.size = 0;
-      return false;
+      return allocatedSequence;
    }
 
-   /*
-    * Found a free block.
-    *
-    * After this free block, there *might* be another allocated sequence
-    * and another free block.
-    */
-   allocatedSequence.key = nextFreeBlock->first + nextFreeBlock->second;
+   const K               endOfThisAllocatedSequence{allocatedSequence.key + allocatedSequence.size};
+   const block_size_type offsetInSegment{getOffsetInSegment(endOfThisAllocatedSequence)};
 
-   if ((allocatedSequence.key & OffsetInSegmentMask) == 0)
+   if (offsetInSegment == 0u)
    {
       /*
-       * The first key in a segment is not used, and we waste four entries
-       * to ensure word alignment.
+       * This block runs until the end of the segment, so the next block must
+       * be in the next segment.
        */
-      allocatedSequence.key += FirstKeyValue;
+      const block_size_type segmentIndex{getSegmentIndex(endOfThisAllocatedSequence)};
 
-      const auto possibleFreeBlockAtBeginningOfSegment{m_freeBlocksIndex.find(allocatedSequence.key)};
-      if (possibleFreeBlockAtBeginningOfSegment != m_freeBlocksIndex.end())
+      // no need to increment since getSegmentIndex wraps to the next segment
+      return getFirstBlockInSegment(segmentIndex);
+   }
+   else
+   {
+      return getFirstBlockFollowing(endOfThisAllocatedSequence);
+   }
+}
+
+template <typename T, typename K, unsigned SegmentSizeBits>
+typename Store<T, K, SegmentSizeBits>::AllocatedSequence
+Store<T, K, SegmentSizeBits>::getFirstBlockInSegment(block_size_type segmentIndex) const noexcept
+{
+   Store<T, K, SegmentSizeBits>::AllocatedSequence allocatedSequence = {};
+
+   if (segmentIndex < m_segment.size())
+   {
+      const K key = makeKey(segmentIndex, FirstKeyValue);
+
+      return getFirstBlockFollowing(key);
+   }
+
+   return allocatedSequence;
+}
+
+template <typename T, typename K, unsigned SegmentSizeBits>
+typename Store<T, K, SegmentSizeBits>::AllocatedSequence
+Store<T, K, SegmentSizeBits>::getFirstBlockFollowing(K key) const noexcept
+{
+   Store<T, K, SegmentSizeBits>::AllocatedSequence allocatedSequence = {};
+
+   const block_size_type segmentIndex{getSegmentIndex(key)};
+
+   allocatedSequence.key = key;
+
+   /*
+    * There is something in this segment, free or allocated.
+    */
+   allocatedSequence.isValid = 1;
+
+   const auto nextFreeBlockIter = m_freeBlocksIndex.upper_bound(key - 1);
+
+   if (nextFreeBlockIter == m_freeBlocksIndex.end())
+   {
+      /*
+       * There are no free blocks after this. So this is an allocated block...
+       */
+      allocatedSequence.isUsed = 1;
+
+      /*
+       * ... that extends to the end of the segment.
+       */
+      allocatedSequence.size = MaxContiguousAllocation;
+   }
+   else
+   {
+      if (nextFreeBlockIter->first == allocatedSequence.key)
       {
          /*
-          * Skip over this free block.
+          * Right here we start a free block, and ...
           */
-         allocatedSequence.key += possibleFreeBlockAtBeginningOfSegment->second;
+         allocatedSequence.isUsed = 0;
+
+         /*
+          * ... its size is the size of the free block.
+          */
+         allocatedSequence.size = nextFreeBlockIter->second;
+      }
+      else
+      {
+         /*
+          * There is a free block following this block, so this block is used.
+          */
+         allocatedSequence.isUsed = 1;
+
+         const block_size_type nextFreeBlockSegmentIndex{getSegmentIndex(nextFreeBlockIter->first)};
+
+         if (nextFreeBlockSegmentIndex == segmentIndex)
+         {
+            /*
+             * The following free block is in the same segment, so the size
+             * of this used block is just the distance to it.
+             */
+            allocatedSequence.size = nextFreeBlockIter->first - allocatedSequence.key;
+         }
+         else
+         {
+            /*
+             * The following free block is in a different segment, so this
+             * allocated block runs for the entirety of the segment.
+             */
+            allocatedSequence.size = MaxContiguousAllocation;
+         }
       }
    }
 
-   /*
-    * Look for the next free block that follows our candidate allocation.
-    */
-   const auto subsequentFreeBlock{m_freeBlocksIndex.upper_bound(allocatedSequence.key)};
-   if (subsequentFreeBlock == m_freeBlocksIndex.end())
-   {
-      /*
-       * If there are no more free blocks, we're done.
-       */
-
-      allocatedSequence.key  = 0;
-      allocatedSequence.size = 0;
-      return false;
-   }
-
-   /*
-    * The allocated sequence is situated between 'next' and 'subsequent'
-    * free blocks.
-    */
-   allocatedSequence.size = subsequentFreeBlock->first - allocatedSequence.key;
-
-   return true;
+   return allocatedSequence;
 }
 
 template <typename T, typename K, unsigned SegmentSizeBits>
