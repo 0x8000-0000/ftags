@@ -211,19 +211,19 @@ std::vector<std::string> ftags::RecordSpanManager::getStatisticsRemarks() const
    remarks.emplace_back("");
 
    remarks.emplace_back("Record span sizes, (five number summary):");
-   remarks.emplace_back(fmt::format("  minimum:        {:>8}", spanSizesSummary.minimum));
-   remarks.emplace_back(fmt::format("  lower quartile: {:>8}", spanSizesSummary.lowerQuartile));
-   remarks.emplace_back(fmt::format("  median:         {:>8}", spanSizesSummary.median));
-   remarks.emplace_back(fmt::format("  upper quartile: {:>8}", spanSizesSummary.upperQuartile));
-   remarks.emplace_back(fmt::format("  maximum:        {:>8}", spanSizesSummary.maximum));
+   remarks.emplace_back(fmt::format("  minimum:        {:>10n}", spanSizesSummary.minimum));
+   remarks.emplace_back(fmt::format("  lower quartile: {:>10n}", spanSizesSummary.lowerQuartile));
+   remarks.emplace_back(fmt::format("  median:         {:>10n}", spanSizesSummary.median));
+   remarks.emplace_back(fmt::format("  upper quartile: {:>10n}", spanSizesSummary.upperQuartile));
+   remarks.emplace_back(fmt::format("  maximum:        {:>10n}", spanSizesSummary.maximum));
    remarks.emplace_back("");
 
    remarks.emplace_back("Record span usage, (five number summary):");
-   remarks.emplace_back(fmt::format("  minimum:        {:>8}", usageCountSummary.minimum));
-   remarks.emplace_back(fmt::format("  lower quartile: {:>8}", usageCountSummary.lowerQuartile));
-   remarks.emplace_back(fmt::format("  median:         {:>8}", usageCountSummary.median));
-   remarks.emplace_back(fmt::format("  upper quartile: {:>8}", usageCountSummary.upperQuartile));
-   remarks.emplace_back(fmt::format("  maximum:        {:>8}", usageCountSummary.maximum));
+   remarks.emplace_back(fmt::format("  minimum:        {:>10n}", usageCountSummary.minimum));
+   remarks.emplace_back(fmt::format("  lower quartile: {:>10n}", usageCountSummary.lowerQuartile));
+   remarks.emplace_back(fmt::format("  median:         {:>10n}", usageCountSummary.median));
+   remarks.emplace_back(fmt::format("  upper quartile: {:>10n}", usageCountSummary.upperQuartile));
+   remarks.emplace_back(fmt::format("  maximum:        {:>10n}", usageCountSummary.maximum));
    remarks.emplace_back("");
 
    return remarks;
