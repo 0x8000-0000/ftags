@@ -43,7 +43,7 @@ public:
    RecordSpanManager(const ftags::RecordSpanManager& other) = delete;
    const RecordSpanManager& operator=(const ftags::RecordSpanManager& other) = delete;
 
-   RecordSpanManager(RecordSpanManager&& other) :
+   RecordSpanManager(RecordSpanManager&& other) noexcept :
       m_symbolIndex{std::move(other.m_symbolIndex)},
       m_recordSpanStore{std::move(other.m_recordSpanStore)},
       m_recordStore{std::move(other.m_recordStore)},
@@ -52,7 +52,7 @@ public:
    {
    }
 
-   RecordSpanManager& operator=(RecordSpanManager&& other)
+   RecordSpanManager& operator=(RecordSpanManager&& other) noexcept
    {
       m_symbolIndex      = std::move(other.m_symbolIndex);
       m_recordSpanStore  = std::move(other.m_recordSpanStore);
@@ -62,6 +62,8 @@ public:
 
       return *this;
    }
+
+   ~RecordSpanManager() = default;
 
    using Key = ftags::RecordSpan::Store::Key;
 
@@ -77,7 +79,7 @@ public:
       else
       {
          assert(key != 0);
-         throw("Invalid span key");
+         throw(std::runtime_error("Invalid span key"));
       }
    }
 
@@ -206,7 +208,12 @@ public:
       ;
 #endif
 
-   std::vector<std::string> getStatisticsRemarks() const;
+   std::vector<std::string> getStatisticsRemarks() const noexcept;
+
+   std::vector<std::string> analyzeRecordSpans(const ftags::util::StringTable& symbolTable,
+                                               const ftags::util::StringTable& fileNameTable) const noexcept;
+
+   std::vector<std::string> analyzeRecords() const noexcept;
 
 private:
    // persistent

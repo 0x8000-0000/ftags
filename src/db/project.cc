@@ -534,7 +534,18 @@ std::vector<std::string> ftags::ProjectDb::analyzeData(const std::string& analys
 {
    std::vector<std::string> remarks;
 
-   remarks.emplace_back(fmt::format("Analysis of '{}' complete.", analysisType));
+   if (analysisType == "recordspans")
+   {
+      remarks = m_recordSpanManager.analyzeRecordSpans(m_symbolTable, m_fileNameTable);
+   }
+   else if (analysisType == "records")
+   {
+      remarks = m_recordSpanManager.analyzeRecords();
+   }
+   else
+   {
+      remarks.emplace_back(fmt::format("Analysis of '{}' complete.", analysisType));
+   }
 
    return remarks;
 }

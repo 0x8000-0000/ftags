@@ -20,6 +20,8 @@
 
 #include <fmt/format.h>
 
+#include <random>
+
 ftags::RecordSpanManager::Key ftags::RecordSpanManager::addSpan(const std::vector<Record>& records)
 {
    RecordSpan::Hash hashValue = RecordSpan::computeHash(records);
@@ -185,7 +187,7 @@ void ftags::RecordSpanManager::assertValid() const
 }
 #endif
 
-std::vector<std::string> ftags::RecordSpanManager::getStatisticsRemarks() const
+std::vector<std::string> ftags::RecordSpanManager::getStatisticsRemarks() const noexcept
 {
    ftags::stats::Sample<unsigned> usageCount;
    ftags::stats::Sample<unsigned> spanSizes;
@@ -226,5 +228,81 @@ std::vector<std::string> ftags::RecordSpanManager::getStatisticsRemarks() const
    remarks.emplace_back(fmt::format("  maximum:        {:>10n}", usageCountSummary.maximum));
    remarks.emplace_back("");
 
+   return remarks;
+}
+
+std::vector<std::string>
+ftags::RecordSpanManager::analyzeRecordSpans(const ftags::util::StringTable& /* symbolTable */,
+                                             const ftags::util::StringTable& fileNameTable) const noexcept
+{
+   std::vector<const RecordSpan*> spans;
+
+   m_recordSpanStore.forEachAllocatedSequence([&spans](RecordSpan::Store::Key /* key */,
+                                                       const RecordSpan*                  recordSpan,
+                                                       RecordSpan::Store::block_size_type size) {
+      for (RecordSpan::Store::block_size_type ii = 0; ii < size; ii++)
+      {
+         spans.push_back(&recordSpan[ii]);
+      }
+   });
+
+   auto compareRecordSpansBySize = [](const RecordSpan* left, const RecordSpan* right) -> bool {
+      return left->getSize() < right->getSize();
+   };
+
+   std::sort(spans.begin(), spans.end(), compareRecordSpansBySize);
+
+   auto spansEnd = spans.end();
+
+   auto iter = spans.begin();
+
+   std::vector<std::string> remarks;
+   remarks.emplace_back("Single records:");
+
+   std::random_device randomDevice;
+   std::mt19937       generator(randomDevice());
+
+   const unsigned maximumRecordsToDump = 128;
+
+   while (iter != spansEnd)
+   {
+      auto rangeEnd = std::upper_bound(iter, spansEnd, *iter, compareRecordSpansBySize);
+
+      remarks.emplace_back(fmt::format("Records of size {}", (*iter)->getSize()));
+
+      /*
+       * Now all spans from iter to rangeEnd have the same size
+       */
+      std::shuffle(iter, rangeEnd, generator);
+
+      while ((remarks.size() < maximumRecordsToDump) && (iter != rangeEnd))
+      {
+         (*iter)->forEachRecord([&remarks, &fileNameTable](const Record* record) {
+            if (remarks.size() < maximumRecordsToDump)
+            {
+               remarks.emplace_back(fmt::format("{}:{}:{}",
+                                                fileNameTable.getStringView(record->location.fileNameKey),
+                                                record->location.line,
+                                                record->location.column));
+            }
+         });
+
+         ++iter;
+      }
+
+      if (remarks.size() >= maximumRecordsToDump)
+      {
+         break;
+      }
+
+      iter = rangeEnd;
+   }
+
+   return remarks;
+}
+
+std::vector<std::string> ftags::RecordSpanManager::analyzeRecords() const noexcept
+{
+   std::vector<std::string> remarks;
    return remarks;
 }
