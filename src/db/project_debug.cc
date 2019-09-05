@@ -29,7 +29,7 @@ namespace
 class OrderRecordsByLocation
 {
 public:
-   OrderRecordsByLocation(const std::vector<ftags::Record>& records) : m_records{records}
+   explicit OrderRecordsByLocation(const std::vector<ftags::Record>& records) : m_records{records}
    {
    }
 
@@ -80,18 +80,12 @@ void ftags::RecordSpan::dumpRecords(std::ostream&                   os,
    {
       const Record& record = m_records[ii];
 
-      std::string namespaceName;
-      if (record.namespaceKey)
-      {
-         namespaceName = fmt::format("{}::", symbolTable.getString(record.namespaceKey));
-      }
       const char* symbolName = symbolTable.getString(record.symbolNameKey);
       // const char*       fileName   = fileNameTable.getString(record.location.fileNameKey);
       const std::string           symbolType = record.attributes.getRecordType();
       const std::filesystem::path filePath{fileNameTable.getString(record.location.fileNameKey)};
-      os << fmt::format("{}   {}{}  {} {} {}:{}",
+      os << fmt::format("{}   {}  {} {} {}:{}",
                         std::string(record.attributes.level, ' '),
-                        namespaceName,
                         symbolName,
                         symbolType,
                         std::filesystem::relative(filePath, trimPath).string(),
@@ -123,7 +117,7 @@ void ftags::ProjectDb::dumpRecords(std::ostream& os, const std::filesystem::path
                  [&os, &trimPath, this](const TranslationUnit& translationUnit) {
                     const auto  fileNameKey = translationUnit.getFileNameKey();
                     const char* fileName    = m_fileNameTable.getString(fileNameKey);
-                    if (fileName)
+                    if (fileName != nullptr)
                     {
                        os << "File: " << fileName << std::endl;
                     }
@@ -135,12 +129,3 @@ void ftags::ProjectDb::dumpRecords(std::ostream& os, const std::filesystem::path
                  });
 }
 
-void ftags::ProjectDb::dumpStats(std::ostream& os) const
-{
-   os << "ProjectDb stats: ";
-#if 0
-   os << "Cache utilization: " << m_recordSpanManager.getActiveSpanCount() << " live spans out of "
-      << m_recordSpanManager.getRecordCount();
-#endif
-   os << std::endl;
-}

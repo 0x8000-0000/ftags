@@ -123,7 +123,7 @@ enum class SymbolType : uint16_t
 
 static_assert(static_cast<unsigned>(SymbolType::LastValue) < 1023, "SymbolTypeDeclaration exceeds 10 bits");
 
-struct Attributes
+struct Attributes // NOLINT
 {
    uint32_t type : 10;
 
@@ -217,13 +217,12 @@ struct Record
       }
    };
 
-   SymbolNameKey    symbolNameKey;
-   NamespaceNameKey namespaceKey;
+   SymbolNameKey symbolNameKey = 0;
 
-   Location location;
-   Location definition;
+   Location location   = {};
+   Location definition = {};
 
-   Attributes attributes;
+   Attributes attributes = {};
 
    SymbolType getType() const
    {
@@ -281,7 +280,7 @@ struct Record
    }
 };
 
-static_assert(sizeof(Record) == 32, "sizeof(Record) exceeds 32 bytes");
+static_assert(sizeof(Record) == 28, "sizeof(Record) exceeds 28 bytes");
 
 /*
  * locationFileNameKey moved to owning span

@@ -51,11 +51,11 @@ struct CXTranslationUnitDestroyer
 class CXStringWrapper
 {
 public:
-   CXStringWrapper()
+   CXStringWrapper() : m_string{}
    {
    }
 
-   CXStringWrapper(CXString cxString) : m_string(cxString)
+   explicit CXStringWrapper(CXString cxString) : m_string(cxString)
    {
    }
 
@@ -64,7 +64,7 @@ public:
       clang_disposeString(m_string);
    }
 
-   const char* c_str() const noexcept
+   [[nodiscard]] const char* c_str() const noexcept
    {
       return clang_getCString(m_string);
    }
@@ -78,7 +78,7 @@ private:
    CXString m_string;
 };
 
-static void getSymbolType(CXCursor clangCursor, ftags::Attributes& attributes)
+void getSymbolType(CXCursor clangCursor, ftags::Attributes* attributes)
 {
    enum CXCursorKind cursorKind = clang_getCursorKind(clangCursor);
 
@@ -87,73 +87,73 @@ static void getSymbolType(CXCursor clangCursor, ftags::Attributes& attributes)
    switch (cursorKind)
    {
    case CXCursor_FieldDecl:
-      symbolType               = ftags::SymbolType::FieldDeclaration;
-      attributes.isDeclaration = true;
+      symbolType                = ftags::SymbolType::FieldDeclaration;
+      attributes->isDeclaration = true;
       break;
 
    case CXCursor_EnumConstantDecl:
-      symbolType               = ftags::SymbolType::EnumerationConstantDeclaration;
-      attributes.isDeclaration = true;
+      symbolType                = ftags::SymbolType::EnumerationConstantDeclaration;
+      attributes->isDeclaration = true;
       break;
 
    case CXCursor_UnionDecl:
-      symbolType               = ftags::SymbolType::UnionDeclaration;
-      attributes.isDeclaration = true;
+      symbolType                = ftags::SymbolType::UnionDeclaration;
+      attributes->isDeclaration = true;
       break;
 
    case CXCursor_StructDecl:
-      symbolType               = ftags::SymbolType::StructDeclaration;
-      attributes.isDeclaration = true;
+      symbolType                = ftags::SymbolType::StructDeclaration;
+      attributes->isDeclaration = true;
       break;
 
    case CXCursor_ClassDecl:
-      symbolType               = ftags::SymbolType::ClassDeclaration;
-      attributes.isDeclaration = true;
+      symbolType                = ftags::SymbolType::ClassDeclaration;
+      attributes->isDeclaration = true;
       break;
 
    case CXCursor_EnumDecl:
-      symbolType               = ftags::SymbolType::EnumerationDeclaration;
-      attributes.isDeclaration = true;
+      symbolType                = ftags::SymbolType::EnumerationDeclaration;
+      attributes->isDeclaration = true;
       break;
 
    case CXCursor_FunctionDecl:
-      symbolType               = ftags::SymbolType::FunctionDeclaration;
-      attributes.isDeclaration = true;
+      symbolType                = ftags::SymbolType::FunctionDeclaration;
+      attributes->isDeclaration = true;
       break;
 
    case CXCursor_VarDecl:
-      symbolType               = ftags::SymbolType::VariableDeclaration;
-      attributes.isDeclaration = true;
+      symbolType                = ftags::SymbolType::VariableDeclaration;
+      attributes->isDeclaration = true;
       break;
 
    case CXCursor_ParmDecl:
-      symbolType               = ftags::SymbolType::ParameterDeclaration;
-      attributes.isDeclaration = true;
+      symbolType                = ftags::SymbolType::ParameterDeclaration;
+      attributes->isDeclaration = true;
       break;
 
    case CXCursor_TypedefDecl:
-      symbolType               = ftags::SymbolType::TypedefDeclaration;
-      attributes.isDeclaration = true;
+      symbolType                = ftags::SymbolType::TypedefDeclaration;
+      attributes->isDeclaration = true;
       break;
 
    case CXCursor_CXXMethod:
-      symbolType               = ftags::SymbolType::MethodDeclaration;
-      attributes.isDeclaration = true;
+      symbolType                = ftags::SymbolType::MethodDeclaration;
+      attributes->isDeclaration = true;
       break;
 
    case CXCursor_Namespace:
-      symbolType               = ftags::SymbolType::Namespace;
-      attributes.isDeclaration = true;
+      symbolType                = ftags::SymbolType::Namespace;
+      attributes->isDeclaration = true;
       break;
 
    case CXCursor_Constructor:
-      symbolType               = ftags::SymbolType::Constructor;
-      attributes.isDeclaration = true;
+      symbolType                = ftags::SymbolType::Constructor;
+      attributes->isDeclaration = true;
       break;
 
    case CXCursor_Destructor:
-      symbolType               = ftags::SymbolType::Destructor;
-      attributes.isDeclaration = true;
+      symbolType                = ftags::SymbolType::Destructor;
+      attributes->isDeclaration = true;
       break;
 
    case CXCursor_NonTypeTemplateParameter:
@@ -161,23 +161,23 @@ static void getSymbolType(CXCursor clangCursor, ftags::Attributes& attributes)
       break;
 
    case CXCursor_TemplateTypeParameter:
-      symbolType               = ftags::SymbolType::TemplateTypeParameter;
-      attributes.isDeclaration = true;
+      symbolType                = ftags::SymbolType::TemplateTypeParameter;
+      attributes->isDeclaration = true;
       break;
 
    case CXCursor_FunctionTemplate:
-      symbolType               = ftags::SymbolType::FunctionTemplate;
-      attributes.isDeclaration = true;
+      symbolType                = ftags::SymbolType::FunctionTemplate;
+      attributes->isDeclaration = true;
       break;
 
    case CXCursor_UsingDeclaration:
-      symbolType               = ftags::SymbolType::UsingDeclaration;
-      attributes.isDeclaration = true;
+      symbolType                = ftags::SymbolType::UsingDeclaration;
+      attributes->isDeclaration = true;
       break;
 
    case CXCursor_TypeAliasDecl:
-      symbolType               = ftags::SymbolType::TypeAliasDeclaration;
-      attributes.isDeclaration = true;
+      symbolType                = ftags::SymbolType::TypeAliasDeclaration;
+      attributes->isDeclaration = true;
       break;
 
    case CXCursor_CXXBaseSpecifier:
@@ -205,36 +205,36 @@ static void getSymbolType(CXCursor clangCursor, ftags::Attributes& attributes)
       break;
 
    case CXCursor_NamespaceRef:
-      symbolType                = ftags::SymbolType::NamespaceReference;
-      attributes.isNamespaceRef = true;
+      symbolType                 = ftags::SymbolType::NamespaceReference;
+      attributes->isNamespaceRef = true;
       break;
 
    case CXCursor_MemberRef:
-      symbolType             = ftags::SymbolType::MemberReference;
-      attributes.isReference = true;
+      symbolType              = ftags::SymbolType::MemberReference;
+      attributes->isReference = true;
       break;
 
    case CXCursor_VariableRef:
-      symbolType             = ftags::SymbolType::VariableReference;
-      attributes.isReference = true;
+      symbolType              = ftags::SymbolType::VariableReference;
+      attributes->isReference = true;
       break;
 
    case CXCursor_OverloadedDeclRef:
-      symbolType             = ftags::SymbolType::OverloadedDeclarationReference;
-      attributes.isReference = true;
+      symbolType              = ftags::SymbolType::OverloadedDeclarationReference;
+      attributes->isReference = true;
       break;
 
 #if 0
    case CXCursor_UnexposedExpr:
       symbolType              = ftags::SymbolType::UnexposedExpression;
-      attributes.isExpression = true;
+      attributes->isExpression = true;
       break;
 #endif
 
    case CXCursor_CallExpr:
-      symbolType              = ftags::SymbolType::FunctionCallExpression;
-      attributes.isExpression = true;
-      attributes.isReference  = true;
+      symbolType               = ftags::SymbolType::FunctionCallExpression;
+      attributes->isExpression = true;
+      attributes->isReference  = true;
       break;
 
 #if 0
@@ -260,21 +260,21 @@ static void getSymbolType(CXCursor clangCursor, ftags::Attributes& attributes)
 #endif
 
    case CXCursor_DeclRefExpr:
-      symbolType               = ftags::SymbolType::DeclarationReferenceExpression;
-      attributes.isDeclaration = true;
-      attributes.isReference   = true;
-      attributes.isExpression  = true;
+      symbolType                = ftags::SymbolType::DeclarationReferenceExpression;
+      attributes->isDeclaration = true;
+      attributes->isReference   = true;
+      attributes->isExpression  = true;
       break;
 
    case CXCursor_MemberRefExpr:
-      symbolType              = ftags::SymbolType::MemberReferenceExpression;
-      attributes.isReference  = true;
-      attributes.isExpression = true;
+      symbolType               = ftags::SymbolType::MemberReferenceExpression;
+      attributes->isReference  = true;
+      attributes->isExpression = true;
       break;
 
    case CXCursor_CStyleCastExpr:
-      symbolType        = ftags::SymbolType::CStyleCastExpression;
-      attributes.isCast = true;
+      symbolType         = ftags::SymbolType::CStyleCastExpression;
+      attributes->isCast = true;
       break;
 
    case CXCursor_MacroDefinition:
@@ -290,37 +290,36 @@ static void getSymbolType(CXCursor clangCursor, ftags::Attributes& attributes)
       break;
 
    case CXCursor_TypeAliasTemplateDecl:
-      symbolType               = ftags::SymbolType::TypeAliasTemplateDecl;
-      attributes.isDeclaration = true;
+      symbolType                = ftags::SymbolType::TypeAliasTemplateDecl;
+      attributes->isDeclaration = true;
       break;
 
    default:
       break;
    }
 
-   attributes.setType(symbolType);
+   attributes->setType(symbolType);
 }
 
-struct TranslationUnitAccumulator
+class TranslationUnitAccumulator
 {
-   ftags::ProjectDb::TranslationUnit& translationUnit;
-   ftags::util::StringTable&          symbolTable;
-   ftags::util::StringTable&          namespaceTable;
-   ftags::util::StringTable&          fileNameTable;
-   ftags::RecordSpanManager&          recordSpanManager;
-   std::string                        filterPath;
+   ftags::ProjectDb::TranslationUnit& m_translationUnit;
+   ftags::util::StringTable&          m_symbolTable;
+   ftags::util::StringTable&          m_fileNameTable;
+   ftags::RecordSpanManager&          m_recordSpanManager;
+   std::string                        m_filterPath;
 
-   int                                                            level = 0;
-   std::unordered_map<std::string, ftags::util::StringTable::Key> fileKeyCache;
+   int                                                            m_level = 0;
+   std::unordered_map<std::string, ftags::util::StringTable::Key> m_fileKeyCache;
 
-   TranslationUnitAccumulator(ftags::ProjectDb::TranslationUnit&                translationUnit_,
+public:
+   TranslationUnitAccumulator(ftags::ProjectDb::TranslationUnit&                translationUnit,
                               ftags::ProjectDb::TranslationUnit::ParsingContext parsingContext) :
-      translationUnit{translationUnit_},
-      symbolTable{parsingContext.symbolTable},
-      namespaceTable{parsingContext.namespaceTable},
-      fileNameTable{parsingContext.fileNameTable},
-      recordSpanManager{parsingContext.recordSpanManager},
-      filterPath{parsingContext.filterPath}
+      m_translationUnit{translationUnit},
+      m_symbolTable{parsingContext.symbolTable},
+      m_fileNameTable{parsingContext.fileNameTable},
+      m_recordSpanManager{parsingContext.recordSpanManager},
+      m_filterPath{parsingContext.filterPath}
    {
    }
 
@@ -334,6 +333,21 @@ struct TranslationUnitAccumulator
                           std::string& fileName
 #endif
    );
+
+   void increaseLevel() noexcept
+   {
+      m_level++;
+   }
+
+   void decreaseLevel() noexcept
+   {
+      m_level--;
+   }
+
+   bool isLevel() const noexcept
+   {
+      return (m_level == 0);
+   }
 };
 
 bool TranslationUnitAccumulator::getCursorLocation(CXCursor                       clangCursor,
@@ -357,9 +371,9 @@ bool TranslationUnitAccumulator::getCursorLocation(CXCursor                     
 #else
    std::string fileName{fileNameWrapper.c_str()};
 #endif
-   const auto iter = fileKeyCache.find(fileName);
+   const auto iter = m_fileKeyCache.find(fileName);
 
-   if (iter != fileKeyCache.end())
+   if (iter != m_fileKeyCache.end())
    {
       *fileNameKey = iter->second;
    }
@@ -369,8 +383,8 @@ bool TranslationUnitAccumulator::getCursorLocation(CXCursor                     
       if (std::filesystem::exists(filePath))
       {
          std::filesystem::path canonicalFilePath = std::filesystem::canonical(filePath);
-         *fileNameKey                            = fileNameTable.addKey(canonicalFilePath.string());
-         const auto insertIter                   = fileKeyCache.emplace(std::move(fileName), *fileNameKey);
+         *fileNameKey                            = m_fileNameTable.addKey(canonicalFilePath.string());
+         const auto insertIter                   = m_fileKeyCache.emplace(std::move(fileName), *fileNameKey);
 #ifdef NDEBUG
          (void)insertIter;
 #endif
@@ -382,8 +396,8 @@ bool TranslationUnitAccumulator::getCursorLocation(CXCursor                     
          if (std::filesystem::exists(otherPath))
          {
             std::filesystem::path canonicalFilePath = std::filesystem::canonical(otherPath);
-            *fileNameKey                            = fileNameTable.addKey(canonicalFilePath.string().data());
-            const auto insertIter                   = fileKeyCache.emplace(std::move(fileName), *fileNameKey);
+            *fileNameKey                            = m_fileNameTable.addKey(canonicalFilePath.string().data());
+            const auto insertIter                   = m_fileKeyCache.emplace(std::move(fileName), *fileNameKey);
 #ifdef NDEBUG
             (void)insertIter;
 #endif
@@ -393,8 +407,8 @@ bool TranslationUnitAccumulator::getCursorLocation(CXCursor                     
          {
             if (fileName == "<built-in>")
             {
-               *fileNameKey          = fileNameTable.addKey(fileName.data());
-               const auto insertIter = fileKeyCache.emplace(std::move(fileName), *fileNameKey);
+               *fileNameKey          = m_fileNameTable.addKey(fileName.data());
+               const auto insertIter = m_fileKeyCache.emplace(std::move(fileName), *fileNameKey);
 #ifdef NDEBUG
                (void)insertIter;
 #endif
@@ -412,13 +426,13 @@ bool TranslationUnitAccumulator::getCursorLocation(CXCursor                     
 
    assert(*fileNameKey);
 
-   return clang_Location_isFromMainFile(location);
+   return (clang_Location_isFromMainFile(location) != 0);
 }
 
 void TranslationUnitAccumulator::processCursor(CXCursor clangCursor)
 {
    // check if the cursor is defined in a file below filterPath and if not, bail out early
-   if (!filterPath.empty())
+   if (!m_filterPath.empty())
    {
       CXStringWrapper fileName;
 
@@ -427,12 +441,12 @@ void TranslationUnitAccumulator::processCursor(CXCursor clangCursor)
 
       const std::size_t thisPathLength = strlen(fileName.c_str());
 
-      if (thisPathLength < filterPath.size())
+      if (thisPathLength < m_filterPath.size())
       {
          return;
       }
 
-      if (memcmp(fileName.c_str(), filterPath.data(), filterPath.size()) != 0)
+      if (memcmp(fileName.c_str(), m_filterPath.data(), m_filterPath.size()) != 0)
       {
          return;
       }
@@ -443,7 +457,7 @@ void TranslationUnitAccumulator::processCursor(CXCursor clangCursor)
    CXStringWrapper name{clang_getCursorSpelling(clangCursor)};
    cursor.symbolName = name.c_str();
 
-   getSymbolType(clangCursor, cursor.attributes);
+   getSymbolType(clangCursor, &cursor.attributes);
 
 #ifdef DUMP_SKIPPED_CURSORS
    std::string locationFileName;
@@ -487,7 +501,7 @@ void TranslationUnitAccumulator::processCursor(CXCursor clangCursor)
    // TODO: combine FunctionCallExpression with the subsequent DeclarationReferenceExpression and optional NamespaceReference
 #endif
 
-   if (clang_isCursorDefinition(clangCursor))
+   if (clang_isCursorDefinition(clangCursor) != 0)
    {
       cursor.attributes.isDefinition = 1;
    }
@@ -511,23 +525,23 @@ void TranslationUnitAccumulator::processCursor(CXCursor clangCursor)
    );
    assert(referencedFileNameKey != 0);
 
-   const ftags::util::StringTable::Key symbolNameKey = symbolTable.addKey(cursor.symbolName);
+   const ftags::util::StringTable::Key symbolNameKey = m_symbolTable.addKey(cursor.symbolName);
 
-   assert(level >= 0);
-   cursor.attributes.level = static_cast<uint32_t>(level);
-   translationUnit.addCursor(cursor, symbolNameKey, fileNameKey, referencedFileNameKey, recordSpanManager);
+   assert(m_level >= 0);
+   cursor.attributes.level = static_cast<uint32_t>(m_level);
+   m_translationUnit.addCursor(cursor, symbolNameKey, fileNameKey, referencedFileNameKey, m_recordSpanManager);
 }
 
 CXChildVisitResult visitTranslationUnit(CXCursor cursor, CXCursor /* parent */, CXClientData clientData)
 {
-   TranslationUnitAccumulator* accumulator = reinterpret_cast<TranslationUnitAccumulator*>(clientData);
+   auto* accumulator = reinterpret_cast<TranslationUnitAccumulator*>(clientData);
 
    accumulator->processCursor(cursor);
-   accumulator->level++;
+   accumulator->increaseLevel();
 
    clang_visitChildren(cursor, visitTranslationUnit, clientData);
 
-   accumulator->level--;
+   accumulator->decreaseLevel();
    return CXChildVisit_Continue;
 }
 
@@ -568,7 +582,7 @@ ftags::ProjectDb::TranslationUnit ftags::ProjectDb::TranslationUnit::parse(const
       CXDiagnosticSet diagnosticSet    = clang_getDiagnosticSetFromTU(translationUnitPtr);
       unsigned        diagnosticsCount = clang_getNumDiagnosticsInSet(diagnosticSet);
 
-      if (diagnosticsCount)
+      if (diagnosticsCount != 0)
       {
          const unsigned defaultDisplayOptions = clang_defaultDiagnosticDisplayOptions();
          for (unsigned ii = 0; ii < diagnosticsCount; ii++)
@@ -598,7 +612,7 @@ ftags::ProjectDb::TranslationUnit ftags::ProjectDb::TranslationUnit::parse(const
       throw std::runtime_error("Failed to parse input");
    }
 
-   assert(accumulator.level == 0);
+   assert(accumulator.isLevel());
 
    translationUnit.finalizeParsingUnit(parsingContext.recordSpanManager);
 

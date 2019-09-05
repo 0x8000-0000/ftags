@@ -21,9 +21,9 @@ void ftags::ProjectDb::TranslationUnit::beginParsingUnit(ftags::util::StringTabl
    m_fileNameKey = fileNameKey;
 }
 
-void ftags::ProjectDb::TranslationUnit::finalizeParsingUnit(RecordSpanManager& recordSpanCache)
+void ftags::ProjectDb::TranslationUnit::finalizeParsingUnit(RecordSpanManager& recordSpanManager)
 {
-   flushCurrentSpan(recordSpanCache);
+   flushCurrentSpan(recordSpanManager);
 }
 
 void ftags::ProjectDb::TranslationUnit::copyRecords(const TranslationUnit&   otherTranslationUnit,
@@ -147,7 +147,7 @@ void ftags::ProjectDb::TranslationUnit::addCursor(const ftags::Cursor&          
 
 std::size_t ftags::ProjectDb::TranslationUnit::computeSerializedSize() const
 {
-   std::vector<uint64_t> recordSpanHashes(/* size = */ m_recordSpans.size());
+   std::vector<uint64_t> recordSpanHashes(/* __n = */ m_recordSpans.size());
 
    return sizeof(ftags::util::SerializedObjectHeader) + sizeof(ftags::util::StringTable::Key) +
           ftags::util::Serializer<std::vector<RecordSpan::Store::Key>>::computeSerializedSize(m_recordSpans);
@@ -158,7 +158,7 @@ void ftags::ProjectDb::TranslationUnit::serialize(ftags::util::BufferInsertor& i
    ftags::util::SerializedObjectHeader header{"ftags::TranslationUnit"};
    insertor << header;
 
-   assert(m_fileNameKey);
+   assert(m_fileNameKey != 0);
    insertor << m_fileNameKey;
 
    std::vector<uint64_t> recordSpanHashes;

@@ -28,7 +28,7 @@ namespace
 class OrderRecordsBySymbolKey
 {
 public:
-   OrderRecordsBySymbolKey(const ftags::Record* records) : m_records{records}
+   explicit OrderRecordsBySymbolKey(const ftags::Record* records) : m_records{records}
    {
    }
 
@@ -206,14 +206,7 @@ ftags::RecordSpan ftags::RecordSpan::deserialize(ftags::BufferExtractor& extract
 
 bool ftags::RecordSpan::isEqualTo(const std::vector<ftags::Record>& records) const
 {
-   if (m_size == records.size())
-   {
-      return 0 == memcmp(m_records, records.data(), m_size * sizeof(Record));
-   }
-   else
-   {
-      return false;
-   }
+   return (m_size == records.size()) && (0 == memcmp(m_records, records.data(), m_size * sizeof(Record)));
 }
 
 void ftags::RecordSpan::setRecordsFrom(const std::vector<ftags::Record>& other,
@@ -223,7 +216,7 @@ void ftags::RecordSpan::setRecordsFrom(const std::vector<ftags::Record>& other,
    assert(m_key == 0);
    assert(m_size == 0);
 
-   assert(other.size() != 0);
+   assert(!other.empty());
 
    m_size     = static_cast<uint32_t>(other.size());
    auto alloc = store.allocate(m_size);
@@ -235,28 +228,30 @@ void ftags::RecordSpan::setRecordsFrom(const std::vector<ftags::Record>& other,
 
 ftags::util::StringTable::Key ftags::RecordSpan::getFileKey() const
 {
+   ftags::util::StringTable::Key fileKey = 0;
+
    if (m_records == nullptr)
    {
       assert(m_size == 0);
-      return 0;
-   }
-
-   if (m_size != 0)
-   {
-      const ftags::util::StringTable::Key fileKey = m_records[0].location.fileNameKey;
-
-      for (uint32_t ii = 1; ii < m_size; ii++)
-      {
-         assert(fileKey == m_records[ii].location.fileNameKey);
-      }
-
-      return fileKey;
    }
    else
    {
-      assert(false);
-      return 0;
+      if (m_size != 0)
+      {
+         fileKey = m_records[0].location.fileNameKey;
+
+         for (uint32_t ii = 1; ii < m_size; ii++)
+         {
+            assert(fileKey == m_records[ii].location.fileNameKey);
+         }
+      }
+      else
+      {
+         assert(false);
+      }
    }
+
+   return fileKey;
 }
 
 #if (!defined(NDEBUG)) && (defined(ENABLE_THOROUGH_VALIDITY_CHECKS))

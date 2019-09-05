@@ -174,7 +174,7 @@ bool ftags::ProjectDb::isFileIndexed(const std::string& fileName) const
 {
    bool       isIndexed = false;
    const auto key       = m_fileNameTable.getKey(fileName.data());
-   if (key)
+   if (key != 0)
    {
       isIndexed = m_fileIndex.count(key) != 0;
    }
@@ -275,7 +275,7 @@ std::size_t ftags::ProjectDb::computeSerializedSize() const
       std::accumulate(
          m_translationUnits.cbegin(),
          m_translationUnits.cend(),
-         0u,
+         0U,
          [](std::size_t acc, const TranslationUnit& elem) { return acc + elem.computeSerializedSize(); });
 
    return sizeof(ftags::util::SerializedObjectHeader) +
@@ -366,9 +366,13 @@ void ftags::ProjectDb::mergeFrom(const ProjectDb& other)
 
 void ftags::ProjectDb::updateFrom(const std::string& /* fileName */, const ProjectDb& other)
 {
-   // TODO: check if the file name is indexed already and remove its entries
+   // TODO(signbit): check if the file name is indexed already and remove its entries
    mergeFrom(other);
 }
+
+constexpr uint32_t k_ExtraLargeSymbolSize      = 1024;
+constexpr int      k_NumberOfHugeSymbolsToDump = 16;
+constexpr uint32_t k_SizeOfHugeSymbolPrefix    = 128;
 
 std::vector<std::string> ftags::ProjectDb::getStatisticsRemarks(const std::string& statisticsGroup) const
 {
@@ -402,7 +406,7 @@ std::vector<std::string> ftags::ProjectDb::getStatisticsRemarks(const std::strin
       std::vector<ftags::util::StringTable::Key> largeSymbols;
 
       m_symbolTable.forEachElement([&largeSymbols](std::string_view symbol, ftags::util::StringTable::Key key) {
-         if (symbol.size() > 1024)
+         if (symbol.size() > k_ExtraLargeSymbolSize)
          {
             largeSymbols.push_back(key);
          }
@@ -423,25 +427,25 @@ std::vector<std::string> ftags::ProjectDb::getStatisticsRemarks(const std::strin
       remarks.emplace_back(
          fmt::format("Found {:n} records with symbols larger than 1024", recordsWithLargeSymbols.size()));
 
-      int top16 = 16;
+      int top16 = k_NumberOfHugeSymbolsToDump;
       for (const auto* record : recordsWithLargeSymbols)
       {
-         if (top16 == 0)
+         if (top16 > 0)
          {
-            break;
+            top16--;
+
+            remarks.emplace_back(fmt::format("  ... {}:{}:{}",
+                                             m_fileNameTable.getStringView(record->location.fileNameKey),
+                                             record->location.line,
+                                             record->location.column));
+
+            remarks.emplace_back(fmt::format(
+               "  \\ {}", m_symbolTable.getStringView(record->symbolNameKey).substr(0, k_SizeOfHugeSymbolPrefix)));
          }
          else
          {
-            top16--;
+            break;
          }
-
-         remarks.emplace_back(fmt::format("  ... {}:{}:{}",
-                                          m_fileNameTable.getStringView(record->location.fileNameKey),
-                                          record->location.line,
-                                          record->location.column));
-
-         remarks.emplace_back(
-            fmt::format("  \\ {}", m_symbolTable.getStringView(record->symbolNameKey).substr(0, 128)));
       }
    }
    else
