@@ -418,6 +418,7 @@ int main(int argc, char* argv[])
          command.set_projectname(projectName);
          command.set_directoryname(dirName);
          command.set_symbolname(query.symbolName);
+
          const std::size_t requestSize = command.ByteSizeLong();
          zmq::message_t    request(requestSize);
          command.SerializeToArray(request.data(), static_cast<int>(requestSize));
@@ -436,6 +437,28 @@ int main(int argc, char* argv[])
       else if (query.type == ftags::query::Query::Type::Contents)
       {
          dispatchDumpTranslationUnit(socket, projectName, dirName, fileName);
+      }
+   }
+   else if (query.verb == ftags::query::Query::Verb::Analyze)
+   {
+      command.set_type(ftags::Command::Type::Command_Type_ANALYZE_DATA);
+      command.set_projectname(projectName);
+      command.set_directoryname(dirName);
+      command.set_symbolname(query.symbolName);
+
+      const std::size_t requestSize = command.ByteSizeLong();
+      zmq::message_t    request(requestSize);
+      command.SerializeToArray(request.data(), static_cast<int>(requestSize));
+      socket.send(request);
+
+      zmq::message_t reply;
+      socket.recv(&reply);
+
+      status.ParseFromArray(reply.data(), static_cast<int>(reply.size()));
+
+      for (int ii = 0; ii < status.remarks_size(); ii++)
+      {
+         std::cout << status.remarks(ii) << std::endl;
       }
    }
    else if (query.verb == ftags::query::Query::Verb::Shutdown)

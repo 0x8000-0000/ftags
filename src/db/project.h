@@ -232,14 +232,14 @@ public:
     */
    void dumpRecords(std::ostream& os, const std::filesystem::path& trimPath) const;
 
-   void dumpStats(std::ostream& os) const;
-
    std::size_t getRecordCount() const
    {
       return m_recordSpanManager.getRecordCount();
    }
 
    std::vector<std::string> getStatisticsRemarks(const std::string& statisticsGroup) const;
+
+   std::vector<std::string> analyzeData(const std::string& analysisType) const;
 
    void assertValid() const
 #if defined(NDEBUG) || (!defined(ENABLE_THOROUGH_VALIDITY_CHECKS))

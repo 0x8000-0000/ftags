@@ -47,6 +47,7 @@ struct str_list: TAO_PEGTL_STRING("list") {};
 struct str_ping: TAO_PEGTL_STRING("ping") {};
 struct str_shutdown: TAO_PEGTL_STRING("shutdown") {};
 struct str_dump: TAO_PEGTL_STRING("dump") {};
+struct str_analyze: TAO_PEGTL_STRING("analyze") {};
 
 struct str_projects: TAO_PEGTL_STRING("projects") {};
 struct str_dependencies: TAO_PEGTL_STRING("dependencies") {};
@@ -83,6 +84,7 @@ struct key_list: key<str_list> {};
 struct key_ping: key<str_ping> {};
 struct key_shutdown: key<str_shutdown> {};
 struct key_dump: key<str_dump> {};
+struct key_analyze: key<str_analyze> {};
 
 struct key_override: key<str_override> {};
 
@@ -170,7 +172,12 @@ struct dump_stats : pegtl::if_must<key_dump, sep, symbol_name, sep, str_statisti
 {
 };
 
-struct grammar : pegtl::sor<find_symbol, identify_symbol, list_projects, ping_server, shutdown_server, dump_stats>
+struct analyze_data : pegtl::if_must<key_analyze, sep, symbol_name, pegtl::eof>
+{
+};
+
+struct grammar
+   : pegtl::sor<find_symbol, identify_symbol, list_projects, ping_server, shutdown_server, dump_stats, analyze_data>
 {
 };
 
@@ -236,6 +243,16 @@ struct action<key_dump>
    static void apply(const Input& /* in */, ftags::query::Query& query)
    {
       query.verb = ftags::query::Query::Verb::Dump;
+   }
+};
+
+template <>
+struct action<key_analyze>
+{
+   template <typename Input>
+   static void apply(const Input& /* in */, ftags::query::Query& query)
+   {
+      query.verb = ftags::query::Query::Verb::Analyze;
    }
 };
 

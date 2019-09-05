@@ -12,6 +12,7 @@ message Command
       GET_STATUS = 3;
       FLUSH = 4;
       QUERY_STATISTICS = 5;
+      ANALYZE_DATA = 6;
 
       SAVE_DATABASE = 10;
 

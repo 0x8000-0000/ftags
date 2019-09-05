@@ -235,3 +235,11 @@ TEST(QueryTest, DumpGeneralStats)
    ASSERT_EQ(query.type, ftags::query::Query::Type::Statistics);
    ASSERT_EQ(query.symbolName, "general");
 }
+
+TEST(QueryTest, AnalyzeThis)
+{
+   ftags::query::Query query("analyze this");
+
+   ASSERT_EQ(query.verb, ftags::query::Query::Verb::Analyze);
+   ASSERT_EQ(query.symbolName, "this");
+}

@@ -35,6 +35,7 @@ struct Query
       Ping,
       Shutdown,
       Dump,
+      Analyze,
    };
 
    enum Type : uint8_t
@@ -82,7 +83,7 @@ struct Query
    unsigned    columnNumber = 0;
 
    Query() = default;
-   Query(std::string_view input);
+   explicit Query(std::string_view input);
 
    static Query parse(std::string_view input);
    static Query parse(std::vector<std::string> input);

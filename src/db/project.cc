@@ -529,3 +529,12 @@ void ftags::ProjectDb::assertValid() const
     */
 }
 #endif
+
+std::vector<std::string> ftags::ProjectDb::analyzeData(const std::string& analysisType) const
+{
+   std::vector<std::string> remarks;
+
+   remarks.emplace_back(fmt::format("Analysis of '{}' complete.", analysisType));
+
+   return remarks;
+}

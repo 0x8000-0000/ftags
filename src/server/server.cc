@@ -245,6 +245,26 @@ void dispatchQueryStatistics(zmq::socket_t&          socket,
    socket.send(reply);
 }
 
+void dispatchDataAnalysis(zmq::socket_t& socket, const ftags::ProjectDb* projectDb, const std::string& analysisType)
+{
+   ftags::Status status{};
+   status.set_timestamp(getTimeStamp());
+   status.set_type(ftags::Status_Type::Status_Type_STATISTICS_REMARKS);
+
+   std::vector<std::string> statisticsRemarks = projectDb->analyzeData(analysisType);
+
+   for (const auto& remark : statisticsRemarks)
+   {
+      *status.add_remarks() = remark;
+   }
+
+   const std::size_t replySize = status.ByteSizeLong();
+   zmq::message_t    reply(replySize);
+   status.SerializeToArray(reply.data(), static_cast<int>(replySize));
+
+   socket.send(reply);
+}
+
 void dispatchPing(zmq::socket_t& socket)
 {
    ftags::Status status{};
@@ -432,6 +452,10 @@ int main(int argc, char* argv[])
          {
             dispatchQueryStatistics(socket, projectDb, command.symbolname());
          }
+         break;
+
+      case ftags::Command_Type::Command_Type_ANALYZE_DATA:
+         dispatchDataAnalysis(socket, projectDb, command.symbolname());
          break;
 
       case ftags::Command_Type::Command_Type_SHUT_DOWN:
