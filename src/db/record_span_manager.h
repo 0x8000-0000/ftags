@@ -71,30 +71,26 @@ public:
 
    const ftags::RecordSpan& getSpan(Key key) const
    {
-      if (key != 0)
-      {
-         const auto spanIterPair = m_recordSpanStore.get(key);
-         return *spanIterPair.first;
-      }
-      else
+      if (key == 0U)
       {
          assert(key != 0);
          throw(std::runtime_error("Invalid span key"));
       }
+
+      const auto spanIterPair = m_recordSpanStore.get(key);
+      return *spanIterPair.first;
    }
 
    ftags::RecordSpan& getSpan(Key key)
    {
-      if (key != 0)
-      {
-         auto spanIterPair = m_recordSpanStore.get(key);
-         return *spanIterPair.first;
-      }
-      else
+      if (key == 0U)
       {
          assert(key != 0);
-         throw("Invalid span key");
+         throw(std::runtime_error("Invalid span key"));
       }
+
+      auto spanIterPair = m_recordSpanStore.get(key);
+      return *spanIterPair.first;
    }
 
    /*
@@ -109,6 +105,28 @@ public:
    /*
     * Query interface
     */
+   template <typename F>
+   std::vector<const Record*> filterRecords(F                               selectRecord,
+                                            const ftags::util::StringTable& symbolNames,
+                                            const ftags::util::StringTable& fileNames) const
+   {
+      std::vector<const ftags::Record*> results;
+
+      m_recordStore.forEachAllocatedSequence(
+         [&results, &selectRecord, &symbolNames, &fileNames](
+            Record::Store::Key /* key */, const Record* record, Record::Store::block_size_type size) {
+            for (Record::Store::block_size_type ii = 0; ii < size; ii++)
+            {
+               if (selectRecord(&record[ii], symbolNames, fileNames))
+               {
+                  results.push_back(&record[ii]);
+               }
+            }
+         });
+
+      return results;
+   }
+
    template <typename F>
    std::vector<const Record*> filterRecordsWithSymbol(ftags::util::StringTable::Key symbolKey, F selectRecord) const
    {

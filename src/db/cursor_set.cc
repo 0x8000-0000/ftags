@@ -21,9 +21,9 @@
 /*
  * CursorSet
  */
-ftags::CursorSet::CursorSet(std::vector<const Record*>      records,
-                            const ftags::util::StringTable& symbolTable,
-                            const ftags::util::StringTable& fileNameTable)
+ftags::CursorSet::CursorSet(const std::vector<const Record*>& records,
+                            const ftags::util::StringTable&   symbolTable,
+                            const ftags::util::StringTable&   fileNameTable)
 {
    m_records.reserve(records.size());
 
@@ -105,7 +105,7 @@ ftags::CursorSet ftags::CursorSet::deserialize(ftags::util::BufferExtractor& ext
 
 std::size_t ftags::CursorSet::computeHash() const
 {
-   SpookyHash hash;
+   SpookyHash hash = {};
 
    hash.Init(k_hashSeed[0], k_hashSeed[1]);
 
@@ -113,8 +113,14 @@ std::size_t ftags::CursorSet::computeHash() const
    {
       Cursor cursor = inflateRecord(record);
 
-      hash.Update(cursor.symbolName, strlen(cursor.symbolName));
-      hash.Update(cursor.location.fileName, strlen(cursor.location.fileName));
+      if (cursor.symbolName != nullptr)
+      {
+         hash.Update(cursor.symbolName, strlen(cursor.symbolName));
+      }
+      if (cursor.location.fileName != nullptr)
+      {
+         hash.Update(cursor.location.fileName, strlen(cursor.location.fileName));
+      }
 
       cursor.symbolName        = nullptr;
       cursor.location.fileName = nullptr;
@@ -122,7 +128,7 @@ std::size_t ftags::CursorSet::computeHash() const
       hash.Update(&cursor, sizeof(cursor));
    }
 
-   uint64_t hashValue[2] = {};
+   std::array<uint64_t, 2> hashValue = {};
 
    hash.Final(&hashValue[0], &hashValue[1]);
 

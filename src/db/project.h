@@ -25,6 +25,7 @@
 #include <string_table.h>
 
 #include <algorithm>
+#include <array>
 #include <filesystem>
 #include <iosfwd>
 #include <map>
@@ -77,9 +78,9 @@ using KeyMap = ftags::util::FlatMap<ftags::util::StringTable::Key, ftags::util::
 class CursorSet
 {
 public:
-   CursorSet(std::vector<const Record*>      records,
-             const ftags::util::StringTable& symbolTable,
-             const ftags::util::StringTable& fileNameTable);
+   CursorSet(const std::vector<const Record*>& records,
+             const ftags::util::StringTable&   symbolTable,
+             const ftags::util::StringTable&   fileNameTable);
 
    Cursor inflateRecord(const Record& record) const;
 
@@ -117,7 +118,7 @@ private:
    ftags::util::StringTable m_symbolTable;
    ftags::util::StringTable m_fileNameTable;
 
-   static constexpr uint64_t k_hashSeed[] = {0x6905e06277e77c15, 0x27e6864cb5ff7d26};
+   static constexpr std::array<uint64_t, 2> k_hashSeed = {0x6905e06277e77c15, 0x27e6864cb5ff7d26};
 };
 
 class ProjectDb
@@ -132,8 +133,9 @@ public:
 
    ProjectDb(const ProjectDb& other) = delete;
    const ProjectDb& operator=(const ProjectDb& other) = delete;
+   const ProjectDb& operator=(const ProjectDb&& other) = delete;
 
-   ProjectDb(ProjectDb&& other) :
+   ProjectDb(ProjectDb&& other) noexcept :
       m_name{std::move(other.m_name)},
       m_root{std::move(other.m_root)},
       m_translationUnits{std::move(other.m_translationUnits)},
@@ -144,6 +146,8 @@ public:
       m_fileIndex{std::move(other.m_fileIndex)}
    {
    }
+
+   ~ProjectDb() = default;
 
    const std::string& getName() const
    {
@@ -290,7 +294,7 @@ public:
                        const KeyMap&            symbolKeyMapping,
                        const KeyMap&            fileNameKeyMapping);
 
-      TranslationUnit(Key fileNameKey = 0) : m_fileNameKey{fileNameKey}
+      explicit TranslationUnit(Key fileNameKey = 0) : m_fileNameKey{fileNameKey}
       {
       }
 
@@ -306,7 +310,7 @@ public:
       {
          return std::accumulate(m_recordSpans.cbegin(),
                                 m_recordSpans.cend(),
-                                0u,
+                                0U,
                                 [&recordSpanManager](std::vector<Record>::size_type acc, RecordSpan::Store::Key key) {
                                    const RecordSpan& recordSpan = recordSpanManager.getSpan(key);
                                    return acc + recordSpan.getSize();
@@ -322,7 +326,7 @@ public:
 
          forEachRecord(
             [&records, isFromMainFile](const ftags::Record* record) {
-               if (record->attributes.isFromMainFile == isFromMainFile)
+               if (record->attributes.isFromMainFile == static_cast<uint32_t>(isFromMainFile))
                {
                   records.push_back(record);
                }
@@ -403,7 +407,7 @@ public:
 
       struct RecordSymbolComparator
       {
-         RecordSymbolComparator(const Record* records) : m_records{records}
+         explicit RecordSymbolComparator(const Record* records) : m_records{records}
          {
          }
 
@@ -551,6 +555,20 @@ private:
       {
          results = m_recordSpanManager.filterRecordsFromFile(key, selectRecord);
       }
+
+      return results;
+   }
+
+   /*
+    * Selector of last resort; iterates through each record.
+    */
+   template <typename F>
+   std::vector<const Record*> filterRecords(F selectRecord) const
+   {
+      std::vector<const ftags::Record*> results =
+         m_recordSpanManager.filterRecords(selectRecord, m_symbolTable, m_fileNameTable);
+
+      Record::filterDuplicates(results);
 
       return results;
    }

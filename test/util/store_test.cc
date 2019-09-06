@@ -24,8 +24,11 @@
  * Intrusive, black-box tests for Store.
  */
 
-using Store      = ftags::util::Store<uint32_t, uint32_t, 24>;
-using SmallStore = ftags::util::Store<uint32_t, uint32_t, 5>; // block size up to 32 - 4
+constexpr unsigned k_DefaultStoreSegmentSize = 24U;
+constexpr unsigned k_SmallStoreSegmentSize   = 5U;
+
+using Store      = ftags::util::Store<uint32_t, uint32_t, k_DefaultStoreSegmentSize>;
+using SmallStore = ftags::util::Store<uint32_t, uint32_t, k_SmallStoreSegmentSize>; // block size up to 32 - 4
 
 using ftags::util::BufferExtractor;
 using ftags::util::BufferInsertor;
@@ -36,7 +39,7 @@ TEST(StoreMapTest, FirstAllocationReturnsKey1)
 
    const auto blockOne = store.allocate(8);
 
-   ASSERT_EQ(blockOne.key, store.FirstKeyValue);
+   ASSERT_EQ(blockOne.key, store.k_firstKeyValue);
 
    ASSERT_EQ(8, store.countUsedBlocks());
 }
@@ -57,7 +60,7 @@ TEST(StoreMapTest, BlockIsRecycled)
 
    std::fill_n(blockTwo.iterator, blockSize, 2);
 
-   ASSERT_EQ(blockTwo.key, store.FirstKeyValue);
+   ASSERT_EQ(blockTwo.key, store.k_firstKeyValue);
 
    ASSERT_EQ(8, store.countUsedBlocks());
 }
@@ -84,7 +87,7 @@ TEST(StoreMapTest, DeletedBlocksAreCoalesced1)
    const auto blockThree = store.allocate(blockSize);
    std::fill_n(blockThree.iterator, blockSize, 3);
 
-   ASSERT_EQ(blockThree.key, store.FirstKeyValue);
+   ASSERT_EQ(blockThree.key, store.k_firstKeyValue);
 
    ASSERT_EQ(store.countUsedBlocks(), 8);
 }
@@ -107,7 +110,7 @@ TEST(StoreMapTest, DeletedBlocksAreCoalesced2)
    const auto blockThree = store.allocate(2 * blockSize);
    std::fill_n(blockThree.iterator, 2 * blockSize, 3);
 
-   ASSERT_EQ(blockThree.key, store.FirstKeyValue);
+   ASSERT_EQ(blockThree.key, store.k_firstKeyValue);
 }
 
 TEST(StoreMapTest, DeletedBlocksAreCoalesced3)
@@ -117,7 +120,7 @@ TEST(StoreMapTest, DeletedBlocksAreCoalesced3)
    const std::size_t blockSize = 8;
 
    const auto blockOne = store.allocate(blockSize);
-   ASSERT_EQ(blockOne.key, store.FirstKeyValue);
+   ASSERT_EQ(blockOne.key, store.k_firstKeyValue);
    std::fill_n(blockOne.iterator, blockSize, 1);
 
    const auto blockTwo = store.allocate(blockSize);
@@ -129,7 +132,7 @@ TEST(StoreMapTest, DeletedBlocksAreCoalesced3)
    const auto blockThree = store.allocate(3 * blockSize);
    std::fill_n(blockThree.iterator, 3 * blockSize, 3);
 
-   ASSERT_EQ(blockThree.key, store.FirstKeyValue);
+   ASSERT_EQ(blockThree.key, store.k_firstKeyValue);
 }
 
 TEST(StoreMapTest, DeletedBlocksAreCoalesced4)
@@ -139,22 +142,22 @@ TEST(StoreMapTest, DeletedBlocksAreCoalesced4)
    const std::size_t blockSize = 8;
 
    const auto blockOne = store.allocate(blockSize);
-   ASSERT_EQ(blockOne.key, store.FirstKeyValue);
+   ASSERT_EQ(blockOne.key, store.k_firstKeyValue);
    std::fill_n(blockOne.iterator, blockSize, 1);
 
    const auto blockTwo = store.allocate(blockSize);
-   ASSERT_EQ(blockTwo.key, store.FirstKeyValue + blockSize);
+   ASSERT_EQ(blockTwo.key, store.k_firstKeyValue + blockSize);
    std::fill_n(blockTwo.iterator, blockSize, 2);
 
    const auto blockThree = store.allocate(3 * blockSize);
-   ASSERT_EQ(blockThree.key, store.FirstKeyValue + 2 * blockSize);
+   ASSERT_EQ(blockThree.key, store.k_firstKeyValue + 2 * blockSize);
    std::fill_n(blockThree.iterator, 3 * blockSize, 3);
 
    store.deallocate(blockTwo.key, blockSize);
    store.deallocate(blockOne.key, blockSize);
 
    const auto blockFour = store.allocate(2 * blockSize);
-   ASSERT_EQ(blockFour.key, store.FirstKeyValue);
+   ASSERT_EQ(blockFour.key, store.k_firstKeyValue);
    std::fill_n(blockFour.iterator, blockSize, 4);
 }
 
@@ -165,11 +168,11 @@ TEST(StoreMapTest, ExtendAllocatedBlock1)
    const std::size_t blockSize = 8;
 
    const auto blockOne = store.allocate(blockSize);
-   ASSERT_EQ(blockOne.key, store.FirstKeyValue);
+   ASSERT_EQ(blockOne.key, store.k_firstKeyValue);
    std::fill_n(blockOne.iterator, blockSize, 1);
 
    const std::size_t availableSize = store.availableAfter(blockOne.key, blockSize);
-   ASSERT_EQ(availableSize, (1 << 24) - store.FirstKeyValue - blockSize);
+   ASSERT_EQ(availableSize, (1 << 24) - store.k_firstKeyValue - blockSize);
 
    auto iter = store.extend(blockOne.key, blockSize, 2 * blockSize);
    std::fill_n(iter, blockSize, 2);
@@ -184,7 +187,7 @@ TEST(StoreMapTest, ExtendAllocatedBlock2)
    const std::size_t blockSize = 8;
 
    const auto blockOne = store.allocate(blockSize);
-   ASSERT_EQ(blockOne.key, store.FirstKeyValue);
+   ASSERT_EQ(blockOne.key, store.k_firstKeyValue);
    std::fill_n(blockOne.iterator, blockSize, 1);
 
    const auto blockTwo = store.allocate(2 * blockSize);
@@ -192,7 +195,7 @@ TEST(StoreMapTest, ExtendAllocatedBlock2)
    store.deallocate(blockTwo.key, 2 * blockSize);
 
    const std::size_t availableSize = store.availableAfter(blockOne.key, blockSize);
-   ASSERT_EQ(availableSize, (1 << 24) - store.FirstKeyValue - blockSize);
+   ASSERT_EQ(availableSize, (1 << 24) - store.k_firstKeyValue - blockSize);
 
    auto iter = store.extend(blockOne.key, blockSize, 2 * blockSize);
    std::fill_n(iter, blockSize, 2);
@@ -207,7 +210,7 @@ TEST(StoreMapTest, ExtendAllocatedBlock3)
    const std::size_t blockSize = 8;
 
    const auto blockOne = store.allocate(blockSize);
-   ASSERT_EQ(blockOne.key, store.FirstKeyValue);
+   ASSERT_EQ(blockOne.key, store.k_firstKeyValue);
    std::fill_n(blockOne.iterator, blockSize, 1);
 
    const auto blockTwo = store.allocate(2 * blockSize);
@@ -234,7 +237,7 @@ TEST(StoreMapTest, ExtendAllocatedBlock4)
    const std::size_t blockSize = 8;
 
    const auto blockOne = store.allocate(blockSize);
-   ASSERT_EQ(blockOne.key, store.FirstKeyValue);
+   ASSERT_EQ(blockOne.key, store.k_firstKeyValue);
    std::fill_n(blockOne.iterator, blockSize, 1);
 
    const auto blockTwo = store.allocate(2 * blockSize);
@@ -261,15 +264,15 @@ TEST(StoreMapTest, ExtendAllocatedBlock5)
    const std::size_t blockSize = 8;
 
    const auto blockOne = store.allocate(blockSize);
-   ASSERT_EQ(blockOne.key, store.FirstKeyValue);
+   ASSERT_EQ(blockOne.key, store.k_firstKeyValue);
    std::fill_n(blockOne.iterator, blockSize, 1);
 
    const auto blockTwo = store.allocate(2 * blockSize);
-   ASSERT_EQ(blockTwo.key, store.FirstKeyValue + blockSize);
+   ASSERT_EQ(blockTwo.key, store.k_firstKeyValue + blockSize);
    std::fill_n(blockTwo.iterator, 2 * blockSize, 2);
 
    const auto blockThree = store.allocate(blockSize);
-   ASSERT_EQ(blockThree.key, store.FirstKeyValue + 3 * blockSize);
+   ASSERT_EQ(blockThree.key, store.k_firstKeyValue + 3 * blockSize);
    std::fill_n(blockThree.iterator, blockSize, 3);
 
    store.deallocate(blockTwo.key, 2 * blockSize);
@@ -283,7 +286,7 @@ TEST(StoreMapTest, ExtendAllocatedBlock5)
    ASSERT_EQ(std::distance(blockOne.iterator, iter), blockSize);
 
    const auto blockFour = store.allocate(blockSize);
-   ASSERT_EQ(blockFour.key, store.FirstKeyValue + 2 * blockSize);
+   ASSERT_EQ(blockFour.key, store.k_firstKeyValue + 2 * blockSize);
    std::fill_n(blockFour.iterator, blockSize, 4);
 }
 
@@ -295,7 +298,7 @@ TEST(StoreMapTest, SerializeSingleSegment)
 
    // setup
    const auto blockOne = store.allocate(blockSize);
-   ASSERT_EQ(blockOne.key, store.FirstKeyValue);
+   ASSERT_EQ(blockOne.key, store.k_firstKeyValue);
    std::fill_n(blockOne.iterator, blockSize, 1);
 
    const auto blockTwo = store.allocate(2 * blockSize);
@@ -546,14 +549,14 @@ TEST(StoreAllocatorIteratorTest, OneAllocationThatFillsTheFirstBlock)
 {
    SmallStore store;
 
-   const auto blockOne = store.allocate(SmallStore::MaxContiguousAllocation);
-   ASSERT_EQ(blockOne.key, SmallStore::FirstKeyValue); // intrusive
+   const auto blockOne = store.allocate(SmallStore::k_maxContiguousAllocation);
+   ASSERT_EQ(blockOne.key, SmallStore::k_firstKeyValue); // intrusive
 
    const SmallStore::AllocatedSequence allocOne = store.getFirstAllocatedSequence();
    ASSERT_TRUE(allocOne.isValid);
 
    ASSERT_EQ(allocOne.key, blockOne.key);
-   ASSERT_EQ(allocOne.size, SmallStore::MaxContiguousAllocation);
+   ASSERT_EQ(allocOne.size, SmallStore::k_maxContiguousAllocation);
 
    const auto allocTwo = store.getNextAllocatedSequence(allocOne);
    ASSERT_FALSE(allocTwo.isValid);
@@ -563,20 +566,20 @@ TEST(StoreAllocatorIteratorTest, TwoAllocationsThatFillTheFirstSegmentAndAHalf)
 {
    SmallStore store;
 
-   const auto blockOne = store.allocate(SmallStore::MaxContiguousAllocation);
-   ASSERT_EQ(blockOne.key, SmallStore::FirstKeyValue); // intrusive
+   const auto blockOne = store.allocate(SmallStore::k_maxContiguousAllocation);
+   ASSERT_EQ(blockOne.key, SmallStore::k_firstKeyValue); // intrusive
 
-   const auto blockTwo = store.allocate(SmallStore::MaxContiguousAllocation / 2);
+   const auto blockTwo = store.allocate(SmallStore::k_maxContiguousAllocation / 2);
 
    const SmallStore::AllocatedSequence alloc = store.getFirstAllocatedSequence();
    ASSERT_TRUE(alloc.isValid);
    ASSERT_EQ(alloc.key, blockOne.key);
-   ASSERT_EQ(alloc.size, SmallStore::MaxContiguousAllocation);
+   ASSERT_EQ(alloc.size, SmallStore::k_maxContiguousAllocation);
 
    const auto allocTwo = store.getNextAllocatedSequence(alloc);
    ASSERT_TRUE(allocTwo.isValid);
    ASSERT_EQ(allocTwo.key, blockTwo.key);
-   ASSERT_EQ(allocTwo.size, SmallStore::MaxContiguousAllocation / 2);
+   ASSERT_EQ(allocTwo.size, SmallStore::k_maxContiguousAllocation / 2);
 
    const auto allocThree = store.getNextAllocatedSequence(allocTwo);
    ASSERT_FALSE(allocThree.isValid);
@@ -588,20 +591,20 @@ TEST(StoreAllocatorIteratorTest, TwoAllocationsThatFillTheFirstTwoSegments)
 {
    SmallStore store;
 
-   const auto blockOne = store.allocate(SmallStore::MaxContiguousAllocation);
-   ASSERT_EQ(blockOne.key, SmallStore::FirstKeyValue); // intrusive
+   const auto blockOne = store.allocate(SmallStore::k_maxContiguousAllocation);
+   ASSERT_EQ(blockOne.key, SmallStore::k_firstKeyValue); // intrusive
 
-   const auto blockTwo = store.allocate(SmallStore::MaxContiguousAllocation);
+   const auto blockTwo = store.allocate(SmallStore::k_maxContiguousAllocation);
 
    const SmallStore::AllocatedSequence alloc = store.getFirstAllocatedSequence();
    ASSERT_TRUE(alloc.isValid);
    ASSERT_EQ(alloc.key, blockOne.key);
-   ASSERT_EQ(alloc.size, SmallStore::MaxContiguousAllocation);
+   ASSERT_EQ(alloc.size, SmallStore::k_maxContiguousAllocation);
 
    const auto alloc2 = store.getNextAllocatedSequence(alloc);
    ASSERT_TRUE(alloc2.isValid);
    ASSERT_EQ(alloc2.key, blockTwo.key);
-   ASSERT_EQ(alloc2.size, SmallStore::MaxContiguousAllocation);
+   ASSERT_EQ(alloc2.size, SmallStore::k_maxContiguousAllocation);
 
    const auto alloc3 = store.getNextAllocatedSequence(alloc2);
    ASSERT_FALSE(alloc3.isValid);
@@ -613,26 +616,26 @@ TEST(StoreAllocatorIteratorTest, ThreeAllocationsThatFillTheFirstThreeSegments)
 {
    SmallStore store;
 
-   const auto blockOne = store.allocate(SmallStore::MaxContiguousAllocation);
-   ASSERT_EQ(blockOne.key, SmallStore::FirstKeyValue); // intrusive
+   const auto blockOne = store.allocate(SmallStore::k_maxContiguousAllocation);
+   ASSERT_EQ(blockOne.key, SmallStore::k_firstKeyValue); // intrusive
 
-   const auto blockTwo   = store.allocate(SmallStore::MaxContiguousAllocation);
-   const auto blockThree = store.allocate(SmallStore::MaxContiguousAllocation);
+   const auto blockTwo   = store.allocate(SmallStore::k_maxContiguousAllocation);
+   const auto blockThree = store.allocate(SmallStore::k_maxContiguousAllocation);
 
    const SmallStore::AllocatedSequence alloc = store.getFirstAllocatedSequence();
    ASSERT_TRUE(alloc.isValid);
    ASSERT_EQ(alloc.key, blockOne.key);
-   ASSERT_EQ(alloc.size, SmallStore::MaxContiguousAllocation);
+   ASSERT_EQ(alloc.size, SmallStore::k_maxContiguousAllocation);
 
    const auto alloc2 = store.getNextAllocatedSequence(alloc);
    ASSERT_TRUE(alloc2.isValid);
    ASSERT_EQ(alloc2.key, blockTwo.key);
-   ASSERT_EQ(alloc2.size, SmallStore::MaxContiguousAllocation);
+   ASSERT_EQ(alloc2.size, SmallStore::k_maxContiguousAllocation);
 
    const auto alloc3 = store.getNextAllocatedSequence(alloc2);
    ASSERT_TRUE(alloc3.isValid);
    ASSERT_EQ(alloc3.key, blockThree.key);
-   ASSERT_EQ(alloc3.size, SmallStore::MaxContiguousAllocation);
+   ASSERT_EQ(alloc3.size, SmallStore::k_maxContiguousAllocation);
 
    const auto alloc4 = store.getNextAllocatedSequence(alloc3);
    ASSERT_FALSE(alloc4.isValid);

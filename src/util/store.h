@@ -41,16 +41,18 @@ namespace ftags::util
  * The cookie acts similarly to a synthetic pointer, but it can be converted
  * to the underlying iterator via an explicit request only.
  */
-template <typename T, typename K, unsigned SegmentSizeBits = 24>
+static constexpr uint32_t k_DefaultStoreSegmentSize = 24U;
+
+template <typename T, typename K, unsigned SegmentSizeBits = k_DefaultStoreSegmentSize>
 class Store
 {
 public:
    using block_size_type = uint32_t;
 
-   static constexpr block_size_type MaxSegmentSize      = (1U << SegmentSizeBits);
-   static constexpr block_size_type MaxSegmentCount     = (1U << ((sizeof(K) * 8) - SegmentSizeBits));
-   static constexpr block_size_type OffsetInSegmentMask = (MaxSegmentSize - 1);
-   static constexpr block_size_type SegmentIndexMask    = ((MaxSegmentCount - 1) << SegmentSizeBits);
+   static constexpr block_size_type k_maxSegmentSize      = (1U << SegmentSizeBits);
+   static constexpr block_size_type k_maxSegmentCount     = (1U << ((sizeof(K) * 8) - SegmentSizeBits));
+   static constexpr block_size_type k_OffsetInSegmentMask = (k_maxSegmentSize - 1);
+   static constexpr block_size_type k_segmentIndexMask    = ((k_maxSegmentCount - 1) << SegmentSizeBits);
 
 public:
    using iterator       = T*;
@@ -59,8 +61,8 @@ public:
    using key_type = K;
    using Key      = K;
 
-   static constexpr block_size_type FirstKeyValue           = 4;
-   static constexpr block_size_type MaxContiguousAllocation = (MaxSegmentSize - FirstKeyValue);
+   static constexpr block_size_type k_firstKeyValue           = 4;
+   static constexpr block_size_type k_maxContiguousAllocation = (k_maxSegmentSize - k_firstKeyValue);
 
    struct Allocation
    {
@@ -68,19 +70,20 @@ public:
       T* iterator;
    };
 
-   Store() = default;
+   Store()  = default;
+   ~Store() = default;
 
    Store(const Store& other) = delete;
    const Store& operator=(const Store& other) = delete;
 
-   Store(Store&& other) :
+   Store(Store&& other) noexcept :
       m_segment{std::move(other.m_segment)},
       m_freeBlocks{std::move(other.m_freeBlocks)},
       m_freeBlocksIndex{std::move(other.m_freeBlocksIndex)}
    {
    }
 
-   Store& operator=(Store&& other)
+   Store& operator=(Store&& other) noexcept
    {
       m_segment         = std::move(other.m_segment);
       m_freeBlocks      = std::move(other.m_freeBlocks);
@@ -139,7 +142,7 @@ public:
    /*
     * iteration over contiguously allocated areas
     */
-   // TODO: add begin(), next() and end() for used blocks iterator
+   // TODO (signbit): add begin(), next() and end() for used blocks iterator
    struct AllocatedSequence
    {
       K key;
@@ -215,18 +218,18 @@ private:
 
    static block_size_type getOffsetInSegment(K key)
    {
-      return (key & OffsetInSegmentMask);
+      return (key & k_OffsetInSegmentMask);
    }
 
    static block_size_type getSegmentIndex(K key)
    {
-      return (key >> SegmentSizeBits) & (MaxSegmentCount - 1);
+      return (key >> SegmentSizeBits) & (k_maxSegmentCount - 1);
    }
 
    static K makeKey(block_size_type segmentIndex, block_size_type offsetInSegment)
    {
-      assert(segmentIndex < MaxSegmentCount);
-      assert(offsetInSegment < MaxSegmentSize);
+      assert(segmentIndex < k_maxSegmentCount);
+      assert(offsetInSegment < k_maxSegmentSize);
 
       return static_cast<K>((segmentIndex << SegmentSizeBits) | offsetInSegment);
    }
@@ -235,22 +238,22 @@ private:
    {
       const block_size_type segmentsInUse{static_cast<block_size_type>(m_segment.size())};
 
-      if ((segmentsInUse + 1) >= MaxSegmentCount)
+      if ((segmentsInUse + 1) >= k_maxSegmentCount)
       {
          throw std::length_error("Exceeded data structure capacity");
       }
 
-      m_segment.emplace_back(std::unique_ptr<std::byte[]>(new std::byte[sizeof(T) * MaxSegmentSize]));
+      m_segment.emplace_back(std::unique_ptr<std::byte[]>(new std::byte[sizeof(T) * k_maxSegmentSize])); // NOLINT
 
-      const K key{makeKey(segmentsInUse, FirstKeyValue)};
+      const K key{makeKey(segmentsInUse, k_firstKeyValue)};
 
-      recordFreeBlock(key, MaxContiguousAllocation);
+      recordFreeBlock(key, k_maxContiguousAllocation);
    }
 
    void recordFreeBlock(K key, block_size_type size)
    {
-      assert(key >= FirstKeyValue);
-      assert(size <= MaxContiguousAllocation);
+      assert(key >= k_firstKeyValue);
+      assert(size <= k_maxContiguousAllocation);
       m_freeBlocks.insert({size, key});
       m_freeBlocksIndex.insert({key, size});
    }
@@ -273,7 +276,7 @@ private:
 
    /** Segment of contiguous T, up to (1<<B) elements in size.
     */
-   std::vector<std::unique_ptr<std::byte[]>> m_segment;
+   std::vector<std::unique_ptr<std::byte[]>> m_segment; // NOLINT
 
    /** Maps sizes to block indices
     */
@@ -307,10 +310,10 @@ Store<T, K, SegmentSizeBits>::get(K key) const
 
    const auto& segment{m_segment.at(segmentIndex)};
    const T*    iter{static_cast<T*>(static_cast<void*>(segment.get()))};
-   const T*    segmentEnd = iter + MaxSegmentSize;
+   const T*    segmentEnd = iter + k_maxSegmentSize;
    iter += offsetInSegment;
 
-   assert(offsetInSegment < MaxSegmentSize);
+   assert(offsetInSegment < k_maxSegmentSize);
 
    return std::pair<typename Store<T, K, SegmentSizeBits>::const_iterator,
                     typename Store<T, K, SegmentSizeBits>::const_iterator>(iter, segmentEnd);
@@ -331,10 +334,10 @@ Store<T, K, SegmentSizeBits>::get(K key)
 
    auto&    segment = m_segment.at(segmentIndex);
    T*       iter{static_cast<T*>(static_cast<void*>(segment.get()))};
-   const T* segmentEnd = iter + MaxSegmentSize;
+   const T* segmentEnd = iter + k_maxSegmentSize;
    iter += offsetInSegment;
 
-   assert(offsetInSegment < MaxSegmentSize);
+   assert(offsetInSegment < k_maxSegmentSize);
 
    return std::pair<typename Store<T, K, SegmentSizeBits>::iterator,
                     typename Store<T, K, SegmentSizeBits>::const_iterator>(iter, segmentEnd);
@@ -343,7 +346,7 @@ Store<T, K, SegmentSizeBits>::get(K key)
 template <typename T, typename K, unsigned SegmentSizeBits>
 typename Store<T, K, SegmentSizeBits>::Allocation Store<T, K, SegmentSizeBits>::allocate(block_size_type size)
 {
-   if (size >= MaxSegmentSize)
+   if (size >= k_maxSegmentSize)
    {
       throw std::length_error(std::string("Can't store objects that large: ") + std::to_string(size));
    }
@@ -446,41 +449,39 @@ Store<T, K, SegmentSizeBits>::extend(K key, block_size_type oldSize, block_size_
    const K candidateKey{makeKey(segmentIndex, offsetInSegment + oldSize)};
 
    auto blockIndex = m_freeBlocksIndex.find(candidateKey);
-   if (blockIndex != m_freeBlocksIndex.end())
-   {
-      auto range = m_freeBlocks.equal_range(blockIndex->second);
-
-      auto blockIter{std::find_if(
-         range.first, range.second, [candidateKey](const auto& pp) { return pp.second == candidateKey; })};
-
-      const block_size_type sizeIncrease{newSize - oldSize};
-      const block_size_type availableSize{blockIter->first};
-      if (availableSize < sizeIncrease)
-      {
-         throw std::logic_error("Can't allocate more than what's available");
-      }
-
-      recycleFreeBlock(blockIter, blockIndex);
-
-      if (sizeIncrease != availableSize)
-      {
-         // shrink the leftover block
-         const block_size_type leftOverOffsetInSegment{offsetInSegment + newSize};
-         const K               reminderBlockKey{makeKey(segmentIndex, leftOverOffsetInSegment)};
-         const block_size_type reminderBlockSize{availableSize - sizeIncrease};
-         recordFreeBlock(reminderBlockKey, reminderBlockSize);
-      }
-
-      auto& segment = m_segment.at(segmentIndex);
-      T*    iter{static_cast<T*>(static_cast<void*>(segment.get()))};
-      iter += offsetInSegment + oldSize;
-
-      return iter;
-   }
-   else
+   if (blockIndex == m_freeBlocksIndex.end())
    {
       throw std::logic_error("Can't extend allocation; no free block follows");
    }
+
+   auto range = m_freeBlocks.equal_range(blockIndex->second);
+
+   auto blockIter{
+      std::find_if(range.first, range.second, [candidateKey](const auto& pp) { return pp.second == candidateKey; })};
+
+   const block_size_type sizeIncrease{newSize - oldSize};
+   const block_size_type availableSize{blockIter->first};
+   if (availableSize < sizeIncrease)
+   {
+      throw std::logic_error("Can't allocate more than what's available");
+   }
+
+   recycleFreeBlock(blockIter, blockIndex);
+
+   if (sizeIncrease != availableSize)
+   {
+      // shrink the leftover block
+      const block_size_type leftOverOffsetInSegment{offsetInSegment + newSize};
+      const K               reminderBlockKey{makeKey(segmentIndex, leftOverOffsetInSegment)};
+      const block_size_type reminderBlockSize{availableSize - sizeIncrease};
+      recordFreeBlock(reminderBlockKey, reminderBlockSize);
+   }
+
+   auto& segment = m_segment.at(segmentIndex);
+   T*    iter{static_cast<T*>(static_cast<void*>(segment.get()))};
+   iter += offsetInSegment + oldSize;
+
+   return iter;
 }
 
 template <typename T, typename K, unsigned SegmentSizeBits>
@@ -586,7 +587,7 @@ std::size_t Store<T, K, SegmentSizeBits>::computeSpaceUsedInLastSegment() const
 
    const std::size_t sizeOfLastFreeBlock = lastFreeBlockIter->second;
 
-   return MaxSegmentSize - sizeOfLastFreeBlock;
+   return k_maxSegmentSize - sizeOfLastFreeBlock;
 }
 
 template <typename T, typename K, unsigned SegmentSizeBits>
@@ -594,21 +595,21 @@ std::size_t Store<T, K, SegmentSizeBits>::computeSerializedSize() const
 {
    const std::size_t segmentCount = m_segment.size();
 
-   if (segmentCount)
+   std::size_t serializedSize = sizeof(SerializedObjectHeader) + // header
+                                sizeof(uint64_t) +               // number of segments
+                                sizeof(uint64_t);                // size (used) of last segment
+
+   if (segmentCount != 0U)
    {
-      return sizeof(SerializedObjectHeader) +                  // header
-             sizeof(uint64_t) +                                // number of segments
-             sizeof(uint64_t) +                                // size (used) of last segment
-             (segmentCount - 1) * MaxSegmentSize * sizeof(T) + // full segments
-             computeSpaceUsedInLastSegment() * sizeof(T) +     // last segment
-             Serializer<std::map<K, block_size_type>>::computeSerializedSize(m_freeBlocksIndex);
+      serializedSize = sizeof(SerializedObjectHeader) +                    // header
+                       sizeof(uint64_t) +                                  // number of segments
+                       sizeof(uint64_t) +                                  // size (used) of last segment
+                       (segmentCount - 1) * k_maxSegmentSize * sizeof(T) + // full segments
+                       computeSpaceUsedInLastSegment() * sizeof(T) +       // last segment
+                       Serializer<std::map<K, block_size_type>>::computeSerializedSize(m_freeBlocksIndex);
    }
-   else
-   {
-      return sizeof(SerializedObjectHeader) + // header
-             sizeof(uint64_t) +               // number of segments
-             sizeof(uint64_t);                // size (used) of last segment
-   }
+
+   return serializedSize;
 }
 
 template <typename T, typename K, unsigned SegmentSizeBits>
@@ -620,14 +621,14 @@ void Store<T, K, SegmentSizeBits>::serialize(ftags::util::BufferInsertor& insert
    const uint64_t segmentCount = m_segment.size();
    insertor << segmentCount;
 
-   if (segmentCount)
+   if (segmentCount != 0U)
    {
       const uint64_t spaceUsedInLastSegment = computeSpaceUsedInLastSegment();
       insertor << spaceUsedInLastSegment;
 
       for (uint64_t ii = 0; ii < (segmentCount - 1); ii++)
       {
-         insertor.serialize(static_cast<void*>(m_segment[ii].get()), MaxSegmentSize * sizeof(T));
+         insertor.serialize(static_cast<void*>(m_segment[ii].get()), k_maxSegmentSize * sizeof(T));
       }
 
       insertor.serialize(static_cast<void*>(m_segment[segmentCount - 1].get()), spaceUsedInLastSegment * sizeof(T));
@@ -657,17 +658,19 @@ Store<T, K, SegmentSizeBits> Store<T, K, SegmentSizeBits>::deserialize(ftags::ut
    uint64_t spaceUsedInLastSegment = 0;
    extractor >> spaceUsedInLastSegment;
 
-   if (segmentCount)
+   if (segmentCount != 0U)
    {
       for (uint64_t ii = 0; ii < (segmentCount - 1); ii++)
       {
-         retval.m_segment.emplace_back(std::unique_ptr<std::byte[]>(new std::byte[MaxSegmentSize * sizeof(T)]));
+         retval.m_segment.emplace_back(
+            std::unique_ptr<std::byte[]>(new std::byte[k_maxSegmentSize * sizeof(T)])); // NOLINT
          auto& segment = retval.m_segment.back();
-         extractor.deserialize(static_cast<void*>(segment.get()), MaxSegmentSize * sizeof(T));
+         extractor.deserialize(static_cast<void*>(segment.get()), k_maxSegmentSize * sizeof(T));
       }
 
       {
-         retval.m_segment.emplace_back(std::unique_ptr<std::byte[]>(new std::byte[MaxSegmentSize * sizeof(T)]));
+         retval.m_segment.emplace_back(
+            std::unique_ptr<std::byte[]>(new std::byte[k_maxSegmentSize * sizeof(T)])); // NOLINT
          auto& segment = retval.m_segment.back();
          extractor.deserialize(static_cast<void*>(segment.get()), spaceUsedInLastSegment * sizeof(T));
       }
@@ -680,7 +683,7 @@ Store<T, K, SegmentSizeBits> Store<T, K, SegmentSizeBits>::deserialize(ftags::ut
       // reconstruct free blocks index from free block
       for (const auto& [key, size] : retval.m_freeBlocksIndex)
       {
-         assert(size <= MaxContiguousAllocation);
+         assert(size <= k_maxContiguousAllocation);
          retval.m_freeBlocks.insert({size, key});
       }
    }
@@ -701,7 +704,7 @@ Store<T, K, SegmentSizeBits>::getFirstAllocatedSequence() const noexcept
    if (!m_segment.empty())
    {
       allocatedSequence.key     = 0;
-      allocatedSequence.size    = FirstKeyValue;
+      allocatedSequence.size    = k_firstKeyValue;
       allocatedSequence.isUsed  = 0;
       allocatedSequence.isValid = 1;
 
@@ -741,21 +744,19 @@ Store<T, K, SegmentSizeBits>::getNextBlock(Store<T, K, SegmentSizeBits>::Allocat
    const K               endOfThisAllocatedSequence{allocatedSequence.key + allocatedSequence.size};
    const block_size_type offsetInSegment{getOffsetInSegment(endOfThisAllocatedSequence)};
 
-   if (offsetInSegment == 0u)
-   {
-      /*
-       * This block runs until the end of the segment, so the next block must
-       * be in the next segment.
-       */
-      const block_size_type segmentIndex{getSegmentIndex(endOfThisAllocatedSequence)};
-
-      // no need to increment since getSegmentIndex wraps to the next segment
-      return getFirstBlockInSegment(segmentIndex);
-   }
-   else
+   if (offsetInSegment != 0U)
    {
       return getFirstBlockFollowing(endOfThisAllocatedSequence);
    }
+
+   /*
+    * This block runs until the end of the segment, so the next block must
+    * be in the next segment.
+    */
+   const block_size_type segmentIndex{getSegmentIndex(endOfThisAllocatedSequence)};
+
+   // no need to increment since getSegmentIndex wraps to the next segment
+   return getFirstBlockInSegment(segmentIndex);
 }
 
 template <typename T, typename K, unsigned SegmentSizeBits>
@@ -766,7 +767,7 @@ Store<T, K, SegmentSizeBits>::getFirstBlockInSegment(block_size_type segmentInde
 
    if (segmentIndex < m_segment.size())
    {
-      const K key = makeKey(segmentIndex, FirstKeyValue);
+      const K key = makeKey(segmentIndex, k_firstKeyValue);
 
       return getFirstBlockFollowing(key);
    }
@@ -801,7 +802,7 @@ Store<T, K, SegmentSizeBits>::getFirstBlockFollowing(K key) const noexcept
       /*
        * ... that extends to the end of the segment.
        */
-      allocatedSequence.size = MaxContiguousAllocation;
+      allocatedSequence.size = k_maxContiguousAllocation;
    }
    else
    {
@@ -840,7 +841,7 @@ Store<T, K, SegmentSizeBits>::getFirstBlockFollowing(K key) const noexcept
              * The following free block is in a different segment, so this
              * allocated block runs for the entirety of the segment.
              */
-            allocatedSequence.size = MaxContiguousAllocation;
+            allocatedSequence.size = k_maxContiguousAllocation;
          }
       }
    }
@@ -860,7 +861,7 @@ void Store<T, K, SegmentSizeBits>::validateInternalState() const
       return left.key < right.key;
    });
 
-   block_size_type currentSegment{MaxSegmentCount + 1};
+   block_size_type currentSegment{k_maxSegmentCount + 1};
    block_size_type currentOffset{0};
 
    for (const auto& block : freeBlocks)

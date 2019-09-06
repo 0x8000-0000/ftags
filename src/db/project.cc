@@ -549,3 +549,14 @@ std::vector<std::string> ftags::ProjectDb::analyzeData(const std::string& analys
 
    return remarks;
 }
+
+#if 0
+void ftags::ProjectDb::removeTranslationUnit(const std::string& fileName)
+{
+   const ftags::util::StringTable::Key fileNameKey = m_fileNameTable.getKey(fileName);
+
+   TranslationUnit& translationUnit = m_fileIndex[fileNameKey];
+
+   // TODO
+}
+#endif
