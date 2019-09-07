@@ -20,7 +20,6 @@
 
 using ftags::util::BufferExtractor;
 using ftags::util::BufferInsertor;
-using ftags::util::StringTable;
 
 TEST(RecordSpanManagerTest, RecordVector)
 {
@@ -233,8 +232,8 @@ TEST(RecordSpanManagerTest, RecordIteration)
 
       // clang-format off
       one.location.fileNameKey =
-         two.location.fileNameKey = 
-         three.location.fileNameKey = 99;
+      two.location.fileNameKey =
+      three.location.fileNameKey = 99;
       // clang-format on
 
       input2.push_back(one);
@@ -314,8 +313,8 @@ TEST(RecordSpanManagerTest, RecordIterationAfterSerialization)
 
       // clang-format off
       one.location.fileNameKey =
-         two.location.fileNameKey = 
-         three.location.fileNameKey = 99;
+      two.location.fileNameKey =
+      three.location.fileNameKey = 99;
       // clang-format on
 
       input2.push_back(one);

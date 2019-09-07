@@ -147,7 +147,10 @@ public:
    {
    }
 
-   ~ProjectDb() = default;
+   ~ProjectDb()
+   {
+      m_translationUnits.destruct();
+   }
 
    const std::string& getName() const
    {
@@ -255,7 +258,7 @@ public:
 
    std::size_t getTranslationUnitCount() const
    {
-      return m_translationUnits.size();
+      return m_translationUnits.countUsedBlocks();
    }
 
    std::size_t getSymbolCount() const
@@ -294,11 +297,59 @@ public:
                        const KeyMap&            symbolKeyMapping,
                        const KeyMap&            fileNameKeyMapping);
 
-      explicit TranslationUnit(Key fileNameKey = 0) : m_fileNameKey{fileNameKey}
+      explicit TranslationUnit(Key fileNameKey = 0) noexcept : m_fileNameKey{fileNameKey}
       {
       }
 
-      Key getFileNameKey() const
+      TranslationUnit(const TranslationUnit& other) noexcept :
+         m_fileNameKey{other.m_fileNameKey}, m_recordSpans{other.m_recordSpans}
+      {
+         assert(other.m_currentSpan.empty());
+      }
+
+      TranslationUnit(TranslationUnit&& other) noexcept :
+         m_fileNameKey{other.m_fileNameKey}, m_recordSpans{std::move(other.m_recordSpans)}
+      {
+         assert(other.m_currentSpan.empty());
+      }
+
+      TranslationUnit& operator=(const TranslationUnit& other) noexcept
+      {
+         if (this != &other)
+         {
+            m_fileNameKey = other.m_fileNameKey;
+            m_recordSpans = other.m_recordSpans;
+
+            assert(other.m_currentSpan.empty());
+         }
+
+         return *this;
+      }
+
+      TranslationUnit& operator=(TranslationUnit&& other) noexcept
+      {
+         if (this != &other)
+         {
+            m_fileNameKey = other.m_fileNameKey;
+            m_recordSpans = std::move(other.m_recordSpans);
+
+            assert(other.m_currentSpan.empty());
+         }
+
+         return *this;
+      }
+
+      ~TranslationUnit() noexcept
+      {
+         assert(m_currentSpan.empty());
+      }
+
+      void setFileNameKey(Key key) noexcept
+      {
+         m_fileNameKey = key;
+      }
+
+      Key getFileNameKey() const noexcept
       {
          return m_fileNameKey;
       }
@@ -513,8 +564,9 @@ public:
       void finalizeParsingUnit(RecordSpanManager& recordSpanManager);
    };
 
-   const TranslationUnit&
-   parseOneFile(const std::string& fileName, std::vector<const char*> arguments, bool includeEverything = true);
+   const TranslationUnit& parseOneFile(const std::string&              fileName,
+                                       const std::vector<const char*>& arguments,
+                                       bool                            includeEverything = true);
 
    std::vector<const Record*> getTranslationUnitRecords(const TranslationUnit& translationUnit,
                                                         bool                   isFromMainFile) const
@@ -576,7 +628,9 @@ private:
    std::string m_name;
    std::string m_root;
 
-   using TranslationUnitStore = std::vector<TranslationUnit>;
+   static constexpr uint32_t k_translationUnitStoreSegmentSize = 12; // 4096 translation units per segment
+
+   using TranslationUnitStore = ftags::util::Store<TranslationUnit, uint32_t, k_translationUnitStoreSegmentSize>;
    TranslationUnitStore m_translationUnits;
 
    ftags::util::StringTable m_symbolTable;
@@ -587,7 +641,7 @@ private:
 
    /** Maps from a file name key to a position in the translation units vector.
     */
-   std::map<ftags::util::StringTable::Key, std::vector<TranslationUnit>::size_type> m_fileIndex;
+   std::map<ftags::util::StringTable::Key, TranslationUnitStore::Key> m_fileIndex;
 };
 
 void parseProject(const char* parentDirectory, ftags::ProjectDb& projectDb);

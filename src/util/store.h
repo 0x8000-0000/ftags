@@ -98,6 +98,17 @@ public:
     */
    Allocation allocate(block_size_type size);
 
+   /** Construct a non-trivial T instance in place.
+    *
+    * TODO(signbit) figure out with type traits if we need to call
+    * construct/destruct automatically.
+    */
+   Allocation construct();
+
+   /** Destruct all allocated T instances.
+    */
+   void destruct();
+
    /** Requests access to an allocated block by key
     *
     * @param key identifies the block of T
@@ -389,6 +400,28 @@ typename Store<T, K, SegmentSizeBits>::Allocation Store<T, K, SegmentSizeBits>::
    addSegment();
 
    return allocate(size);
+}
+
+template <typename T, typename K, unsigned SegmentSizeBits>
+typename Store<T, K, SegmentSizeBits>::Allocation Store<T, K, SegmentSizeBits>::construct()
+{
+   Allocation alloc = allocate(1);
+
+   T* obj = new (&*alloc.iterator) T; // NOLINT
+   (void)obj;
+
+   return alloc;
+}
+
+template <typename T, typename K, unsigned SegmentSizeBits>
+void Store<T, K, SegmentSizeBits>::destruct()
+{
+   forEachAllocatedSequence([](Key /* key */, T* instance, std::size_t size) {
+      for (std::size_t ii = 0; ii < size; ii++)
+      {
+         instance[ii].~T();
+      }
+   });
 }
 
 template <typename T, typename K, unsigned SegmentSizeBits>

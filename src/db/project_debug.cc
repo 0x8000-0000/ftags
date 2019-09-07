@@ -112,20 +112,23 @@ void ftags::ProjectDb::TranslationUnit::dumpRecords(std::ostream&               
 
 void ftags::ProjectDb::dumpRecords(std::ostream& os, const std::filesystem::path& trimPath) const
 {
-   std::for_each(m_translationUnits.cbegin(),
-                 m_translationUnits.cend(),
-                 [&os, &trimPath, this](const TranslationUnit& translationUnit) {
-                    const auto  fileNameKey = translationUnit.getFileNameKey();
-                    const char* fileName    = m_fileNameTable.getString(fileNameKey);
-                    if (fileName != nullptr)
-                    {
-                       os << "File: " << fileName << std::endl;
-                    }
-                    else
-                    {
-                       os << "File: unnamed" << std::endl;
-                    }
-                    translationUnit.dumpRecords(os, m_recordSpanManager, m_symbolTable, m_fileNameTable, trimPath);
-                 });
-}
 
+   m_translationUnits.forEachAllocatedSequence([&os, &trimPath, this](TranslationUnitStore::Key /* key */,
+                                                                      const TranslationUnit* translationUnit,
+                                                                      std::size_t            size) {
+      for (std::size_t ii = 0; ii < size; ii++)
+      {
+         const auto  fileNameKey = translationUnit[ii].getFileNameKey();
+         const char* fileName    = m_fileNameTable.getString(fileNameKey);
+         if (fileName != nullptr)
+         {
+            os << "File: " << fileName << std::endl;
+         }
+         else
+         {
+            os << "File: unnamed" << std::endl;
+         }
+         translationUnit[ii].dumpRecords(os, m_recordSpanManager, m_symbolTable, m_fileNameTable, trimPath);
+      }
+   });
+}

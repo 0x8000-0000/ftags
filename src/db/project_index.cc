@@ -21,9 +21,9 @@
 #include <string>
 #include <vector>
 
-const ftags::ProjectDb::TranslationUnit& ftags::ProjectDb::parseOneFile(const std::string&       fileName,
-                                                                        std::vector<const char*> arguments,
-                                                                        bool                     includeEverything)
+const ftags::ProjectDb::TranslationUnit& ftags::ProjectDb::parseOneFile(const std::string&              fileName,
+                                                                        const std::vector<const char*>& arguments,
+                                                                        bool includeEverything)
 {
    try
    {
@@ -44,13 +44,13 @@ const ftags::ProjectDb::TranslationUnit& ftags::ProjectDb::parseOneFile(const st
                     fileName,
                     translationUnit.getRecords(true, m_recordSpanManager).size());
 
-      const TranslationUnitStore::size_type translationUnitPos = m_translationUnits.size();
+      auto       alloc   = m_translationUnits.construct();
+      const auto fileKey = translationUnit.getFileNameKey();
+      *alloc.iterator    = std::move(translationUnit);
 
-      m_translationUnits.push_back(translationUnit);
+      m_fileIndex[fileKey] = alloc.key;
 
-      m_fileIndex[translationUnit.getFileNameKey()] = translationUnitPos;
-
-      return m_translationUnits.back();
+      return *alloc.iterator;
    }
    catch (const std::runtime_error& re)
    {

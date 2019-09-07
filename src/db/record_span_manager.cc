@@ -41,8 +41,7 @@ ftags::RecordSpanManager::Key ftags::RecordSpanManager::addSpan(const std::vecto
       }
    }
 
-   auto [newSpanKey, newSpanIterator] = m_recordSpanStore.allocate(1);
-   memset(static_cast<void*>(newSpanIterator), 0, sizeof(RecordSpan));
+   auto [newSpanKey, newSpanIterator] = m_recordSpanStore.construct();
    newSpanIterator->setRecordsFrom(records, m_recordStore, m_symbolIndexStore);
    newSpanIterator->addRef();
 

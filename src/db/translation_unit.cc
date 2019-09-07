@@ -74,10 +74,15 @@ void ftags::ProjectDb::TranslationUnit::flushCurrentSpan(RecordSpanManager& reco
 {
    if (!m_currentSpan.empty())
    {
-      m_recordSpans.push_back(recordSpanManager.addSpan(m_currentSpan));
+      const auto spanKey = recordSpanManager.addSpan(m_currentSpan);
+      m_recordSpans.push_back(spanKey);
 
       m_currentSpan.clear();
       m_currentSpanLocations.clear();
+   }
+   else
+   {
+      assert(m_currentSpanLocations.empty());
    }
 }
 

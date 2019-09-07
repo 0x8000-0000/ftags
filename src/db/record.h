@@ -175,7 +175,7 @@ static_assert(sizeof(Attributes) == 8, "sizeof(Attributes) exceeds 8 bytes");
 
 struct Record
 {
-   using Store = ftags::util::Store<Record, uint32_t, 24>;
+   using Store = ftags::util::Store<Record, uint32_t, 24>; // NOLINT
    using Key   = Store::key_type;
 
    using SymbolNameKey    = ftags::util::StringTable::Key;
@@ -185,8 +185,8 @@ struct Record
    struct Location
    {
       FileNameKey fileNameKey;
-      uint32_t    line : 20;
-      uint32_t    column : 12;
+      uint32_t    line : 20;   // NOLINT
+      uint32_t    column : 12; // NOLINT
 
       bool operator<(const Location& other) const
       {
@@ -217,12 +217,12 @@ struct Record
       }
    };
 
-   SymbolNameKey symbolNameKey = 0;
+   SymbolNameKey symbolNameKey;
 
-   Location location   = {};
-   Location definition = {};
+   Location location;
+   Location definition;
 
-   Attributes attributes = {};
+   Attributes attributes;
 
    SymbolType getType() const
    {

@@ -33,7 +33,7 @@ bool ftags::ProjectDb::operator==(const ftags::ProjectDb& other) const
       return true;
    }
 
-   if (m_translationUnits.size() != other.m_translationUnits.size())
+   if (m_translationUnits.countUsedBlocks() != other.m_translationUnits.countUsedBlocks())
    {
       return false;
    }
@@ -41,24 +41,34 @@ bool ftags::ProjectDb::operator==(const ftags::ProjectDb& other) const
    std::map<std::string, std::vector<const Record*>> thisTranslationUnits;
    std::map<std::string, std::vector<const Record*>> otherTranslationUnits;
 
-   for (const auto& translationUnit : m_translationUnits)
-   {
-      const std::string_view translationUnitName = m_fileNameTable.getStringView(translationUnit.getFileNameKey());
+   m_translationUnits.forEachAllocatedSequence([&thisTranslationUnits, this](TranslationUnitStore::Key /* key */,
+                                                                             const TranslationUnit* translationUnit,
+                                                                             std::size_t            size) {
+      for (std::size_t ii = 0; ii < size; ii++)
+      {
+         const std::string_view translationUnitName =
+            m_fileNameTable.getStringView(translationUnit[ii].getFileNameKey());
 
-      const std::vector<const Record*> records = translationUnit.getRecords(false, m_recordSpanManager);
+         const std::vector<const Record*> records = translationUnit[ii].getRecords(false, m_recordSpanManager);
 
-      thisTranslationUnits.emplace(std::string(translationUnitName), records);
-   }
+         thisTranslationUnits.emplace(std::string(translationUnitName), records);
+      }
+   });
 
-   for (const auto& translationUnit : other.m_translationUnits)
-   {
-      const std::string_view translationUnitName =
-         other.m_fileNameTable.getStringView(translationUnit.getFileNameKey());
+   other.m_translationUnits.forEachAllocatedSequence(
+      [&otherTranslationUnits,
+       &other](TranslationUnitStore::Key /* key */, const TranslationUnit* translationUnit, std::size_t size) {
+         for (std::size_t ii = 0; ii < size; ii++)
+         {
+            const std::string_view translationUnitName =
+               other.m_fileNameTable.getStringView(translationUnit[ii].getFileNameKey());
 
-      const std::vector<const Record*> records = translationUnit.getRecords(false, other.m_recordSpanManager);
+            const std::vector<const Record*> records =
+               translationUnit[ii].getRecords(false, other.m_recordSpanManager);
 
-      otherTranslationUnits.emplace(std::string(translationUnitName), records);
-   }
+            otherTranslationUnits.emplace(std::string(translationUnitName), records);
+         }
+      });
 
    if (thisTranslationUnits.size() != otherTranslationUnits.size())
    {
@@ -183,19 +193,14 @@ bool ftags::ProjectDb::isFileIndexed(const std::string& fileName) const
 
 std::vector<const ftags::Record*> ftags::ProjectDb::getFunctions() const
 {
-   std::vector<const ftags::Record*> functions;
-
-   for (const auto& translationUnit : m_translationUnits)
-   {
-      translationUnit.forEachRecord(
-         [&functions](const Record* record) {
-            if (record->attributes.getType() == SymbolType::FunctionDeclaration)
-            {
-               functions.push_back(record);
-            }
-         },
-         m_recordSpanManager);
-   }
+   std::vector<const ftags::Record*> functions = m_recordSpanManager.filterRecords(
+      [](const Record* record,
+         const ftags::util::StringTable& /* symbolNames */,
+         const ftags::util::StringTable& /* fileNames */) {
+         return record->attributes.getType() == SymbolType::FunctionDeclaration;
+      },
+      m_symbolTable,
+      m_fileNameTable);
 
    return functions;
 }
@@ -254,11 +259,11 @@ std::vector<std::vector<const ftags::Record*>> ftags::ProjectDb::identifySymbolE
 
 std::vector<const ftags::Record*> ftags::ProjectDb::dumpTranslationUnit(const std::string& fileName) const
 {
-   const ftags::util::StringTable::Key      fileKey            = m_fileNameTable.getKey(fileName.data());
-   const auto                               translationUnitPos = m_fileIndex.at(fileKey);
-   const ftags::ProjectDb::TranslationUnit& translationUnit    = m_translationUnits.at(translationUnitPos);
+   const ftags::util::StringTable::Key fileKey            = m_fileNameTable.getKey(fileName.data());
+   const auto                          translationUnitPos = m_fileIndex.at(fileKey);
+   const auto& [translationUnit, rangeEnd]                = m_translationUnits.get(translationUnitPos);
 
-   return translationUnit.getRecords(true, m_recordSpanManager);
+   return translationUnit->getRecords(true, m_recordSpanManager);
 }
 
 ftags::CursorSet ftags::ProjectDb::inflateRecords(const std::vector<const Record*>& records) const
@@ -270,13 +275,16 @@ ftags::CursorSet ftags::ProjectDb::inflateRecords(const std::vector<const Record
 
 std::size_t ftags::ProjectDb::computeSerializedSize() const
 {
-   const std::size_t translationUnitSize =
+   std::size_t translationUnitSize = 0;
 
-      std::accumulate(
-         m_translationUnits.cbegin(),
-         m_translationUnits.cend(),
-         0U,
-         [](std::size_t acc, const TranslationUnit& elem) { return acc + elem.computeSerializedSize(); });
+   m_translationUnits.forEachAllocatedSequence([&translationUnitSize](TranslationUnitStore::Key /* key */,
+                                                                      const TranslationUnit* translationUnit,
+                                                                      std::size_t            size) {
+      for (std::size_t ii = 0; ii < size; ii++)
+      {
+         translationUnitSize += translationUnit[ii].computeSerializedSize();
+      }
+   });
 
    return sizeof(ftags::util::SerializedObjectHeader) +
           ftags::util::Serializer<std::string>::computeSerializedSize(m_name) +
@@ -299,12 +307,16 @@ void ftags::ProjectDb::serialize(ftags::util::BufferInsertor& insertor) const
    m_namespaceTable.serialize(insertor);
    m_recordSpanManager.serialize(insertor);
 
-   const uint64_t translationUnitCount = m_translationUnits.size();
+   const uint64_t translationUnitCount = m_translationUnits.countUsedBlocks();
    insertor << translationUnitCount;
 
-   std::for_each(m_translationUnits.cbegin(),
-                 m_translationUnits.cend(),
-                 [&insertor](const TranslationUnit& translationUnit) { translationUnit.serialize(insertor); });
+   m_translationUnits.forEachAllocatedSequence(
+      [&insertor](TranslationUnitStore::Key /* key */, const TranslationUnit* translationUnit, std::size_t size) {
+         for (std::size_t ii = 0; ii < size; ii++)
+         {
+            translationUnit[ii].serialize(insertor);
+         }
+      });
 }
 
 ftags::ProjectDb ftags::ProjectDb::deserialize(ftags::util::BufferExtractor& extractor)
@@ -324,12 +336,13 @@ ftags::ProjectDb ftags::ProjectDb::deserialize(ftags::util::BufferExtractor& ext
 
    uint64_t translationUnitCount = 0;
    extractor >> translationUnitCount;
-   projectDb.m_translationUnits.reserve(translationUnitCount);
 
+   // FIXME: this assumes a compact container
    for (size_t ii = 0; ii < translationUnitCount; ii++)
    {
-      projectDb.m_translationUnits.push_back(TranslationUnit::deserialize(extractor));
-      projectDb.m_fileIndex[projectDb.m_translationUnits.back().getFileNameKey()] = ii;
+      auto alloc                                              = projectDb.m_translationUnits.construct();
+      *alloc.iterator                                         = TranslationUnit::deserialize(extractor);
+      projectDb.m_fileIndex[alloc.iterator->getFileNameKey()] = static_cast<TranslationUnitStore::Key>(ii);
    }
 
    projectDb.assertValid();
@@ -345,23 +358,26 @@ void ftags::ProjectDb::mergeFrom(const ProjectDb& other)
    KeyMap symbolKeyMapping   = m_symbolTable.mergeStringTable(other.m_symbolTable);
    KeyMap fileNameKeyMapping = m_fileNameTable.mergeStringTable(other.m_fileNameTable);
 
-   for (const auto& otherTranslationUnit : other.m_translationUnits)
-   {
-      const TranslationUnitStore::size_type translationUnitPos = m_translationUnits.size();
+   other.m_translationUnits.forEachAllocatedSequence(
+      [this, &other, &symbolKeyMapping, &fileNameKeyMapping](
+         TranslationUnitStore::Key /* key */, const TranslationUnit* translationUnit, std::size_t size) {
+         for (std::size_t ii = 0; ii < size; ii++)
+         {
+            assert(translationUnit[ii].getFileNameKey());
+            const auto iter = fileNameKeyMapping.lookup(translationUnit[ii].getFileNameKey());
+            assert(iter != fileNameKeyMapping.none());
 
-      assert(otherTranslationUnit.getFileNameKey());
-      const auto iter = fileNameKeyMapping.lookup(otherTranslationUnit.getFileNameKey());
-      assert(iter != fileNameKeyMapping.none());
+            auto alloc = m_translationUnits.construct();
+            alloc.iterator->setFileNameKey(iter->first);
+            alloc.iterator->copyRecords(translationUnit[ii],
+                                        other.m_recordSpanManager,
+                                        m_recordSpanManager,
+                                        symbolKeyMapping,
+                                        fileNameKeyMapping);
 
-      m_translationUnits.emplace_back(iter->first);
-      m_translationUnits.back().copyRecords(
-         otherTranslationUnit, other.m_recordSpanManager, m_recordSpanManager, symbolKeyMapping, fileNameKeyMapping);
-
-      /*
-       * register the name of the translation unit
-       */
-      m_fileIndex[iter->first] = translationUnitPos;
-   }
+            m_fileIndex[iter->first] = alloc.key;
+         }
+      });
 }
 
 void ftags::ProjectDb::updateFrom(const std::string& /* fileName */, const ProjectDb& other)
@@ -451,7 +467,7 @@ std::vector<std::string> ftags::ProjectDb::getStatisticsRemarks(const std::strin
    else
    {
       remarks.emplace_back(fmt::format("Serialized size is {:n} bytes", computeSerializedSize()));
-      remarks.emplace_back(fmt::format("Indexed {:n} translation units", m_translationUnits.size()));
+      remarks.emplace_back(fmt::format("Indexed {:n} translation units", m_translationUnits.countUsedBlocks()));
       remarks.emplace_back(fmt::format("Indexed {:n} symbols", m_symbolTable.getSize()));
       remarks.emplace_back(fmt::format("Indexed {:n} distinct files", m_fileNameTable.getSize()));
    }
