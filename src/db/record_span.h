@@ -46,7 +46,7 @@ private:
          ftags::util::StringTable::Key key;
       };
 
-      RecordSymbolComparator(const Record* records) : m_records{records}
+      explicit RecordSymbolComparator(const Record* records) : m_records{records}
       {
       }
 
@@ -64,9 +64,9 @@ private:
    };
 
 public:
-   using Store            = ftags::util::Store<RecordSpan, uint32_t, 22>;
+   using Store            = ftags::util::Store<RecordSpan, uint32_t, 22>; // NOLINT
    using Hash             = std::uint64_t;
-   using SymbolIndexStore = ftags::util::Store<uint32_t, uint32_t, 22>;
+   using SymbolIndexStore = ftags::util::Store<uint32_t, uint32_t, 22>; // NOLINT
 
    RecordSpan() = default;
 
@@ -81,7 +81,7 @@ public:
    {
       auto alloc = store.allocate(m_size);
       m_key      = alloc.key;
-      m_records  = &*alloc.iterator;
+      m_records  = alloc.iterator;
    }
 
    int getUsage() const
@@ -155,7 +155,7 @@ public:
       if (m_symbolIndexKey != 0)
       {
          const auto symbolIndexIter              = symbolIndexStore.get(m_symbolIndexKey);
-         const auto recordsInSymbolKeyOrderBegin = &*symbolIndexIter.first;
+         const auto recordsInSymbolKeyOrderBegin = symbolIndexIter.first;
          const auto recordsInSymbolKeyOrderEnd   = recordsInSymbolKeyOrderBegin + m_size;
 
          const RecordSymbolComparator::KeyWrapper keyWrapper{symbolNameKey};

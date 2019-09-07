@@ -60,7 +60,7 @@ ftags::util::StringTable::Key ftags::util::StringTable::insertString(std::string
    // also copy NUL
    allocation.iterator[string.size()] = '\0';
 
-   m_index[&*allocation.iterator] = allocation.key;
+   m_index[allocation.iterator] = allocation.key;
 
    return allocation.key;
 }

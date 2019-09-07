@@ -119,7 +119,7 @@ public:
          return nullptr;
       }
 
-      return &*location.first;
+      return location.first;
    }
 
    std::string_view getStringView(Key stringKey) const noexcept

@@ -50,7 +50,7 @@ ftags::util::StringTable ftags::util::StringTable::deserialize(ftags::util::Buff
 
       auto iter = iterStart;
 
-      const char*                symbol = &*iter;
+      const char*                symbol = iter;
       StoreType::block_size_type key    = allocSeq.key;
       for (StoreType::block_size_type ii = 0; ii < allocSeq.size; ii++)
       {
@@ -62,7 +62,7 @@ ftags::util::StringTable ftags::util::StringTable::deserialize(ftags::util::Buff
 
             ++iter;
 
-            symbol = &*iter;
+            symbol = iter;
             key    = allocSeq.key + ii + 1;
          }
          else

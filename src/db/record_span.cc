@@ -63,7 +63,7 @@ void ftags::RecordSpan::restoreRecordPointer(Record::Store& recordStore)
 {
    assert(m_key != 0);
    auto [recordIter, rangeEnd] = recordStore.get(m_key);
-   m_records                   = &*recordIter;
+   m_records                   = recordIter;
 }
 
 void ftags::RecordSpan::updateIndices(SymbolIndexStore& symbolIndexStore)
@@ -74,7 +74,7 @@ void ftags::RecordSpan::updateIndices(SymbolIndexStore& symbolIndexStore)
    auto symbolIndexIter = symbolIndexStore.allocate(m_size);
    m_symbolIndexKey     = symbolIndexIter.key;
 
-   auto recordsInSymbolKeyOrderBegin = &*symbolIndexIter.iterator;
+   auto recordsInSymbolKeyOrderBegin = symbolIndexIter.iterator;
    auto recordsInSymbolKeyOrderEnd   = recordsInSymbolKeyOrderBegin + m_size;
 
    std::iota(recordsInSymbolKeyOrderBegin, recordsInSymbolKeyOrderEnd, 0);
@@ -192,7 +192,7 @@ ftags::RecordSpan ftags::RecordSpan::deserialize(ftags::BufferExtractor& extract
 
    auto iter = recordStore.get(key);
 
-   ftags::RecordSpan retval(/* key = */ key, /* size = */ size, /* records = */ &*iter.first);
+   ftags::RecordSpan retval(/* key = */ key, /* size = */ size, /* records = */ iter.first);
 
    retval.m_hash = SpookyHash::Hash64(retval.m_records, retval.m_size * sizeof(Record), k_hashSeed);
 
@@ -221,7 +221,7 @@ void ftags::RecordSpan::setRecordsFrom(const std::vector<ftags::Record>& other,
    m_size     = static_cast<uint32_t>(other.size());
    auto alloc = store.allocate(m_size);
    m_key      = alloc.key;
-   m_records  = &*alloc.iterator;
+   m_records  = alloc.iterator;
 
    copyRecordsFrom(other, symbolIndexStore);
 }

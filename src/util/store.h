@@ -228,7 +228,7 @@ private:
       while (allocation.isValid)
       {
          auto pair = get(allocation.key);
-         func(allocation.key, &*pair.first, allocation.size);
+         func(allocation.key, pair.first, allocation.size);
          allocation = getNextAllocatedSequence(allocation);
       }
    }
@@ -241,7 +241,7 @@ private:
       while (allocation.isValid)
       {
          auto pair = get(allocation.key);
-         func(allocation.key, &*pair.first, allocation.size);
+         func(allocation.key, pair.first, allocation.size);
          allocation = getNextAllocatedSequence(allocation);
       }
    }
@@ -429,7 +429,7 @@ typename Store<T, K, SegmentSizeBits>::Allocation Store<T, K, SegmentSizeBits>::
 {
    Allocation alloc = allocate(1);
 
-   T* obj = new (&*alloc.iterator) T; // NOLINT
+   T* obj = new (alloc.iterator) T; // NOLINT
    (void)obj;
 
    return alloc;
