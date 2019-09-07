@@ -99,7 +99,7 @@ ftags::util::FileNameTable::Key ftags::util::FileNameTable::getKey(std::string_v
    {
       StringTable::Key elemKey = m_pathElements.getKey(elem);
 
-      if (elemKey == StringTable::InvalidKey)
+      if (elemKey == StringTable::k_InvalidKey)
       {
          return InvalidKey;
       }
@@ -170,7 +170,7 @@ void ftags::util::FileNameTable::removeKey(std::string_view path)
    {
       StringTable::Key elemKey = m_pathElements.getKey(elem);
 
-      if (elemKey == StringTable::InvalidKey)
+      if (elemKey == StringTable::k_InvalidKey)
       {
          // this path element does not exist
          return;

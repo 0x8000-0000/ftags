@@ -96,20 +96,16 @@ ftags::RecordSpanManager ftags::RecordSpanManager::deserialize(ftags::util::Buff
    retval.m_recordSpanStore = RecordSpan::Store::deserialize(extractor);
    retval.m_recordStore     = Record::Store::deserialize(extractor);
 
-   retval.m_recordSpanStore.forEachAllocatedSequence(
-      [&retval](RecordSpan::Store::Key key, RecordSpan* recordSpan, RecordSpan::Store::block_size_type size) {
-         for (RecordSpan::Store::block_size_type ii = 0; ii < size; ii++)
-         {
-            RecordSpan::Hash hashValue = recordSpan[ii].getHash();
-            retval.m_cache.emplace(hashValue, key + ii);
+   retval.m_recordSpanStore.forEach([&retval](RecordSpan::Store::Key key, RecordSpan* recordSpan) {
+      RecordSpan::Hash hashValue = recordSpan->getHash();
+      retval.m_cache.emplace(hashValue, key);
 
-            recordSpan[ii].restoreRecordPointer(retval.m_recordStore);
+      recordSpan->restoreRecordPointer(retval.m_recordStore);
 
-            recordSpan[ii].updateIndices(retval.m_symbolIndexStore);
+      recordSpan->updateIndices(retval.m_symbolIndexStore);
 
-            retval.indexRecordSpan(recordSpan[ii], key + ii);
-         }
-      });
+      retval.indexRecordSpan(*recordSpan, key);
+   });
 
    retval.assertValid();
 
@@ -191,17 +187,13 @@ std::vector<std::string> ftags::RecordSpanManager::getStatisticsRemarks() const 
    ftags::stats::Sample<unsigned> usageCount;
    ftags::stats::Sample<unsigned> spanSizes;
 
-   m_recordSpanStore.forEachAllocatedSequence([&usageCount, &spanSizes](RecordSpan::Store::Key /* key */,
-                                                                        const RecordSpan*                  recordSpan,
-                                                                        RecordSpan::Store::block_size_type size) {
-      for (RecordSpan::Store::block_size_type ii = 0; ii < size; ii++)
-      {
-         auto usage = recordSpan[ii].getUsage();
+   m_recordSpanStore.forEach(
+      [&usageCount, &spanSizes](RecordSpan::Store::Key /* key */, const RecordSpan* recordSpan) {
+         auto usage = recordSpan->getUsage();
          assert(usage >= 0);
          usageCount.addValue(static_cast<unsigned>(usage));
-         spanSizes.addValue(recordSpan[ii].getSize());
-      }
-   });
+         spanSizes.addValue(recordSpan->getSize());
+      });
 
    const ftags::stats::FiveNumbersSummary<unsigned> usageCountSummary = usageCount.computeFiveNumberSummary();
    const ftags::stats::FiveNumbersSummary<unsigned> spanSizesSummary  = spanSizes.computeFiveNumberSummary();
@@ -236,14 +228,8 @@ ftags::RecordSpanManager::analyzeRecordSpans(const ftags::util::StringTable& /* 
 {
    std::vector<const RecordSpan*> spans;
 
-   m_recordSpanStore.forEachAllocatedSequence([&spans](RecordSpan::Store::Key /* key */,
-                                                       const RecordSpan*                  recordSpan,
-                                                       RecordSpan::Store::block_size_type size) {
-      for (RecordSpan::Store::block_size_type ii = 0; ii < size; ii++)
-      {
-         spans.push_back(&recordSpan[ii]);
-      }
-   });
+   m_recordSpanStore.forEach(
+      [&spans](RecordSpan::Store::Key /* key */, const RecordSpan* recordSpan) { spans.push_back(recordSpan); });
 
    auto compareRecordSpansBySize = [](const RecordSpan* left, const RecordSpan* right) -> bool {
       return left->getSize() < right->getSize();

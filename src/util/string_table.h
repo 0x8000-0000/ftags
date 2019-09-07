@@ -58,11 +58,12 @@ private:
 class StringTable
 {
 public:
-   StringTable() = default;
+   StringTable()  = default;
+   ~StringTable() = default;
 
    StringTable(const StringTable& other) = delete;
 
-   StringTable(StringTable&& other) : m_store{std::move(other.m_store)}, m_index{std::move(other.m_index)}
+   StringTable(StringTable&& other) noexcept : m_store{std::move(other.m_store)}, m_index{std::move(other.m_index)}
    {
    }
 
@@ -107,7 +108,7 @@ public:
 
    using Key = uint32_t;
 
-   static constexpr Key InvalidKey = 0;
+   static constexpr Key k_InvalidKey = 0;
 
    const char* getString(Key stringKey) const noexcept
    {
@@ -117,10 +118,8 @@ public:
       {
          return nullptr;
       }
-      else
-      {
-         return &*location.first;
-      }
+
+      return &*location.first;
    }
 
    std::string_view getStringView(Key stringKey) const noexcept

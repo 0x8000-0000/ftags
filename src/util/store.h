@@ -176,6 +176,51 @@ public:
    AllocatedSequence getNextBlock(AllocatedSequence allocatedSequence) const noexcept;
 
    template <typename F>
+   void forEach(F func)
+   {
+      forEachAllocatedSequence([&func](Key key, T* instance, block_size_type size) {
+         for (block_size_type ii = 0; ii < size; ii++)
+         {
+            func(key + ii, &instance[ii]);
+         }
+      });
+   }
+
+   template <typename F>
+   void forEach(F func) const
+   {
+      forEachAllocatedSequence([&func](Key key, const T* instance, block_size_type size) {
+         for (block_size_type ii = 0; ii < size; ii++)
+         {
+            func(key + ii, &instance[ii]);
+         }
+      });
+   }
+
+   block_size_type countUsedBlocks() const
+   {
+      block_size_type count = 0;
+
+      forEachAllocatedSequence([&count](Key /* key */, const T* /* ptr */, block_size_type size) { count += size; });
+
+      return count;
+   }
+
+   /** Runs a self-check
+    */
+   void validateInternalState() const;
+
+   /*
+    * Serialization interface
+    */
+   std::size_t computeSerializedSize() const;
+
+   void serialize(ftags::util::BufferInsertor& insertor) const;
+
+   static Store deserialize(ftags::util::BufferExtractor& extractor);
+
+private:
+   template <typename F>
    void forEachAllocatedSequence(F func)
    {
       AllocatedSequence allocation = getFirstAllocatedSequence();
@@ -201,29 +246,6 @@ public:
       }
    }
 
-   std::size_t countUsedBlocks() const
-   {
-      std::size_t count = 0;
-
-      forEachAllocatedSequence([&count](Key /* key */, const T* /* ptr */, std::size_t size) { count += size; });
-
-      return count;
-   }
-
-   /** Runs a self-check
-    */
-   void validateInternalState() const;
-
-   /*
-    * Serialization interface
-    */
-   std::size_t computeSerializedSize() const;
-
-   void serialize(ftags::util::BufferInsertor& insertor) const;
-
-   static Store deserialize(ftags::util::BufferExtractor& extractor);
-
-private:
    AllocatedSequence getFirstBlockInSegment(block_size_type segmentIndex) const noexcept;
    AllocatedSequence getFirstBlockFollowing(K key) const noexcept;
 
@@ -416,8 +438,8 @@ typename Store<T, K, SegmentSizeBits>::Allocation Store<T, K, SegmentSizeBits>::
 template <typename T, typename K, unsigned SegmentSizeBits>
 void Store<T, K, SegmentSizeBits>::destruct()
 {
-   forEachAllocatedSequence([](Key /* key */, T* instance, std::size_t size) {
-      for (std::size_t ii = 0; ii < size; ii++)
+   forEachAllocatedSequence([](Key /* key */, T* instance, block_size_type size) {
+      for (block_size_type ii = 0; ii < size; ii++)
       {
          instance[ii].~T();
       }

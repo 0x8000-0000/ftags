@@ -112,15 +112,11 @@ public:
    {
       std::vector<const ftags::Record*> results;
 
-      m_recordStore.forEachAllocatedSequence(
-         [&results, &selectRecord, &symbolNames, &fileNames](
-            Record::Store::Key /* key */, const Record* record, Record::Store::block_size_type size) {
-            for (Record::Store::block_size_type ii = 0; ii < size; ii++)
+      m_recordStore.forEach(
+         [&results, &selectRecord, &symbolNames, &fileNames](Record::Store::Key /* key */, const Record* record) {
+            if (selectRecord(record, symbolNames, fileNames))
             {
-               if (selectRecord(&record[ii], symbolNames, fileNames))
-               {
-                  results.push_back(&record[ii]);
-               }
+               results.push_back(record);
             }
          });
 
@@ -172,16 +168,12 @@ public:
    template <typename F>
    void forEachRecord(F func) const
    {
-      m_recordStore.forEachAllocatedSequence(
-         [func](Record::Store::Key /* key */, const Record* record, Record::Store::block_size_type size) {
-            for (Record::Store::block_size_type ii = 0; ii < size; ii++)
-            {
-               if (record[ii].symbolNameKey != 0)
-               {
-                  func(&record[ii]);
-               }
-            }
-         });
+      m_recordStore.forEach([func](Record::Store::Key /* key */, const Record* record) {
+         if (record->symbolNameKey != 0)
+         {
+            func(record);
+         }
+      });
    }
 
    template <typename F>

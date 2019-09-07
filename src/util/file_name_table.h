@@ -68,7 +68,7 @@ public:
 private:
    struct PathElement
    {
-      StringTable::Key   pathElementKey = StringTable::InvalidKey;
+      StringTable::Key   pathElementKey = StringTable::k_InvalidKey;
       FileNameTable::Key parentPathKey  = FileNameTable::InvalidKey;
 
       bool operator<(const PathElement& other) const
