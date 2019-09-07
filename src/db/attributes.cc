@@ -20,7 +20,7 @@
 
 std::string ftags::Attributes::getRecordType() const
 {
-   const ftags::SymbolType symbolType = static_cast<ftags::SymbolType>(type);
+   const auto symbolType = static_cast<ftags::SymbolType>(type);
 
    switch (symbolType)
    {

@@ -54,7 +54,7 @@ std::vector<std::string_view> ftags::util::splitPath(std::string_view pathInput)
    return result;
 }
 
-const std::string ftags::util::FileNameTable::getPath(ftags::util::FileNameTable::Key pathKey) const noexcept
+std::string ftags::util::FileNameTable::getPath(ftags::util::FileNameTable::Key pathKey) const noexcept
 {
    std::list<const char*> elements;
 
@@ -112,20 +112,16 @@ ftags::util::FileNameTable::Key ftags::util::FileNameTable::getKey(std::string_v
       {
          return InvalidKey;
       }
-      else
-      {
-         currentPathKey = iter->second;
-      }
+
+      currentPathKey = iter->second;
    }
 
    if (m_parentToElement[currentPathKey].isTerminal == 1)
    {
       return currentPathKey;
    }
-   else
-   {
-      return InvalidKey;
-   }
+
+   return InvalidKey;
 }
 
 ftags::util::FileNameTable::Key ftags::util::FileNameTable::addKey(std::string_view path)
@@ -145,7 +141,7 @@ ftags::util::FileNameTable::Key ftags::util::FileNameTable::addKey(std::string_v
       if (iter == m_elementToParent.end())
       {
          currentPathKey = static_cast<Key>(m_parentToElement.size());
-         m_parentToElement.push_back(thisElement);
+         m_parentToElement.emplace_back(thisElement);
          m_elementToParent.emplace(thisElement, currentPathKey);
       }
       else
@@ -185,11 +181,9 @@ void ftags::util::FileNameTable::removeKey(std::string_view path)
          // this path element does not exist
          return;
       }
-      else
-      {
-         currentPathKey = iter->second;
-         m_parentToElement[currentPathKey].referenceCount--;
-      }
+
+      currentPathKey = iter->second;
+      m_parentToElement[currentPathKey].referenceCount--;
    }
 
    m_parentToElement[currentPathKey].isTerminal = 0;

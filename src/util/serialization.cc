@@ -99,7 +99,7 @@ std::size_t ftags::util::Serializer<std::multimap<uint32_t, uint32_t>>::computeS
           val.size() * (sizeof(map_uu::key_type) + sizeof(map_uu::mapped_type));
 }
 
-const std::string_view k_std_multimap_uint32_uint32_SerializationSignature{"eeto2jaed!ie2Ou"};
+const std::string_view k_std_multimap_uint32_uint32_SerializationSignature{"eeto2jaed!ie2Ou"}; // NOLINT
 
 template <>
 void ftags::util::Serializer<std::multimap<uint32_t, uint32_t>>::serialize(
@@ -176,7 +176,7 @@ std::vector<char> ftags::util::Serializer<std::vector<char>>::deserialize(ftags:
    std::vector<char>::size_type vecSize = 0;
    extractor >> vecSize;
 
-   std::vector<char> retval(/* size = */ vecSize);
+   std::vector<char> retval(/* __n = */ vecSize);
    extractor >> retval;
 
    return retval;
@@ -214,7 +214,7 @@ ftags::util::Serializer<std::vector<uint32_t>>::deserialize(ftags::util::BufferE
    std::vector<uint32_t>::size_type vecSize = 0;
    extractor >> vecSize;
 
-   std::vector<uint32_t> retval(/* size = */ vecSize);
+   std::vector<uint32_t> retval(/* __n = */ vecSize);
    extractor >> retval;
 
    return retval;
@@ -252,7 +252,7 @@ ftags::util::Serializer<std::vector<uint64_t>>::deserialize(ftags::util::BufferE
    std::vector<uint64_t>::size_type vecSize = 0;
    extractor >> vecSize;
 
-   std::vector<uint64_t> retval(/* size = */ vecSize);
+   std::vector<uint64_t> retval(/* __n = */ vecSize);
    extractor >> retval;
 
    return retval;

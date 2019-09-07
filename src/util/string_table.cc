@@ -28,19 +28,17 @@ ftags::util::StringTable::Key ftags::util::StringTable::getKey(std::string_view 
 
    if (m_index.end() == iter)
    {
-      return 0;
+      return k_InvalidKey;
    }
-   else
-   {
-      return iter->second;
-   }
+
+   return iter->second;
 }
 
-ftags::util::StringTable::Key ftags::util::StringTable::addKey(std::string_view inputString) noexcept
+ftags::util::StringTable::Key ftags::util::StringTable::addKey(std::string_view inputString)
 {
    const Key currentPosition{getKey(inputString)};
 
-   if (currentPosition != 0)
+   if (currentPosition != k_InvalidKey)
    {
       return currentPosition;
    }
@@ -50,7 +48,7 @@ ftags::util::StringTable::Key ftags::util::StringTable::addKey(std::string_view 
    return key;
 }
 
-ftags::util::StringTable::Key ftags::util::StringTable::insertString(std::string_view string) noexcept
+ftags::util::StringTable::Key ftags::util::StringTable::insertString(std::string_view string)
 {
    // allocate extra byte for NUL
    auto allocation{m_store.allocate(static_cast<StoreType::block_size_type>(string.size() + 1))};

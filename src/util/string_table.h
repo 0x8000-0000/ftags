@@ -133,7 +133,7 @@ public:
    }
 
    Key  getKey(std::string_view string) const noexcept;
-   Key  addKey(std::string_view string) noexcept;
+   Key  addKey(std::string_view string);
    void removeKey(std::string_view string) noexcept;
 
    /* Add all the keys from other that are missing in this table.
@@ -160,7 +160,7 @@ public:
    }
 
 private:
-   Key insertString(std::string_view string) noexcept;
+   Key insertString(std::string_view string);
 
    static constexpr uint32_t k_bucketSize = 24;
 

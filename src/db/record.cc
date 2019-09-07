@@ -22,7 +22,7 @@ namespace
 class OrderRecordsBySymbolKey
 {
 public:
-   OrderRecordsBySymbolKey(const ftags::Record* records) : m_records{records}
+   explicit OrderRecordsBySymbolKey(const ftags::Record* records) : m_records{records}
    {
    }
 
@@ -80,7 +80,7 @@ bool compareRecordsByLocation(const ftags::Record& leftRecord, const ftags::Reco
 class OrderRecordsByFileKey
 {
 public:
-   OrderRecordsByFileKey(const std::vector<ftags::Record>& records) : m_records{records}
+   explicit OrderRecordsByFileKey(const std::vector<ftags::Record>& records) : m_records{records}
    {
    }
 
@@ -146,7 +146,7 @@ ftags::util::Serializer<std::vector<ftags::Record>>::deserialize(ftags::util::Bu
    uint64_t vecSize = 0;
    extractor >> vecSize;
 
-   std::vector<ftags::Record> retval(/* size = */ vecSize);
+   std::vector<ftags::Record> retval(/* __n = */ vecSize);
    extractor >> retval;
 
    return retval;

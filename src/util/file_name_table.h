@@ -44,7 +44,7 @@ public:
 
    static constexpr Key InvalidKey = 0;
 
-   const std::string getPath(Key pathKey) const noexcept;
+   std::string getPath(Key pathKey) const noexcept;
 
    Key  getKey(std::string_view path) const noexcept;
    Key  addKey(std::string_view path);
