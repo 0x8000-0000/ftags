@@ -642,3 +642,28 @@ TEST(StoreAllocatorIteratorTest, ThreeAllocationsThatFillTheFirstThreeSegments)
    ASSERT_EQ(alloc4.key, 0);
    ASSERT_EQ(alloc4.size, 0);
 }
+
+TEST(StoreAllocatorIteratorTest, IterateAllocatedObjects)
+{
+   SmallStore store;
+
+   const auto blockOne   = store.allocate(1);
+   const auto blockTwo   = store.allocate(1);
+   const auto blockThree = store.allocate(1);
+   const auto blockFour  = store.allocate(1);
+   const auto blockFive  = store.allocate(1);
+
+   store.deallocate(blockTwo.key, 1);
+   store.deallocate(blockFour.key, 1);
+
+   std::map<SmallStore::Key, SmallStore::Value*> expectedAllocations;
+   expectedAllocations.emplace(blockOne.key, blockOne.iterator);
+   expectedAllocations.emplace(blockThree.key, blockThree.iterator);
+   expectedAllocations.emplace(blockFive.key, blockFive.iterator);
+
+   std::map<SmallStore::Key, SmallStore::Value*> actualAllocations;
+   store.forEach(
+      [&actualAllocations](SmallStore::Key key, SmallStore::Value* value) { actualAllocations.emplace(key, value); });
+
+   ASSERT_EQ(actualAllocations, expectedAllocations);
+}

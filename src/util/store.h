@@ -60,6 +60,7 @@ public:
 
    using key_type = K;
    using Key      = K;
+   using Value    = T;
 
    static constexpr block_size_type k_firstKeyValue           = 4;
    static constexpr block_size_type k_maxContiguousAllocation = (k_maxSegmentSize - k_firstKeyValue);
