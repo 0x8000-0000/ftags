@@ -182,7 +182,7 @@ int main()
          const std::size_t           payloadSize = projectDb.computeSerializedSize();
          zmq::message_t              projectMessage(payloadSize);
          ftags::util::BufferInsertor insertor(static_cast<std::byte*>(projectMessage.data()), payloadSize);
-         projectDb.serialize(insertor);
+         projectDb.serialize(insertor.getInsertor());
 
          serverSocket.send(projectMessage);
 

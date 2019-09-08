@@ -75,7 +75,7 @@ std::size_t ftags::CursorSet::computeSerializedSize() const
           m_symbolTable.computeSerializedSize() + m_fileNameTable.computeSerializedSize();
 }
 
-void ftags::CursorSet::serialize(ftags::util::BufferInsertor& insertor) const
+void ftags::CursorSet::serialize(ftags::util::TypedInsertor& insertor) const
 {
    ftags::util::SerializedObjectHeader header{"ftags::CursorSet"};
    insertor << header;
@@ -87,7 +87,7 @@ void ftags::CursorSet::serialize(ftags::util::BufferInsertor& insertor) const
    m_fileNameTable.serialize(insertor);
 }
 
-ftags::CursorSet ftags::CursorSet::deserialize(ftags::util::BufferExtractor& extractor)
+ftags::CursorSet ftags::CursorSet::deserialize(ftags::util::TypedExtractor& extractor)
 {
    ftags::CursorSet retval;
 

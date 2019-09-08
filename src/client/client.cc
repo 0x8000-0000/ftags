@@ -119,7 +119,7 @@ void dispatchFind(zmq::socket_t&                 socket,
       socket.recv(&resultsMessage);
 
       ftags::util::BufferExtractor extractor(static_cast<std::byte*>(resultsMessage.data()), resultsMessage.size());
-      const ftags::CursorSet       output = ftags::CursorSet::deserialize(extractor);
+      const ftags::CursorSet       output = ftags::CursorSet::deserialize(extractor.getExtractor());
       if (beVerbose)
       {
          std::cout << fmt::format("Received {} results\n", output.size());
@@ -187,7 +187,7 @@ void dispatchIdentifySymbol(zmq::socket_t&     socket,
       socket.recv(&resultsMessage);
 
       ftags::util::BufferExtractor extractor(static_cast<std::byte*>(resultsMessage.data()), resultsMessage.size());
-      const ftags::CursorSet       output = ftags::CursorSet::deserialize(extractor);
+      const ftags::CursorSet       output = ftags::CursorSet::deserialize(extractor.getExtractor());
       if (beVerbose)
       {
          std::cout << fmt::format("Received {} results\n", output.size());
@@ -280,7 +280,7 @@ void dispatchDumpTranslationUnit(zmq::socket_t&     socket,
       socket.recv(&resultsMessage);
 
       ftags::util::BufferExtractor extractor(static_cast<std::byte*>(resultsMessage.data()), resultsMessage.size());
-      const ftags::CursorSet       output = ftags::CursorSet::deserialize(extractor);
+      const ftags::CursorSet       output = ftags::CursorSet::deserialize(extractor.getExtractor());
       if (beVerbose)
       {
          std::cout << fmt::format("Received {} results\n", output.size());

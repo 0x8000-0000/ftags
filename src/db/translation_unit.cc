@@ -158,7 +158,7 @@ std::size_t ftags::ProjectDb::TranslationUnit::computeSerializedSize() const
           ftags::util::Serializer<std::vector<RecordSpan::Store::Key>>::computeSerializedSize(m_recordSpans);
 }
 
-void ftags::ProjectDb::TranslationUnit::serialize(ftags::util::BufferInsertor& insertor) const
+void ftags::ProjectDb::TranslationUnit::serialize(ftags::util::TypedInsertor& insertor) const
 {
    ftags::util::SerializedObjectHeader header{"ftags::TranslationUnit"};
    insertor << header;
@@ -172,7 +172,7 @@ void ftags::ProjectDb::TranslationUnit::serialize(ftags::util::BufferInsertor& i
 }
 
 ftags::ProjectDb::TranslationUnit
-ftags::ProjectDb::TranslationUnit::deserialize(ftags::util::BufferExtractor& extractor)
+ftags::ProjectDb::TranslationUnit::deserialize(ftags::util::TypedExtractor& extractor)
 {
    ftags::ProjectDb::TranslationUnit retval;
 

@@ -280,7 +280,7 @@ std::size_t ftags::ProjectDb::computeSerializedSize() const
           translationUnitSize;
 }
 
-void ftags::ProjectDb::serialize(ftags::util::BufferInsertor& insertor) const
+void ftags::ProjectDb::serialize(ftags::util::TypedInsertor& insertor) const
 {
    ftags::util::SerializedObjectHeader header{"ftags::ProjectDb"};
    insertor << header;
@@ -302,7 +302,7 @@ void ftags::ProjectDb::serialize(ftags::util::BufferInsertor& insertor) const
       });
 }
 
-ftags::ProjectDb ftags::ProjectDb::deserialize(ftags::util::BufferExtractor& extractor)
+ftags::ProjectDb ftags::ProjectDb::deserialize(ftags::util::TypedExtractor& extractor)
 {
    ftags::util::SerializedObjectHeader header;
    extractor >> header;

@@ -62,11 +62,11 @@ TEST(ProjectSerializationTestSynthetic, CursorSet)
 
    BufferInsertor insertor{buffer};
 
-   inputSet.serialize(insertor);
+   inputSet.serialize(insertor.getInsertor());
    insertor.assertEmpty();
 
    BufferExtractor        extractor{buffer};
-   const ftags::CursorSet output = ftags::CursorSet::deserialize(extractor);
+   const ftags::CursorSet output = ftags::CursorSet::deserialize(extractor.getExtractor());
    extractor.assertEmpty();
 
    auto iter = output.begin();
@@ -123,10 +123,10 @@ TEST_F(ProjectSerializationTest, DeserializedProjectDbEqualsInput)
 
    BufferInsertor insertor{buffer};
 
-   tagsDb->serialize(insertor);
+   tagsDb->serialize(insertor.getInsertor());
 
    BufferExtractor  extractor{buffer};
-   ftags::ProjectDb restoredTagsDb = ftags::ProjectDb::deserialize(extractor);
+   ftags::ProjectDb restoredTagsDb = ftags::ProjectDb::deserialize(extractor.getExtractor());
 
    ASSERT_EQ(*tagsDb, restoredTagsDb);
 }
@@ -140,7 +140,7 @@ TEST_F(ProjectSerializationTest, FindVariablesInDeserializedProjectDb)
 
       BufferInsertor insertor{buffer};
 
-      tagsDb->serialize(insertor);
+      tagsDb->serialize(insertor.getInsertor());
 
       {
          const std::vector<const ftags::Record*> countDefinition = tagsDb->findDefinition("count");
@@ -161,7 +161,7 @@ TEST_F(ProjectSerializationTest, FindVariablesInDeserializedProjectDb)
    }
 
    BufferExtractor  extractor{buffer};
-   ftags::ProjectDb restoredTagsDb = ftags::ProjectDb::deserialize(extractor);
+   ftags::ProjectDb restoredTagsDb = ftags::ProjectDb::deserialize(extractor.getExtractor());
 
    std::string restoredName = restoredTagsDb.getName();
    ASSERT_STREQ(restoredName.data(), "multi");

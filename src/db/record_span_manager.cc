@@ -76,7 +76,7 @@ std::size_t ftags::RecordSpanManager::computeSerializedSize() const
           m_recordStore.computeSerializedSize();
 }
 
-void ftags::RecordSpanManager::serialize(ftags::util::BufferInsertor& insertor) const
+void ftags::RecordSpanManager::serialize(ftags::util::TypedInsertor& insertor) const
 {
    assertValid();
 
@@ -87,7 +87,7 @@ void ftags::RecordSpanManager::serialize(ftags::util::BufferInsertor& insertor) 
    m_recordStore.serialize(insertor);
 }
 
-ftags::RecordSpanManager ftags::RecordSpanManager::deserialize(ftags::util::BufferExtractor& extractor)
+ftags::RecordSpanManager ftags::RecordSpanManager::deserialize(ftags::util::TypedExtractor& extractor)
 {
    ftags::util::SerializedObjectHeader header = {};
    extractor >> header;

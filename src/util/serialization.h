@@ -69,7 +69,7 @@ public:
 #ifndef NDEBUG
    virtual void assertEmpty() = 0;
 #else
-   void assertEpty();
+   void assertEmpty()
    {
    }
 #endif
@@ -85,7 +85,7 @@ public:
 #ifndef NDEBUG
    virtual void assertEmpty() = 0;
 #else
-   void assertEpty();
+   void assertEmpty()
    {
    }
 #endif
@@ -292,6 +292,11 @@ public:
    {
    }
 
+   TypedInsertor& getInsertor()
+   {
+      return m_insertor;
+   }
+
    void serialize(const void* data, std::size_t byteSize)
    {
       m_insertor.serialize(static_cast<const char*>(data), byteSize);
@@ -345,6 +350,11 @@ public:
    {
    }
 
+   TypedExtractor& getExtractor()
+   {
+      return m_extractor;
+   }
+
    void deserialize(void* data, std::size_t byteSize)
    {
       m_extractor.deserialize(static_cast<char*>(data), byteSize);
@@ -396,13 +406,22 @@ struct Serializer
 
    static std::size_t computeSerializedSize(const T& t);
 
-   static void serialize(const T& t, BufferInsertor& insertor);
-
-   static T deserialize(BufferExtractor& extractor);
-
    static void serialize(const T& t, TypedInsertor& insertor);
 
    static T deserialize(TypedExtractor& extractor);
+
+   /*
+    * legacy interface
+    */
+   static void serialize(const T& t, BufferInsertor& insertor)
+   {
+      serialize(t, insertor.getInsertor());
+   }
+
+   static T deserialize(BufferExtractor& extractor)
+   {
+      return deserialize(extractor.getExtractor());
+   }
 };
 
 } // namespace ftags::util

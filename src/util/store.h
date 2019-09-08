@@ -216,9 +216,9 @@ public:
     */
    std::size_t computeSerializedSize() const;
 
-   void serialize(ftags::util::BufferInsertor& insertor) const;
+   void serialize(ftags::util::TypedInsertor& insertor) const;
 
-   static Store deserialize(ftags::util::BufferExtractor& extractor);
+   static Store deserialize(ftags::util::TypedExtractor& extractor);
 
 private:
    template <typename F>
@@ -669,7 +669,7 @@ std::size_t Store<T, K, SegmentSizeBits>::computeSerializedSize() const
 }
 
 template <typename T, typename K, unsigned SegmentSizeBits>
-void Store<T, K, SegmentSizeBits>::serialize(ftags::util::BufferInsertor& insertor) const
+void Store<T, K, SegmentSizeBits>::serialize(ftags::util::TypedInsertor& insertor) const
 {
    SerializedObjectHeader header{k_serializationSignature.data()};
    insertor << header;
@@ -684,10 +684,12 @@ void Store<T, K, SegmentSizeBits>::serialize(ftags::util::BufferInsertor& insert
 
       for (uint64_t ii = 0; ii < (segmentCount - 1); ii++)
       {
-         insertor.serialize(static_cast<void*>(m_segment[ii].get()), k_maxSegmentSize * sizeof(T));
+         insertor.serialize(static_cast<char*>(static_cast<void*>(m_segment[ii].get())),
+                            k_maxSegmentSize * sizeof(T));
       }
 
-      insertor.serialize(static_cast<void*>(m_segment[segmentCount - 1].get()), spaceUsedInLastSegment * sizeof(T));
+      insertor.serialize(static_cast<char*>(static_cast<void*>(m_segment[segmentCount - 1].get())),
+                         spaceUsedInLastSegment * sizeof(T));
 
       Serializer<std::map<K, block_size_type>>::serialize(m_freeBlocksIndex, insertor);
    }
@@ -699,7 +701,7 @@ void Store<T, K, SegmentSizeBits>::serialize(ftags::util::BufferInsertor& insert
 }
 
 template <typename T, typename K, unsigned SegmentSizeBits>
-Store<T, K, SegmentSizeBits> Store<T, K, SegmentSizeBits>::deserialize(ftags::util::BufferExtractor& extractor)
+Store<T, K, SegmentSizeBits> Store<T, K, SegmentSizeBits>::deserialize(ftags::util::TypedExtractor& extractor)
 {
    Store<T, K, SegmentSizeBits> retval;
 

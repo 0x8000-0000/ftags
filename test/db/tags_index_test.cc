@@ -328,10 +328,10 @@ TEST_F(TagsIndexTestMulti, SerializeDeserializeResults)
    const std::size_t      bufferSpace = originalCursorSet.computeSerializedSize();
    std::vector<std::byte> buffer(/* size = */ bufferSpace);
    BufferInsertor         insertor(buffer);
-   originalCursorSet.serialize(insertor);
+   originalCursorSet.serialize(insertor.getInsertor());
    BufferExtractor extractor(buffer);
 
-   const ftags::CursorSet restoredCursorSet = ftags::CursorSet::deserialize(extractor);
+   const ftags::CursorSet restoredCursorSet = ftags::CursorSet::deserialize(extractor.getExtractor());
 
    auto iter = restoredCursorSet.begin();
    ASSERT_NE(iter, restoredCursorSet.end());

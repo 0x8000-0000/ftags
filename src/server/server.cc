@@ -109,7 +109,7 @@ void dispatchFind(zmq::socket_t&                socket,
    const std::size_t           payloadSize = queryResultsCursor.computeSerializedSize();
    zmq::message_t              resultsMessage(payloadSize);
    ftags::util::BufferInsertor insertor(static_cast<std::byte*>(resultsMessage.data()), payloadSize);
-   queryResultsCursor.serialize(insertor);
+   queryResultsCursor.serialize(insertor.getInsertor());
    socket.send(resultsMessage);
 }
 
@@ -148,7 +148,7 @@ void dispatchQueryIdentify(zmq::socket_t&          socket,
    const std::size_t           payloadSize = queryResultsCursor.computeSerializedSize();
    zmq::message_t              resultsMessage(payloadSize);
    ftags::util::BufferInsertor insertor(static_cast<std::byte*>(resultsMessage.data()), payloadSize);
-   queryResultsCursor.serialize(insertor);
+   queryResultsCursor.serialize(insertor.getInsertor());
    socket.send(resultsMessage);
 }
 
@@ -183,7 +183,7 @@ void dispatchDumpTranslationUnit(zmq::socket_t&          socket,
    const std::size_t           payloadSize = queryResultsCursor.computeSerializedSize();
    zmq::message_t              resultsMessage(payloadSize);
    ftags::util::BufferInsertor insertor(static_cast<std::byte*>(resultsMessage.data()), payloadSize);
-   queryResultsCursor.serialize(insertor);
+   queryResultsCursor.serialize(insertor.getInsertor());
    socket.send(resultsMessage);
 }
 
@@ -196,7 +196,7 @@ void dispatchUpdateTranslationUnit(zmq::socket_t& socket, ftags::ProjectDb* proj
 
    ftags::util::BufferExtractor extractor(static_cast<std::byte*>(payload.data()), payload.size());
 
-   ftags::ProjectDb updatedTranslationUnit = ftags::ProjectDb::deserialize(extractor);
+   ftags::ProjectDb updatedTranslationUnit = ftags::ProjectDb::deserialize(extractor.getExtractor());
 
    spdlog::info("Data contains {} records for {} translation units",
                 updatedTranslationUnit.getRecordCount(),

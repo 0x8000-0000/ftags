@@ -313,11 +313,11 @@ TEST(StoreMapTest, SerializeSingleSegment)
    const size_t           inputSerializedSize = store.computeSerializedSize();
    std::vector<std::byte> buffer(/* size = */ inputSerializedSize);
    BufferInsertor         insertor{buffer};
-   store.serialize(insertor);
+   store.serialize(insertor.getInsertor());
    insertor.assertEmpty();
 
    BufferExtractor extractor{buffer};
-   Store           rehydrated = Store::deserialize(extractor);
+   Store           rehydrated = Store::deserialize(extractor.getExtractor());
    extractor.assertEmpty();
 
    // test

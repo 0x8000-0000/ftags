@@ -23,7 +23,7 @@ std::size_t ftags::util::StringTable::computeSerializedSize() const noexcept
    return sizeof(SerializedObjectHeader) + m_store.computeSerializedSize();
 }
 
-void ftags::util::StringTable::serialize(ftags::util::BufferInsertor& insertor) const noexcept
+void ftags::util::StringTable::serialize(ftags::util::TypedInsertor& insertor) const noexcept
 {
    SerializedObjectHeader header{"ftags::StringTable"};
    insertor << header;
@@ -31,7 +31,7 @@ void ftags::util::StringTable::serialize(ftags::util::BufferInsertor& insertor) 
    m_store.serialize(insertor);
 }
 
-ftags::util::StringTable ftags::util::StringTable::deserialize(ftags::util::BufferExtractor& extractor) noexcept
+ftags::util::StringTable ftags::util::StringTable::deserialize(ftags::util::TypedExtractor& extractor) noexcept
 {
    StringTable retval;
 

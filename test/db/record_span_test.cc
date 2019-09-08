@@ -155,10 +155,10 @@ TEST(RecordSpanManagerTest, HandleDuplicatesAfterSerialization)
       std::vector<std::byte> buffer(/* size = */ inputSerializedSize);
 
       BufferInsertor insertor{buffer};
-      manager.serialize(insertor);
+      manager.serialize(insertor.getInsertor());
 
       BufferExtractor extractor{buffer};
-      newManager = ftags::RecordSpanManager::deserialize(extractor);
+      newManager = ftags::RecordSpanManager::deserialize(extractor.getExtractor());
    }
 
    ftags::RecordSpan::Store::Key key1 = 0;
@@ -294,11 +294,11 @@ TEST(RecordSpanManagerTest, RecordIterationAfterSerialization)
    std::vector<std::byte> buffer(/* size = */ inputSerializedSize);
 
    BufferInsertor insertor{buffer};
-   manager.serialize(insertor);
+   manager.serialize(insertor.getInsertor());
 
    BufferExtractor extractor{buffer};
 
-   ftags::RecordSpanManager newManager = ftags::RecordSpanManager::deserialize(extractor);
+   ftags::RecordSpanManager newManager = ftags::RecordSpanManager::deserialize(extractor.getExtractor());
 
    std::vector<ftags::Record> input2;
 

@@ -147,9 +147,19 @@ public:
     */
    std::size_t computeSerializedSize() const noexcept;
 
-   void serialize(BufferInsertor& insertor) const noexcept;
+   void serialize(TypedInsertor& insertor) const noexcept;
 
-   static StringTable deserialize(BufferExtractor& extractor) noexcept;
+   void serialize(BufferInsertor& insertor) const noexcept
+   {
+      serialize(insertor.getInsertor());
+   }
+
+   static StringTable deserialize(TypedExtractor& extractor) noexcept;
+
+   static StringTable deserialize(BufferExtractor& extractor) noexcept
+   {
+      return deserialize(extractor.getExtractor());
+   }
 
    template <typename F>
    void forEachElement(F func) const

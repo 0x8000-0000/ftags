@@ -98,9 +98,9 @@ public:
     */
    std::size_t computeSerializedSize() const;
 
-   void serialize(ftags::util::BufferInsertor& insertor) const;
+   void serialize(ftags::util::TypedInsertor& insertor) const;
 
-   static ftags::RecordSpanManager deserialize(ftags::util::BufferExtractor& extractor);
+   static ftags::RecordSpanManager deserialize(ftags::util::TypedExtractor& extractor);
 
    /*
     * Query interface

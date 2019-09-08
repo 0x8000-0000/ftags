@@ -104,9 +104,9 @@ public:
     */
    std::size_t computeSerializedSize() const;
 
-   void serialize(ftags::util::BufferInsertor& insertor) const;
+   void serialize(ftags::util::TypedInsertor& insertor) const;
 
-   static CursorSet deserialize(ftags::util::BufferExtractor& extractor);
+   static CursorSet deserialize(ftags::util::TypedExtractor& extractor);
 
    std::size_t computeHash() const;
 
@@ -276,9 +276,9 @@ public:
     */
    std::size_t computeSerializedSize() const;
 
-   void serialize(ftags::util::BufferInsertor& insertor) const;
+   void serialize(ftags::util::TypedInsertor& insertor) const;
 
-   static ftags::ProjectDb deserialize(ftags::util::BufferExtractor& extractor);
+   static ftags::ProjectDb deserialize(ftags::util::TypedExtractor& extractor);
 
    /** Contains all the symbols in a C++ translation unit.
     */
@@ -507,9 +507,9 @@ public:
        */
       std::size_t computeSerializedSize() const;
 
-      void serialize(ftags::util::BufferInsertor& insertor) const;
+      void serialize(ftags::util::TypedInsertor& insertor) const;
 
-      static TranslationUnit deserialize(ftags::util::BufferExtractor& extractor);
+      static TranslationUnit deserialize(ftags::util::TypedExtractor& extractor);
 
    private:
       // key of the file name of the main translation unit

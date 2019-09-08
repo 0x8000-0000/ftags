@@ -125,7 +125,7 @@ ftags::util::Serializer<std::vector<ftags::Record>>::computeSerializedSize(const
 
 template <>
 void ftags::util::Serializer<std::vector<ftags::Record>>::serialize(const std::vector<ftags::Record>& val,
-                                                                    ftags::util::BufferInsertor&      insertor)
+                                                                    ftags::util::TypedInsertor&       insertor)
 {
    ftags::util::SerializedObjectHeader header{"std::vector<ftags::Record>"};
    insertor << header;
@@ -138,7 +138,7 @@ void ftags::util::Serializer<std::vector<ftags::Record>>::serialize(const std::v
 
 template <>
 std::vector<ftags::Record>
-ftags::util::Serializer<std::vector<ftags::Record>>::deserialize(ftags::util::BufferExtractor& extractor)
+ftags::util::Serializer<std::vector<ftags::Record>>::deserialize(ftags::util::TypedExtractor& extractor)
 {
    ftags::util::SerializedObjectHeader header;
    extractor >> header;
@@ -230,7 +230,7 @@ std::size_t ftags::RecordSpanCache::computeSerializedSize() const
           m_store.computeSerializedSize();
 }
 
-void ftags::RecordSpanCache::serialize(ftags::BufferInsertor& insertor) const
+void ftags::RecordSpanCache::serialize(ftags::TypedInsertor& insertor) const
 {
    ftags::SerializedObjectHeader header{"ftags::RecordSpanCache"};
    insertor << header;
@@ -249,7 +249,7 @@ void ftags::RecordSpanCache::serialize(ftags::BufferInsertor& insertor) const
    });
 }
 
-ftags::RecordSpanCache ftags::RecordSpanCache::deserialize(ftags::BufferExtractor&                   extractor,
+ftags::RecordSpanCache ftags::RecordSpanCache::deserialize(ftags::TypedExtractor&                   extractor,
                                                            std::vector<std::shared_ptr<RecordSpan>>& hardReferences)
 {
    ftags::RecordSpanCache retval;
