@@ -305,13 +305,13 @@ bool                     dumpTranslationUnit = false;
 bool                     doQuit              = false;
 bool                     doPing              = false;
 bool                     queryStats          = false;
-std::string              projectName;
-std::string              symbolName;
-std::string              fileName;
-std::string              dirName;
-std::vector<std::string> queryArray;
+std::string              projectName; // NOLINT
+std::string              symbolName;  // NOLINT
+std::string              fileName;    // NOLINT
+std::string              dirName;     // NOLINT
+std::vector<std::string> queryArray;  // NOLINT
 
-auto cli = clara::Help(showHelp) | clara::Opt(doQuit)["-q"]["--quit"]("Shutdown server") |
+auto cli = clara::Help(showHelp) | clara::Opt(doQuit)["-q"]["--quit"]("Shutdown server") | // NOLINT
            clara::Opt(beVerbose)["-v"]["--verbose"]("Verbose stats") |
            clara::Opt(doPing)["-i"]["--ping"]("Ping server") |
            clara::Opt(queryStats)["-q"]["--stats"]("Query statistics from running server") |
@@ -327,94 +327,125 @@ auto cli = clara::Help(showHelp) | clara::Opt(doQuit)["-q"]["--quit"]("Shutdown 
 
 int main(int argc, char* argv[])
 {
-   GOOGLE_PROTOBUF_VERIFY_VERSION;
-
-   auto result = cli.parse(clara::Args(argc, argv));
-   if (!result)
-   {
-      std::cout << fmt::format("Failed to parse command line options: {}\n", result.errorMessage());
-      exit(-1);
-   }
-
-   // canonicalize the project directory input
-   {
-      if (dirName.empty())
-      {
-         dirName = ".";
-      }
-
-      std::filesystem::path projectPath{dirName};
-      std::filesystem::path canonicalProjectPath = std::filesystem::canonical(projectPath);
-      dirName                                    = canonicalProjectPath.string();
-   }
-
-   if (showHelp)
-   {
-      std::cout << cli << std::endl;
-      exit(0);
-   }
-
-   ftags::query::Query query;
-
    try
    {
-      query = ftags::query::Query::parse(queryArray);
-   }
-   catch (std::runtime_error& runtimeError)
-   {
-      std::cout << "Failed to parse query: " << runtimeError.what() << std::endl;
-      exit(1);
-   }
+      GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-   const char*       xdgRuntimeDir  = std::getenv("XDG_RUNTIME_DIR");
-   const std::string socketLocation = fmt::format("ipc://{}/ftags_server", xdgRuntimeDir);
+      auto result = cli.parse(clara::Args(argc, argv));
+      if (!result)
+      {
+         std::cout << fmt::format("Failed to parse command line options: {}\n", result.errorMessage());
+         exit(-1);
+      }
 
-   //  Prepare our context and socket
-   zmq::context_t context(1);
-   zmq::socket_t  socket(context, ZMQ_REQ);
+      // canonicalize the project directory input
+      {
+         if (dirName.empty())
+         {
+            dirName = ".";
+         }
 
-   if (beVerbose)
-   {
-      std::cout << "Connecting to ftags server..." << std::endl;
-   }
-   socket.connect(socketLocation);
+         std::filesystem::path projectPath{dirName};
+         std::filesystem::path canonicalProjectPath = std::filesystem::canonical(projectPath);
+         dirName                                    = canonicalProjectPath.string();
+      }
 
-   ftags::Command command{};
-   command.set_source("client");
-   std::string   serializedCommand;
-   ftags::Status status;
+      if (showHelp)
+      {
+         std::cout << cli << std::endl;
+         exit(0);
+      }
 
-   if (query.verb == ftags::query::Query::Verb::Ping)
-   {
-      command.set_type(ftags::Command::Type::Command_Type_PING);
-      const std::size_t requestSize = command.ByteSizeLong();
-      zmq::message_t    request(requestSize);
-      command.SerializeToArray(request.data(), static_cast<int>(requestSize));
-      socket.send(request);
+      ftags::query::Query query;
 
-      zmq::message_t reply;
-      socket.recv(&reply);
+      try
+      {
+         query = ftags::query::Query::parse(queryArray);
+      }
+      catch (std::runtime_error& runtimeError)
+      {
+         std::cout << "Failed to parse query: " << runtimeError.what() << std::endl;
+         exit(1);
+      }
 
-      status.ParseFromArray(reply.data(), static_cast<int>(reply.size()));
+      const char*       xdgRuntimeDir  = std::getenv("XDG_RUNTIME_DIR");
+      const std::string socketLocation = fmt::format("ipc://{}/ftags_server", xdgRuntimeDir);
+
+      //  Prepare our context and socket
+      zmq::context_t context(1);
+      zmq::socket_t  socket(context, ZMQ_REQ);
 
       if (beVerbose)
       {
-         std::cout << fmt::format("Received timestamp {} with status {}\n", status.timestamp(), status.type());
+         std::cout << "Connecting to ftags server..." << std::endl;
       }
-   }
-   else if (query.verb == ftags::query::Query::Verb::Find)
-   {
-      dispatchFind(socket, projectName, dirName, query.type, query.qualifier, query.symbolName);
-   }
-   else if (query.verb == ftags::query::Query::Verb::Identify)
-   {
-      dispatchIdentifySymbol(socket, projectName, dirName, query.filePath, query.lineNumber, query.columnNumber);
-   }
-   else if (query.verb == ftags::query::Query::Verb::Dump)
-   {
-      if (query.type == ftags::query::Query::Type::Statistics)
+      socket.connect(socketLocation);
+
+      ftags::Command command{};
+      command.set_source("client");
+      std::string   serializedCommand;
+      ftags::Status status;
+
+      switch (query.verb)
       {
-         command.set_type(ftags::Command::Type::Command_Type_QUERY_STATISTICS);
+      case ftags::query::Query::Verb::Ping: {
+         command.set_type(ftags::Command::Type::Command_Type_PING);
+         const std::size_t requestSize = command.ByteSizeLong();
+         zmq::message_t    request(requestSize);
+         command.SerializeToArray(request.data(), static_cast<int>(requestSize));
+         socket.send(request);
+
+         zmq::message_t reply;
+         socket.recv(&reply);
+
+         status.ParseFromArray(reply.data(), static_cast<int>(reply.size()));
+
+         if (beVerbose)
+         {
+            std::cout << fmt::format("Received timestamp {} with status {}\n", status.timestamp(), status.type());
+         }
+      }
+      break;
+
+      case ftags::query::Query::Verb::Find:
+         dispatchFind(socket, projectName, dirName, query.type, query.qualifier, query.symbolName);
+         break;
+
+      case ftags::query::Query::Verb::Identify:
+         dispatchIdentifySymbol(socket, projectName, dirName, query.filePath, query.lineNumber, query.columnNumber);
+         break;
+
+      case ftags::query::Query::Verb::Dump:
+         if (query.type == ftags::query::Query::Type::Statistics)
+         {
+            command.set_type(ftags::Command::Type::Command_Type_QUERY_STATISTICS);
+            command.set_projectname(projectName);
+            command.set_directoryname(dirName);
+            command.set_symbolname(query.symbolName);
+
+            const std::size_t requestSize = command.ByteSizeLong();
+            zmq::message_t    request(requestSize);
+            command.SerializeToArray(request.data(), static_cast<int>(requestSize));
+            socket.send(request);
+
+            zmq::message_t reply;
+            socket.recv(&reply);
+
+            status.ParseFromArray(reply.data(), static_cast<int>(reply.size()));
+
+            for (int ii = 0; ii < status.remarks_size(); ii++)
+            {
+               std::cout << status.remarks(ii) << std::endl;
+            }
+         }
+         else if (query.type == ftags::query::Query::Type::Contents)
+         {
+            dispatchDumpTranslationUnit(socket, projectName, dirName, fileName);
+         }
+         break;
+
+      case ftags::query::Query::Verb::Analyze: {
+         command.set_type(ftags::Command::Type::Command_Type_ANALYZE_DATA);
          command.set_projectname(projectName);
          command.set_directoryname(dirName);
          command.set_symbolname(query.symbolName);
@@ -434,49 +465,78 @@ int main(int argc, char* argv[])
             std::cout << status.remarks(ii) << std::endl;
          }
       }
-      else if (query.type == ftags::query::Query::Type::Contents)
-      {
-         dispatchDumpTranslationUnit(socket, projectName, dirName, fileName);
+      break;
+
+      case ftags::query::Query::Verb::Save: {
+         command.set_type(ftags::Command::Type::Command_Type_SAVE_DATABASE);
+         command.set_projectname(projectName);
+         command.set_directoryname(dirName);
+
+         const std::size_t requestSize = command.ByteSizeLong();
+         zmq::message_t    request(requestSize);
+         command.SerializeToArray(request.data(), static_cast<int>(requestSize));
+         socket.send(request);
+
+         zmq::message_t reply;
+         socket.recv(&reply);
+
+         status.ParseFromArray(reply.data(), static_cast<int>(reply.size()));
+
+         for (int ii = 0; ii < status.remarks_size(); ii++)
+         {
+            std::cout << status.remarks(ii) << std::endl;
+         }
       }
+      break;
+
+      case ftags::query::Query::Verb::Load: {
+         command.set_type(ftags::Command::Type::Command_Type_LOAD_DATABASE);
+         command.set_projectname(projectName);
+         command.set_directoryname(dirName);
+
+         const std::size_t requestSize = command.ByteSizeLong();
+         zmq::message_t    request(requestSize);
+         command.SerializeToArray(request.data(), static_cast<int>(requestSize));
+         socket.send(request);
+
+         zmq::message_t reply;
+         socket.recv(&reply);
+
+         status.ParseFromArray(reply.data(), static_cast<int>(reply.size()));
+
+         for (int ii = 0; ii < status.remarks_size(); ii++)
+         {
+            std::cout << status.remarks(ii) << std::endl;
+         }
+      }
+      break;
+
+      case ftags::query::Query::Verb::Shutdown: {
+         command.set_type(ftags::Command::Type::Command_Type_SHUT_DOWN);
+         std::string quitCommand;
+         command.SerializeToString(&quitCommand);
+
+         zmq::message_t request(quitCommand.size());
+         memcpy(request.data(), quitCommand.data(), quitCommand.size());
+         if (beVerbose)
+         {
+            std::cout << "Sending Quit\n";
+         }
+         socket.send(request);
+      }
+      break;
+
+      case ftags::query::Query::Verb::Unknown:
+      default:
+         std::cout << "Unknown command" << std::endl;
+      }
+
+      google::protobuf::ShutdownProtobufLibrary();
    }
-   else if (query.verb == ftags::query::Query::Verb::Analyze)
+   catch (std::exception& ex)
    {
-      command.set_type(ftags::Command::Type::Command_Type_ANALYZE_DATA);
-      command.set_projectname(projectName);
-      command.set_directoryname(dirName);
-      command.set_symbolname(query.symbolName);
-
-      const std::size_t requestSize = command.ByteSizeLong();
-      zmq::message_t    request(requestSize);
-      command.SerializeToArray(request.data(), static_cast<int>(requestSize));
-      socket.send(request);
-
-      zmq::message_t reply;
-      socket.recv(&reply);
-
-      status.ParseFromArray(reply.data(), static_cast<int>(reply.size()));
-
-      for (int ii = 0; ii < status.remarks_size(); ii++)
-      {
-         std::cout << status.remarks(ii) << std::endl;
-      }
+      std::cout << "Caught exception: " << ex.what() << std::endl;
    }
-   else if (query.verb == ftags::query::Query::Verb::Shutdown)
-   {
-      command.set_type(ftags::Command::Type::Command_Type_SHUT_DOWN);
-      std::string quitCommand;
-      command.SerializeToString(&quitCommand);
-
-      zmq::message_t request(quitCommand.size());
-      memcpy(request.data(), quitCommand.data(), quitCommand.size());
-      if (beVerbose)
-      {
-         std::cout << "Sending Quit\n";
-      }
-      socket.send(request);
-   }
-
-   google::protobuf::ShutdownProtobufLibrary();
 
    return 0;
 }

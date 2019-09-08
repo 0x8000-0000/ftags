@@ -15,6 +15,7 @@ message Command
       ANALYZE_DATA = 6;
 
       SAVE_DATABASE = 10;
+      LOAD_DATABASE = 11;
 
       QUERY = 60;
 

@@ -243,3 +243,17 @@ TEST(QueryTest, AnalyzeThis)
    ASSERT_EQ(query.verb, ftags::query::Query::Verb::Analyze);
    ASSERT_EQ(query.symbolName, "this");
 }
+
+TEST(QueryTest, SaveDatabase)
+{
+   ftags::query::Query query("save database");
+
+   ASSERT_EQ(query.verb, ftags::query::Query::Verb::Save);
+}
+
+TEST(QueryTest, LoadDatabase)
+{
+   ftags::query::Query query("load database");
+
+   ASSERT_EQ(query.verb, ftags::query::Query::Verb::Load);
+}

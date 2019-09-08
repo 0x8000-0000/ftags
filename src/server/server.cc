@@ -265,6 +265,44 @@ void dispatchDataAnalysis(zmq::socket_t& socket, const ftags::ProjectDb* project
    socket.send(reply);
 }
 
+void dispatchSaveDatabase(zmq::socket_t& socket,
+                          const ftags::ProjectDb* /* projectDb */,
+                          const std::string& projectName,
+                          const std::string& /* projectDirectory */)
+{
+   ftags::Status status{};
+   status.set_timestamp(getTimeStamp());
+   status.set_type(ftags::Status_Type::Status_Type_STATISTICS_REMARKS);
+
+   // TODO(signbit): do this
+   *status.add_remarks() = fmt::format("Saved {} to disk", projectName);
+
+   const std::size_t replySize = status.ByteSizeLong();
+   zmq::message_t    reply(replySize);
+   status.SerializeToArray(reply.data(), static_cast<int>(replySize));
+
+   socket.send(reply);
+}
+
+void dispatchLoadDatabase(zmq::socket_t& socket,
+                          const ftags::ProjectDb* /* projectDb */,
+                          const std::string& projectName,
+                          const std::string& /* projectDirectory */)
+{
+   ftags::Status status{};
+   status.set_timestamp(getTimeStamp());
+   status.set_type(ftags::Status_Type::Status_Type_STATISTICS_REMARKS);
+
+   // TODO(signbit): do this
+   *status.add_remarks() = fmt::format("Loaded {} from disk", projectName);
+
+   const std::size_t replySize = status.ByteSizeLong();
+   zmq::message_t    reply(replySize);
+   status.SerializeToArray(reply.data(), static_cast<int>(replySize));
+
+   socket.send(reply);
+}
+
 void dispatchPing(zmq::socket_t& socket)
 {
    ftags::Status status{};
@@ -305,168 +343,195 @@ void dispatchShutdown(zmq::socket_t& socket)
 }
 
 bool        showHelp = false;
-std::string projectName;
+std::string projectName; // NOLINT
 
-auto cli = clara::Help(showHelp) | clara::Opt(projectName, "project")["-p"]["--project"]("Project name");
+auto cli = clara::Help(showHelp) | clara::Opt(projectName, "project")["-p"]["--project"]("Project name"); // NOLINT
 
 } // namespace
 
 int main(int argc, char* argv[])
 {
-   GOOGLE_PROTOBUF_VERIFY_VERSION;
-
-   auto result = cli.parse(clara::Args(argc, argv));
-   if (!result)
+   try
    {
-      spdlog::error("Failed to parse command line options: {}", result.errorMessage());
-      exit(-1);
-   }
+      GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-   if (showHelp)
-   {
-      std::cout << cli << std::endl;
-      exit(0);
-   }
-
-   std::map<std::string, ftags::ProjectDb>  projects;
-   std::map<std::string, ftags::ProjectDb*> projectsByPath;
-
-   //  Prepare our context and socket
-   zmq::context_t context(1);
-
-   ftags::ZmqCentralLogger centralLogger{context, std::string{"server"}};
-
-   spdlog::info("Started");
-
-   const char*       xdgRuntimeDir  = std::getenv("XDG_RUNTIME_DIR");
-   const std::string socketLocation = fmt::format("ipc://{}/ftags_server", xdgRuntimeDir);
-
-   zmq::socket_t socket(context, ZMQ_REP);
-   socket.bind(socketLocation);
-
-   bool shuttingDown = false;
-
-   while (!shuttingDown)
-   {
-      zmq::message_t request;
-      ftags::Command command{};
-
-      //  Wait for next request from client
-      socket.recv(&request);
-      command.ParseFromArray(request.data(), static_cast<int>(request.size()));
-      spdlog::info("Received request from {}: {}", command.source(), command.Type_Name(command.type()));
-
-      ftags::ProjectDb* projectDb = nullptr;
-
-      if (command.projectname().empty())
+      auto result = cli.parse(clara::Args(argc, argv));
+      if (!result)
       {
-         if (!command.directoryname().empty())
-         {
-            std::filesystem::path inputPath{command.directoryname()};
+         spdlog::error("Failed to parse command line options: {}", result.errorMessage());
+         exit(-1);
+      }
 
-            /*
-             * traverse directory up to find a project root
-             */
-            while ((nullptr == projectDb) && (inputPath != inputPath.root_directory()))
+      if (showHelp)
+      {
+         std::cout << cli << std::endl;
+         exit(0);
+      }
+
+      std::map<std::string, ftags::ProjectDb>  projects;
+      std::map<std::string, ftags::ProjectDb*> projectsByPath;
+
+      //  Prepare our context and socket
+      zmq::context_t context(1);
+
+      ftags::ZmqCentralLogger centralLogger{context, std::string{"server"}};
+
+      spdlog::info("Started");
+
+      const char*       xdgRuntimeDir  = std::getenv("XDG_RUNTIME_DIR");
+      const std::string socketLocation = fmt::format("ipc://{}/ftags_server", xdgRuntimeDir);
+
+      zmq::socket_t socket(context, ZMQ_REP);
+      socket.bind(socketLocation);
+
+      bool shuttingDown = false;
+
+      while (!shuttingDown)
+      {
+         zmq::message_t request;
+         ftags::Command command{};
+
+         //  Wait for next request from client
+         socket.recv(&request);
+         command.ParseFromArray(request.data(), static_cast<int>(request.size()));
+         spdlog::info("Received request from {}: {}", command.source(), command.Type_Name(command.type()));
+
+         ftags::ProjectDb* projectDb = nullptr;
+
+         if (command.projectname().empty())
+         {
+            if (!command.directoryname().empty())
             {
-               auto iter = projectsByPath.find(inputPath.string());
-               if (iter != projectsByPath.end())
+               std::filesystem::path inputPath{command.directoryname()};
+
+               /*
+                * traverse directory up to find a project root
+                */
+               while ((nullptr == projectDb) && (inputPath != inputPath.root_directory()))
                {
-                  projectDb = iter->second;
-               }
-               else
-               {
-                  inputPath = inputPath.parent_path();
+                  auto iter = projectsByPath.find(inputPath.string());
+                  if (iter != projectsByPath.end())
+                  {
+                     projectDb = iter->second;
+                  }
+                  else
+                  {
+                     inputPath = inputPath.parent_path();
+                  }
                }
             }
          }
-      }
-      else
-      {
-         auto iter = projects.find(command.projectname());
-         if (iter != projects.end())
-         {
-            projectDb = &iter->second;
-         }
-      }
-
-      switch (command.type())
-      {
-
-      case ftags::Command_Type::Command_Type_QUERY:
-         if (nullptr == projectDb)
-         {
-            reportUnknownProject(socket, command.projectname(), projects);
-         }
          else
          {
-            switch (command.querytype())
+            auto iter = projects.find(command.projectname());
+            if (iter != projects.end())
             {
-            case ftags::Command_QueryType::Command_QueryType_IDENTIFY:
-               dispatchQueryIdentify(
-                  socket, projectDb, command.filename(), command.linenumber(), command.columnnumber());
-               break;
-            default:
-               dispatchFind(socket, projectDb, command.querytype(), command.queryqualifier(), command.symbolname());
-               break;
+               projectDb = &iter->second;
             }
          }
-         break;
 
-      case ftags::Command_Type::Command_Type_DUMP_TRANSLATION_UNIT:
-         if (nullptr == projectDb)
+         switch (command.type())
          {
-            reportUnknownProject(socket, command.projectname(), projects);
+
+         case ftags::Command_Type::Command_Type_QUERY:
+            if (nullptr == projectDb)
+            {
+               reportUnknownProject(socket, command.projectname(), projects);
+            }
+            else
+            {
+               switch (command.querytype())
+               {
+               case ftags::Command_QueryType::Command_QueryType_IDENTIFY:
+                  dispatchQueryIdentify(
+                     socket, projectDb, command.filename(), command.linenumber(), command.columnnumber());
+                  break;
+               default:
+                  dispatchFind(
+                     socket, projectDb, command.querytype(), command.queryqualifier(), command.symbolname());
+                  break;
+               }
+            }
+            break;
+
+         case ftags::Command_Type::Command_Type_DUMP_TRANSLATION_UNIT:
+            if (nullptr == projectDb)
+            {
+               reportUnknownProject(socket, command.projectname(), projects);
+            }
+            else
+            {
+               dispatchDumpTranslationUnit(socket, projectDb, command.filename());
+            }
+            break;
+
+         case ftags::Command_Type::Command_Type_UPDATE_TRANSLATION_UNIT:
+            if (nullptr == projectDb)
+            {
+               spdlog::info(
+                  fmt::format("Creating new project: {} in {}", command.projectname(), command.directoryname()));
+               auto iter = projects.emplace(command.projectname(),
+                                            ftags::ProjectDb(/* name = */ command.projectname(),
+                                                             /* rootDirectory = */ command.directoryname()));
+               projectDb = &iter.first->second;
+
+               projectsByPath.emplace(command.directoryname(), projectDb);
+            }
+            dispatchUpdateTranslationUnit(socket, projectDb, command.filename());
+            break;
+
+         case ftags::Command_Type::Command_Type_PING:
+            dispatchPing(socket);
+            break;
+
+         case ftags::Command_Type::Command_Type_QUERY_STATISTICS:
+            if (nullptr == projectDb)
+            {
+               reportUnknownProject(socket, command.projectname(), projects);
+            }
+            else
+            {
+               dispatchQueryStatistics(socket, projectDb, command.symbolname());
+            }
+            break;
+
+         case ftags::Command_Type::Command_Type_SAVE_DATABASE:
+            dispatchSaveDatabase(socket, projectDb, command.projectname(), command.directoryname());
+            break;
+
+         case ftags::Command_Type::Command_Type_LOAD_DATABASE:
+            if (nullptr == projectDb)
+            {
+               spdlog::info(
+                  fmt::format("Creating new project: {} in {}", command.projectname(), command.directoryname()));
+               auto iter = projects.emplace(command.projectname(),
+                                            ftags::ProjectDb(/* name = */ command.projectname(),
+                                                             /* rootDirectory = */ command.directoryname()));
+               projectDb = &iter.first->second;
+
+               projectsByPath.emplace(command.directoryname(), projectDb);
+            }
+            dispatchLoadDatabase(socket, projectDb, command.projectname(), command.directoryname());
+            break;
+
+         case ftags::Command_Type::Command_Type_ANALYZE_DATA:
+            dispatchDataAnalysis(socket, projectDb, command.symbolname());
+            break;
+
+         case ftags::Command_Type::Command_Type_SHUT_DOWN:
+            dispatchShutdown(socket);
+            shuttingDown = true;
+            break;
+
+         default:
+            dispatchUnknownCommand(socket);
+            break;
          }
-         else
-         {
-            dispatchDumpTranslationUnit(socket, projectDb, command.filename());
-         }
-         break;
-
-      case ftags::Command_Type::Command_Type_UPDATE_TRANSLATION_UNIT:
-         if (nullptr == projectDb)
-         {
-            spdlog::info(
-               fmt::format("Creating new project: {} in {}", command.projectname(), command.directoryname()));
-            auto iter = projects.emplace(
-               command.projectname(),
-               ftags::ProjectDb(/* name = */ command.projectname(), /* rootDirectory = */ command.directoryname()));
-            projectDb = &iter.first->second;
-
-            projectsByPath.emplace(command.directoryname(), projectDb);
-         }
-         dispatchUpdateTranslationUnit(socket, projectDb, command.filename());
-         break;
-
-      case ftags::Command_Type::Command_Type_PING:
-         dispatchPing(socket);
-         break;
-
-      case ftags::Command_Type::Command_Type_QUERY_STATISTICS:
-         if (nullptr == projectDb)
-         {
-            reportUnknownProject(socket, command.projectname(), projects);
-         }
-         else
-         {
-            dispatchQueryStatistics(socket, projectDb, command.symbolname());
-         }
-         break;
-
-      case ftags::Command_Type::Command_Type_ANALYZE_DATA:
-         dispatchDataAnalysis(socket, projectDb, command.symbolname());
-         break;
-
-      case ftags::Command_Type::Command_Type_SHUT_DOWN:
-         dispatchShutdown(socket);
-         shuttingDown = true;
-         break;
-
-      default:
-         dispatchUnknownCommand(socket);
-         break;
       }
+   }
+   catch (std::exception& ex)
+   {
+      spdlog::error("Caught exception: {}", ex.what());
    }
 
    spdlog::info("Shutting down");

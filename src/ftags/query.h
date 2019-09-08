@@ -36,6 +36,8 @@ struct Query
       Shutdown,
       Dump,
       Analyze,
+      Load,
+      Save,
    };
 
    enum Type : uint8_t

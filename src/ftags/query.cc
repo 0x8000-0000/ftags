@@ -48,6 +48,8 @@ struct str_ping: TAO_PEGTL_STRING("ping") {};
 struct str_shutdown: TAO_PEGTL_STRING("shutdown") {};
 struct str_dump: TAO_PEGTL_STRING("dump") {};
 struct str_analyze: TAO_PEGTL_STRING("analyze") {};
+struct str_load: TAO_PEGTL_STRING("load") {};
+struct str_save: TAO_PEGTL_STRING("save") {};
 
 struct str_projects: TAO_PEGTL_STRING("projects") {};
 struct str_dependencies: TAO_PEGTL_STRING("dependencies") {};
@@ -64,6 +66,7 @@ struct str_attribute: TAO_PEGTL_STRING("attribute") {};
 struct str_parameter: TAO_PEGTL_STRING("parameter") {};
 struct str_variable: TAO_PEGTL_STRING("variable") {};
 struct str_statistics : TAO_PEGTL_STRING("statistics") {};
+struct str_database : TAO_PEGTL_STRING("database") {};
 
 struct str_callers: TAO_PEGTL_STRING("callers") {};
 struct str_containers: TAO_PEGTL_STRING("containers") {};
@@ -85,6 +88,8 @@ struct key_ping: key<str_ping> {};
 struct key_shutdown: key<str_shutdown> {};
 struct key_dump: key<str_dump> {};
 struct key_analyze: key<str_analyze> {};
+struct key_save: key<str_save> {};
+struct key_load: key<str_load> {};
 
 struct key_override: key<str_override> {};
 
@@ -176,8 +181,23 @@ struct analyze_data : pegtl::if_must<key_analyze, sep, symbol_name, pegtl::eof>
 {
 };
 
-struct grammar
-   : pegtl::sor<find_symbol, identify_symbol, list_projects, ping_server, shutdown_server, dump_stats, analyze_data>
+struct save_database : pegtl::if_must<key_save, sep, str_database, pegtl::eof>
+{
+};
+
+struct load_database : pegtl::if_must<key_load, sep, str_database, pegtl::eof>
+{
+};
+
+struct grammar : pegtl::sor<find_symbol,
+                            identify_symbol,
+                            list_projects,
+                            ping_server,
+                            shutdown_server,
+                            dump_stats,
+                            analyze_data,
+                            save_database,
+                            load_database>
 {
 };
 
@@ -253,6 +273,26 @@ struct action<key_analyze>
    static void apply(const Input& /* in */, ftags::query::Query& query)
    {
       query.verb = ftags::query::Query::Verb::Analyze;
+   }
+};
+
+template <>
+struct action<key_save>
+{
+   template <typename Input>
+   static void apply(const Input& /* in */, ftags::query::Query& query)
+   {
+      query.verb = ftags::query::Query::Verb::Save;
+   }
+};
+
+template <>
+struct action<key_load>
+{
+   template <typename Input>
+   static void apply(const Input& /* in */, ftags::query::Query& query)
+   {
+      query.verb = ftags::query::Query::Verb::Load;
    }
 };
 
