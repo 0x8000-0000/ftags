@@ -105,7 +105,7 @@ template <>
 void ftags::util::Serializer<std::multimap<uint32_t, uint32_t>>::serialize(
    const std::multimap<uint32_t, uint32_t>& val, ftags::util::BufferInsertor& insertor)
 {
-   SerializedObjectHeader header = {k_std_multimap_uint32_uint32_SerializationSignature.data()};
+   SerializedObjectHeader header{k_std_multimap_uint32_uint32_SerializationSignature.data()};
    insertor << header;
 
    insertor << val.size();
