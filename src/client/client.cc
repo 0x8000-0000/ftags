@@ -15,6 +15,7 @@
 */
 
 #include <project.h>
+#include <serialization_legacy.h>
 
 #include <query.h>
 

@@ -15,6 +15,7 @@
 */
 
 #include <serialization.h>
+#include <serialization_legacy.h>
 
 #include <gtest/gtest.h>
 

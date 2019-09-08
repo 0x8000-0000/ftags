@@ -14,6 +14,7 @@
    limitations under the License.
 */
 
+#include <serialization_legacy.h>
 #include <string_table.h>
 
 #include <gtest/gtest.h>

@@ -14,9 +14,11 @@
    limitations under the License.
 */
 
+#include <project.h>
+#include <serialization_legacy.h>
+
 #include <ftags.pb.h>
 
-#include <project.h>
 #include <zmq_logger_sink.h>
 
 #include <zmq.hpp>

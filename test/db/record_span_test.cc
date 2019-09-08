@@ -15,6 +15,7 @@
 */
 
 #include <record_span_manager.h>
+#include <serialization_legacy.h>
 
 #include <gtest/gtest.h>
 
