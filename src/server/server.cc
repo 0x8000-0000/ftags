@@ -15,6 +15,7 @@
 */
 
 #include <project.h>
+#include <serialization_iostream.h>
 #include <serialization_legacy.h>
 
 #include <ftags.pb.h>
@@ -200,10 +201,10 @@ void dispatchUpdateTranslationUnit(zmq::socket_t& socket, ftags::ProjectDb* proj
 
    ftags::ProjectDb updatedTranslationUnit = ftags::ProjectDb::deserialize(extractor.getExtractor());
 
-   spdlog::info("Data contains {} records for {} translation units",
+   spdlog::info("Data contains {:n} records for {:n} translation units",
                 updatedTranslationUnit.getRecordCount(),
                 updatedTranslationUnit.getTranslationUnitCount());
-   spdlog::info("Data contains {} symbols extracted from {} files",
+   spdlog::info("Data contains {:n} symbols extracted from {:n} files",
                 updatedTranslationUnit.getSymbolCount(),
                 updatedTranslationUnit.getFilesCount());
 
@@ -267,17 +268,112 @@ void dispatchDataAnalysis(zmq::socket_t& socket, const ftags::ProjectDb* project
    socket.send(reply);
 }
 
-void dispatchSaveDatabase(zmq::socket_t& socket,
-                          const ftags::ProjectDb* /* projectDb */,
-                          const std::string& projectName,
-                          const std::string& /* projectDirectory */)
+std::filesystem::path getProjectSaveLocation(const std::string& projectDirName)
+{
+   const char* xdgCacheHomeDirName = std::getenv("XDG_CACHE_HOME");
+
+   std::filesystem::path xdgCachePath;
+
+   if (xdgCacheHomeDirName == nullptr)
+   {
+      const char* homeDirName = std::getenv("HOME");
+      if (homeDirName == nullptr)
+      {
+         throw(std::runtime_error("HOME environment variable is not defined"));
+      }
+
+      const std::filesystem::path homePath = std::filesystem::path{homeDirName};
+
+      if (!std::filesystem::exists(homePath))
+      {
+         throw(std::runtime_error(
+            fmt::format("HOME environment variable points to an invalid directory {}", homeDirName)));
+      }
+
+      xdgCachePath = homePath / ".config";
+   }
+   else
+   {
+      xdgCachePath = std::filesystem::path{xdgCacheHomeDirName};
+   }
+
+   if (!std::filesystem::exists(xdgCachePath))
+   {
+      std::error_code ec;
+
+      const bool createdDir = std::filesystem::create_directory(xdgCachePath, ec);
+      if (createdDir)
+      {
+         spdlog::warn("Created missing cache dir {}", xdgCachePath.string());
+      }
+      else
+      {
+         const std::string errorMessage{
+            fmt::format("Failed to create missing cache directory {}: {}", xdgCachePath.string(), ec.message())};
+         spdlog::error(errorMessage);
+         throw(std::runtime_error(errorMessage));
+      }
+   }
+
+   const std::filesystem::path projectSourcePath{projectDirName};
+
+   const std::filesystem::path projectSaveLocation = xdgCachePath / projectSourcePath.relative_path();
+
+   if (!std::filesystem::exists(projectSaveLocation))
+   {
+      std::error_code ec;
+
+      const bool createdDir = std::filesystem::create_directories(projectSaveLocation, ec);
+      if (createdDir)
+      {
+         spdlog::warn("Created missing project save location directory {}", projectSaveLocation.string());
+      }
+      else
+      {
+         const std::string errorMessage{fmt::format(
+            "Failed to create missing project save directory {}: {}", projectSaveLocation.string(), ec.message())};
+         spdlog::error(errorMessage);
+         throw(std::runtime_error(errorMessage));
+      }
+   }
+   else
+   {
+      spdlog::info("Found existing save location directory {}", projectSaveLocation.string());
+   }
+
+   return projectSaveLocation;
+}
+
+void dispatchSaveDatabase(zmq::socket_t&          socket,
+                          const ftags::ProjectDb* projectDb,
+                          const std::string&      projectName,
+                          const std::string&      projectDirectory)
 {
    ftags::Status status{};
    status.set_timestamp(getTimeStamp());
    status.set_type(ftags::Status_Type::Status_Type_STATISTICS_REMARKS);
 
-   // TODO(signbit): do this
-   *status.add_remarks() = fmt::format("Saved {} to disk", projectName);
+   try
+   {
+      const std::filesystem::path saveLocation{getProjectSaveLocation(projectDirectory)};
+
+      const std::size_t serializedSize{projectDb->computeSerializedSize()};
+
+      const std::filesystem::path saveFile{saveLocation / "project.data"};
+
+      ftags::util::OfstreamSerializationWriter writer{saveFile.string(), serializedSize};
+
+      ftags::util::TypedInsertor insertor{writer};
+
+      projectDb->serialize(insertor);
+
+      *status.add_remarks() =
+         fmt::format("Saved {} to {} ({:n} bytes)", projectName, saveFile.string(), serializedSize);
+   }
+   catch (std::exception& ex)
+   {
+      *status.add_remarks() = fmt::format("Caught exception during save project: {}", ex.what());
+   }
 
    const std::size_t replySize = status.ByteSizeLong();
    zmq::message_t    reply(replySize);
