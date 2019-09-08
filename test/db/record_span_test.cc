@@ -44,11 +44,11 @@ TEST(RecordSpanManagerTest, RecordVector)
 
    BufferInsertor insertor{buffer};
 
-   Serializer::serialize(input, insertor);
+   Serializer::serialize(input, insertor.getInsertor());
    insertor.assertEmpty();
 
    BufferExtractor                  extractor{buffer};
-   const std::vector<ftags::Record> output = Serializer::deserialize(extractor);
+   const std::vector<ftags::Record> output = Serializer::deserialize(extractor.getExtractor());
    extractor.assertEmpty();
 
    ASSERT_EQ(1, output[0].symbolNameKey);

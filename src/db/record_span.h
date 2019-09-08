@@ -186,9 +186,9 @@ public:
     */
    std::size_t computeSerializedSize() const;
 
-   void serialize(ftags::BufferInsertor& insertor) const;
+   void serialize(ftags::TypedInsertor& insertor) const;
 
-   static RecordSpan deserialize(ftags::BufferExtractor& extractor,
+   static RecordSpan deserialize(ftags::TypedExtractor& extractor,
                                  ftags::Record::Store&   recordStore,
                                  SymbolIndexStore&       symbolIndexStore);
 #endif

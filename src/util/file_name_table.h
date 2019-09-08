@@ -61,9 +61,9 @@ public:
     */
    std::size_t computeSerializedSize() const;
 
-   void serialize(BufferInsertor& insertor) const;
+   void serialize(TypedInsertor& insertor) const;
 
-   static StringTable deserialize(BufferExtractor& extractor);
+   static StringTable deserialize(TypedExtractor& extractor);
 
 private:
    struct PathElement

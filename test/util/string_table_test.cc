@@ -116,11 +116,11 @@ TEST(StringTableTest, SerializeTwoStrings)
    std::vector<std::byte> serializedFormat(/* size = */ estimatedSerializedSize);
 
    BufferInsertor insertor{serializedFormat};
-   st.serialize(insertor);
+   st.serialize(insertor.getInsertor());
    insertor.assertEmpty();
 
    ftags::util::BufferExtractor extractor{serializedFormat};
-   StringTable                  rec = StringTable::deserialize(extractor);
+   StringTable                  rec = StringTable::deserialize(extractor.getExtractor());
    extractor.assertEmpty();
 
    const uint32_t keyForFoo = st.getKey(fooString);
@@ -157,11 +157,11 @@ TEST(StringTableTest, SerializeTwoStringsWithGap)
    std::vector<std::byte> serializedFormat(/* size = */ estimatedSerializedSize);
 
    BufferInsertor insertor{serializedFormat};
-   st.serialize(insertor);
+   st.serialize(insertor.getInsertor());
    insertor.assertEmpty();
 
    BufferExtractor extractor{serializedFormat};
-   StringTable     rec = StringTable::deserialize(extractor);
+   StringTable     rec = StringTable::deserialize(extractor.getExtractor());
    extractor.assertEmpty();
 
    const uint32_t keyForFoo = st.getKey(fooString);
@@ -239,11 +239,11 @@ TEST(StringTableTest, AddTenThousandStrings)
    std::vector<std::byte> buffer(/* size = */ serializedSize);
 
    BufferInsertor insertor{buffer};
-   stringTable.serialize(insertor);
+   stringTable.serialize(insertor.getInsertor());
    insertor.assertEmpty();
 
    BufferExtractor extractor{buffer};
-   StringTable     rehydrated = StringTable::deserialize(extractor);
+   StringTable     rehydrated = StringTable::deserialize(extractor.getExtractor());
 
    std::string test = "abcdefghijlkmnopqrstuvxyz";
 

@@ -409,19 +409,6 @@ struct Serializer
    static void serialize(const T& t, TypedInsertor& insertor);
 
    static T deserialize(TypedExtractor& extractor);
-
-   /*
-    * legacy interface
-    */
-   static void serialize(const T& t, BufferInsertor& insertor)
-   {
-      serialize(t, insertor.getInsertor());
-   }
-
-   static T deserialize(BufferExtractor& extractor)
-   {
-      return deserialize(extractor.getExtractor());
-   }
 };
 
 } // namespace ftags::util

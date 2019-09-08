@@ -41,11 +41,11 @@ TEST(StringTableTest, AddOneMillionStrings)
    std::vector<std::byte> buffer(/* size = */ serializedSize);
 
    BufferInsertor insertor{buffer};
-   stringTable.serialize(insertor);
+   stringTable.serialize(insertor.getInsertor());
    insertor.assertEmpty();
 
    BufferExtractor extractor{buffer};
-   StringTable     rehydrated = StringTable::deserialize(extractor);
+   StringTable     rehydrated = StringTable::deserialize(extractor.getExtractor());
 
    std::string test = "abcdefghijlkmnopqrstuvxyz";
 
@@ -80,11 +80,11 @@ TEST(StringTableTest, AddTenMillionStrings)
    std::vector<std::byte> buffer(/* size = */ serializedSize);
 
    BufferInsertor insertor{buffer};
-   stringTable.serialize(insertor);
+   stringTable.serialize(insertor.getInsertor());
    insertor.assertEmpty();
 
    BufferExtractor extractor{buffer};
-   StringTable     rehydrated = StringTable::deserialize(extractor);
+   StringTable     rehydrated = StringTable::deserialize(extractor.getExtractor());
 
    std::string test = "abcdefghijlkmnopqrstuvxyz";
 

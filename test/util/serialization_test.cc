@@ -40,11 +40,11 @@ TEST(SerializationTest, MapUintToUint)
    std::vector<std::byte> buffer(/* size = */ inputSerializedSize);
 
    BufferInsertor insertor{buffer};
-   Serializer::serialize(input, insertor);
+   Serializer::serialize(input, insertor.getInsertor());
    insertor.assertEmpty();
 
    BufferExtractor                    extractor{buffer};
-   const std::map<uint32_t, uint32_t> output = Serializer::deserialize(extractor);
+   const std::map<uint32_t, uint32_t> output = Serializer::deserialize(extractor.getExtractor());
    extractor.assertEmpty();
 
    auto iter = output.find(4);
@@ -66,11 +66,11 @@ TEST(SerializationTest, CharVector)
 
    BufferInsertor insertor{buffer};
 
-   Serializer::serialize(input, insertor);
+   Serializer::serialize(input, insertor.getInsertor());
    insertor.assertEmpty();
 
    BufferExtractor         extractor{buffer};
-   const std::vector<char> output = Serializer::deserialize(extractor);
+   const std::vector<char> output = Serializer::deserialize(extractor.getExtractor());
    extractor.assertEmpty();
 
    ASSERT_EQ(3, output.size());

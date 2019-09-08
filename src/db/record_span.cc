@@ -160,7 +160,7 @@ std::size_t ftags::RecordSpan::computeSerializedSize() const
    return sizeof(ftags::SerializedObjectHeader) + sizeof(std::size_t) + sizeof(uint32_t) + sizeof(std::size_t);
 }
 
-void ftags::RecordSpan::serialize(ftags::BufferInsertor& insertor) const
+void ftags::RecordSpan::serialize(ftags::TypedInsertor& insertor) const
 {
    ftags::SerializedObjectHeader header{"ftags::RecordSpan"};
    insertor << header;
@@ -175,7 +175,7 @@ void ftags::RecordSpan::serialize(ftags::BufferInsertor& insertor) const
    assert(m_hash == hash);
 }
 
-ftags::RecordSpan ftags::RecordSpan::deserialize(ftags::BufferExtractor& extractor,
+ftags::RecordSpan ftags::RecordSpan::deserialize(ftags::TypedExtractor& extractor,
                                                  ftags::Record::Store&   recordStore,
                                                  SymbolIndexStore&       symbolIndexStore)
 {
