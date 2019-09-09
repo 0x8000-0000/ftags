@@ -319,28 +319,6 @@ std::filesystem::path getProjectSaveLocation(const std::string& projectDirName)
 
    const std::filesystem::path projectSaveLocation = xdgCachePath / projectSourcePath.relative_path();
 
-   if (!std::filesystem::exists(projectSaveLocation))
-   {
-      std::error_code ec;
-
-      const bool createdDir = std::filesystem::create_directories(projectSaveLocation, ec);
-      if (createdDir)
-      {
-         spdlog::warn("Created missing project save location directory {}", projectSaveLocation.string());
-      }
-      else
-      {
-         const std::string errorMessage{fmt::format(
-            "Failed to create missing project save directory {}: {}", projectSaveLocation.string(), ec.message())};
-         spdlog::error(errorMessage);
-         throw(std::runtime_error(errorMessage));
-      }
-   }
-   else
-   {
-      spdlog::info("Found existing save location directory {}", projectSaveLocation.string());
-   }
-
    return projectSaveLocation;
 }
 
@@ -357,6 +335,30 @@ void dispatchSaveDatabase(zmq::socket_t&          socket,
    {
       const std::filesystem::path saveLocation{getProjectSaveLocation(projectDirectory)};
 
+      if (!std::filesystem::exists(saveLocation))
+      {
+         std::error_code ec;
+
+         const bool createdDir = std::filesystem::create_directories(saveLocation, ec);
+         if (createdDir)
+         {
+            spdlog::warn("Created missing project save location directory {}", saveLocation.string());
+         }
+         else
+         {
+            const std::string errorMessage{fmt::format(
+               "Failed to create missing project save directory {}: {}", saveLocation.string(), ec.message())};
+            spdlog::error(errorMessage);
+            throw(std::runtime_error(errorMessage));
+         }
+      }
+      else
+      {
+         spdlog::info("Found existing save location directory {}", saveLocation.string());
+      }
+
+      const auto startSavingTimestamp = std::chrono::steady_clock::now();
+
       const std::size_t serializedSize{projectDb->computeSerializedSize()};
 
       const std::filesystem::path saveFile{saveLocation / "project.data"};
@@ -367,8 +369,14 @@ void dispatchSaveDatabase(zmq::socket_t&          socket,
 
       projectDb->serialize(insertor);
 
+      const auto endSavingTimestamp = std::chrono::steady_clock::now();
+
       *status.add_remarks() =
          fmt::format("Saved {} to {} ({:n} bytes)", projectName, saveFile.string(), serializedSize);
+
+      *status.add_remarks() = fmt::format(
+         "Save duration: {:n} seconds",
+         std::chrono::duration_cast<std::chrono::seconds>(endSavingTimestamp - startSavingTimestamp).count());
    }
    catch (std::exception& ex)
    {
@@ -382,23 +390,65 @@ void dispatchSaveDatabase(zmq::socket_t&          socket,
    socket.send(reply);
 }
 
-void dispatchLoadDatabase(zmq::socket_t& socket,
-                          const ftags::ProjectDb* /* projectDb */,
-                          const std::string& projectName,
-                          const std::string& /* projectDirectory */)
+ftags::ProjectDb* dispatchLoadDatabase(zmq::socket_t&                           socket,
+                                       const std::string&                       projectName,
+                                       const std::string&                       projectDirectory,
+                                       std::map<std::string, ftags::ProjectDb>& projects)
 {
    ftags::Status status{};
    status.set_timestamp(getTimeStamp());
    status.set_type(ftags::Status_Type::Status_Type_STATISTICS_REMARKS);
 
-   // TODO(signbit): do this
-   *status.add_remarks() = fmt::format("Loaded {} from disk", projectName);
+   ftags::ProjectDb* retval = nullptr;
+
+   try
+   {
+      const std::filesystem::path saveLocation{getProjectSaveLocation(projectDirectory)};
+
+      if (!std::filesystem::exists(saveLocation))
+      {
+         *status.add_remarks() = fmt::format("There is no project saved in {}", saveLocation.string());
+      }
+      else
+      {
+         const std::filesystem::path saveFile{saveLocation / "project.data"};
+
+         spdlog::info("Preparing to load data from {}", saveFile.string());
+
+         ftags::util::IfstreamSerializationReader reader{saveFile.string()};
+
+         ftags::util::TypedExtractor extractor{reader};
+
+         const auto startLoadingTimestamp = std::chrono::steady_clock::now();
+
+         ftags::ProjectDb pdb = ftags::ProjectDb::deserialize(extractor);
+
+         const auto endLoadingTimestamp = std::chrono::steady_clock::now();
+
+         auto iter = projects.emplace(projectName, std::move(pdb));
+
+         retval = &iter.first->second;
+
+         spdlog::info("Loaded project from {}", saveFile.string());
+
+         *status.add_remarks() = fmt::format("Loaded {} from disk", projectName);
+         *status.add_remarks() = fmt::format(
+            "Load duration: {:n} seconds",
+            std::chrono::duration_cast<std::chrono::seconds>(endLoadingTimestamp - startLoadingTimestamp).count());
+      }
+   }
+   catch (std::exception& ex)
+   {
+      *status.add_remarks() = fmt::format("Caught exception during save project: {}", ex.what());
+   }
 
    const std::size_t replySize = status.ByteSizeLong();
    zmq::message_t    reply(replySize);
    status.SerializeToArray(reply.data(), static_cast<int>(replySize));
 
    socket.send(reply);
+
+   return retval;
 }
 
 void dispatchPing(zmq::socket_t& socket)
@@ -597,20 +647,12 @@ int main(int argc, char* argv[])
             dispatchSaveDatabase(socket, projectDb, command.projectname(), command.directoryname());
             break;
 
-         case ftags::Command_Type::Command_Type_LOAD_DATABASE:
-            if (nullptr == projectDb)
-            {
-               spdlog::info(
-                  fmt::format("Creating new project: {} in {}", command.projectname(), command.directoryname()));
-               auto iter = projects.emplace(command.projectname(),
-                                            ftags::ProjectDb(/* name = */ command.projectname(),
-                                                             /* rootDirectory = */ command.directoryname()));
-               projectDb = &iter.first->second;
-
-               projectsByPath.emplace(command.directoryname(), projectDb);
-            }
-            dispatchLoadDatabase(socket, projectDb, command.projectname(), command.directoryname());
-            break;
+         case ftags::Command_Type::Command_Type_LOAD_DATABASE: {
+            ftags::ProjectDb* newProjectDb =
+               dispatchLoadDatabase(socket, command.projectname(), command.directoryname(), projects);
+            projectsByPath.emplace(command.directoryname(), newProjectDb);
+         }
+         break;
 
          case ftags::Command_Type::Command_Type_ANALYZE_DATA:
             dispatchDataAnalysis(socket, projectDb, command.symbolname());

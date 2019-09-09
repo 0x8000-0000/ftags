@@ -133,7 +133,6 @@ public:
 
    ProjectDb(const ProjectDb& other) = delete;
    const ProjectDb& operator=(const ProjectDb& other) = delete;
-   const ProjectDb& operator=(const ProjectDb&& other) = delete;
 
    ProjectDb(ProjectDb&& other) noexcept :
       m_name{std::move(other.m_name)},
@@ -145,6 +144,22 @@ public:
       m_recordSpanManager{std::move(other.m_recordSpanManager)},
       m_fileIndex{std::move(other.m_fileIndex)}
    {
+   }
+
+   ProjectDb& operator=(ProjectDb&& other)
+   {
+      m_translationUnits.destruct();
+
+      m_name              = std::move(other.m_name);
+      m_root              = std::move(other.m_root);
+      m_translationUnits  = std::move(other.m_translationUnits);
+      m_symbolTable       = std::move(other.m_symbolTable);
+      m_namespaceTable    = std::move(other.m_namespaceTable);
+      m_fileNameTable     = std::move(other.m_fileNameTable);
+      m_recordSpanManager = std::move(other.m_recordSpanManager);
+      m_fileIndex         = std::move(other.m_fileIndex);
+
+      return *this;
    }
 
    ~ProjectDb()

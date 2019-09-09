@@ -19,6 +19,7 @@
 
 #include <serialization.h>
 
+#include <filesystem>
 #include <fstream>
 #include <string_view>
 
@@ -59,9 +60,12 @@ private:
 class IfstreamSerializationReader : public SerializationReader
 {
 public:
-   IfstreamSerializationReader(std::string_view fileName, std::size_t size) :
-      m_stream{fileName.data(), std::ios::binary}, m_size{size}
+   explicit IfstreamSerializationReader(std::string_view fileName) : m_stream{fileName.data(), std::ios::binary}
    {
+      std::filesystem::path filePath{fileName};
+
+      m_size = std::filesystem::file_size(filePath);
+
       if (m_size == 0)
       {
          throw(std::logic_error("Invalid stream size"));
