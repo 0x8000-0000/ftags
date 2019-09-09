@@ -16,6 +16,7 @@ message Command
 
       SAVE_DATABASE = 10;
       LOAD_DATABASE = 11;
+      LIST_PROJECTS = 12;
 
       QUERY = 60;
 

@@ -736,6 +736,24 @@ int main(int argc, char* argv[])
 
             break;
 
+         case ftags::Command_Type::Command_Type_LIST_PROJECTS: {
+            ftags::Status status{};
+            status.set_timestamp(getTimeStamp());
+            status.set_type(ftags::Status_Type::Status_Type_QUERY_RESULTS);
+
+            for (const auto& iter : projects)
+            {
+               *status.add_remarks() = fmt::format("{} in {}", iter.second.getName(), iter.second.getRoot());
+            }
+
+            const std::size_t replySize = status.ByteSizeLong();
+            zmq::message_t    reply(replySize);
+            status.SerializeToArray(reply.data(), static_cast<int>(replySize));
+
+            socket.send(reply);
+         }
+         break;
+
          case ftags::Command_Type::Command_Type_PING:
             dispatchPing(socket);
             break;

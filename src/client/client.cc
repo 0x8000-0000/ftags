@@ -512,6 +512,26 @@ int main(int argc, char* argv[])
       }
       break;
 
+      case ftags::query::Query::Verb::List: {
+         command.set_type(ftags::Command::Type::Command_Type_LIST_PROJECTS);
+
+         const std::size_t requestSize = command.ByteSizeLong();
+         zmq::message_t    request(requestSize);
+         command.SerializeToArray(request.data(), static_cast<int>(requestSize));
+         socket.send(request);
+
+         zmq::message_t reply;
+         socket.recv(&reply);
+
+         status.ParseFromArray(reply.data(), static_cast<int>(reply.size()));
+
+         for (int ii = 0; ii < status.remarks_size(); ii++)
+         {
+            std::cout << status.remarks(ii) << std::endl;
+         }
+      }
+      break;
+
       case ftags::query::Query::Verb::Shutdown: {
          command.set_type(ftags::Command::Type::Command_Type_SHUT_DOWN);
          std::string quitCommand;
@@ -528,8 +548,8 @@ int main(int argc, char* argv[])
       break;
 
       case ftags::query::Query::Verb::Unknown:
-      default:
          std::cout << "Unknown command" << std::endl;
+         break;
       }
 
       google::protobuf::ShutdownProtobufLibrary();
