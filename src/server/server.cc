@@ -268,7 +268,7 @@ void dispatchDataAnalysis(zmq::socket_t& socket, const ftags::ProjectDb* project
    socket.send(reply);
 }
 
-std::filesystem::path getProjectSaveLocation(const std::string& projectDirName)
+std::filesystem::path getFtagsCachePath()
 {
    const char* xdgCacheHomeDirName = std::getenv("XDG_CACHE_HOME");
 
@@ -315,11 +315,68 @@ std::filesystem::path getProjectSaveLocation(const std::string& projectDirName)
       }
    }
 
+   const std::filesystem::path ftagsCachePath = xdgCachePath / "ftags" / "project";
+
+   return ftagsCachePath;
+}
+
+std::filesystem::path getProjectSaveLocation(const std::string& projectDirName)
+{
+   const std::filesystem::path ftagsCachePath = getFtagsCachePath();
+
+   if (!std::filesystem::exists(ftagsCachePath))
+   {
+      std::error_code ec;
+
+      const bool createdDir = std::filesystem::create_directory(ftagsCachePath, ec);
+      if (createdDir)
+      {
+         spdlog::warn("Created missing ftags cache dir {}", ftagsCachePath.string());
+      }
+      else
+      {
+         const std::string errorMessage{fmt::format(
+            "Failed to create missing ftags cache directory {}: {}", ftagsCachePath.string(), ec.message())};
+         spdlog::error(errorMessage);
+         throw(std::runtime_error(errorMessage));
+      }
+   }
+
    const std::filesystem::path projectSourcePath{projectDirName};
 
-   const std::filesystem::path projectSaveLocation = xdgCachePath / projectSourcePath.relative_path();
+   const std::filesystem::path projectSaveLocation = ftagsCachePath / projectSourcePath.relative_path();
 
    return projectSaveLocation;
+}
+
+std::vector<std::filesystem::path> getSavedProjects()
+{
+   std::vector<std::filesystem::path> retval;
+
+   const std::filesystem::path ftagsCachePath = getFtagsCachePath();
+
+   if (!std::filesystem::exists(ftagsCachePath))
+   {
+      return retval;
+   }
+
+   for (auto& entry : std::filesystem::recursive_directory_iterator(ftagsCachePath))
+   {
+      if (entry.is_regular_file())
+      {
+         spdlog::debug("Examining {}", entry.path().string());
+         if (entry.path().filename().string() == "project.data")
+         {
+            auto projectPath = std::filesystem::relative(entry.path().parent_path(), ftagsCachePath);
+            spdlog::info("Found saved project {}", projectPath.string());
+            retval.push_back(entry.path().parent_path());
+         }
+      }
+   }
+
+   spdlog::info("Found {} saved projects", retval.size());
+
+   return retval;
 }
 
 void dispatchSaveDatabase(zmq::socket_t&          socket,
@@ -490,10 +547,10 @@ void dispatchShutdown(zmq::socket_t& socket)
    socket.send(reply);
 }
 
-bool        showHelp = false;
-std::string projectName; // NOLINT
+bool showHelp         = false;
+bool autoloadProjects = false;
 
-auto cli = clara::Help(showHelp) | clara::Opt(projectName, "project")["-p"]["--project"]("Project name"); // NOLINT
+auto cli = clara::Help(showHelp) | clara::Opt(autoloadProjects)["-a"]["--autoload"]("Autoload projects"); // NOLINT
 
 } // namespace
 
@@ -516,15 +573,50 @@ int main(int argc, char* argv[])
          exit(0);
       }
 
-      std::map<std::string, ftags::ProjectDb>  projects;
-      std::map<std::string, ftags::ProjectDb*> projectsByPath;
-
       //  Prepare our context and socket
       zmq::context_t context(1);
 
       ftags::ZmqCentralLogger centralLogger{context, std::string{"server"}};
 
       spdlog::info("Started");
+
+      std::map<std::string, ftags::ProjectDb>  projects;
+      std::map<std::string, ftags::ProjectDb*> projectsByPath;
+
+      if (autoloadProjects)
+      {
+         const auto savedProjects = getSavedProjects();
+
+         const auto ftagsCachePath = getFtagsCachePath();
+
+         const std::filesystem::path rootPath{"/"};
+
+         const auto startLoadingTimestamp = std::chrono::steady_clock::now();
+         for (const auto& savedProjectData : savedProjects)
+         {
+            const std::filesystem::path fullProjectPath = ftagsCachePath / savedProjectData / "project.data";
+
+            ftags::util::IfstreamSerializationReader reader{fullProjectPath.string()};
+
+            ftags::util::TypedExtractor extractor{reader};
+
+            ftags::ProjectDb pdb = ftags::ProjectDb::deserialize(extractor);
+
+            spdlog::info(
+               "Loaded project {} with root {} from {}", pdb.getName(), pdb.getRoot(), savedProjectData.string());
+
+            const std::string projectRoot = pdb.getRoot();
+
+            auto iter = projects.emplace(pdb.getName(), std::move(pdb));
+
+            projectsByPath.emplace(projectRoot, &iter.first->second);
+         }
+         const auto endLoadingTimestamp = std::chrono::steady_clock::now();
+
+         spdlog::info(
+            "Load duration: {:n} seconds",
+            std::chrono::duration_cast<std::chrono::seconds>(endLoadingTimestamp - startLoadingTimestamp).count());
+      }
 
       const char*       xdgRuntimeDir  = std::getenv("XDG_RUNTIME_DIR");
       const std::string socketLocation = fmt::format("ipc://{}/ftags_server", xdgRuntimeDir);
@@ -626,6 +718,20 @@ int main(int argc, char* argv[])
                projectsByPath.emplace(command.directoryname(), projectDb);
             }
             dispatchUpdateTranslationUnit(socket, projectDb, command.filename());
+
+            // self-check
+            {
+               for (const auto& [name, project] : projects)
+               {
+                  assert(name == project.getName());
+               }
+
+               for (const auto& [path, project] : projectsByPath)
+               {
+                  assert(path == project->getRoot());
+               }
+            }
+
             break;
 
          case ftags::Command_Type::Command_Type_PING:

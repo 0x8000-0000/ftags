@@ -78,3 +78,24 @@ TEST(SerializationTest, CharVector)
    ASSERT_EQ('a', output[0]);
    ASSERT_EQ('c', output[2]);
 }
+
+TEST(SerializationTest, StdString)
+{
+   const std::string input{"this is foo"};
+
+   using Serializer = ftags::util::Serializer<std::string>;
+
+   const size_t           inputSerializedSize = Serializer::computeSerializedSize(input);
+   std::vector<std::byte> buffer(/* size = */ inputSerializedSize);
+
+   BufferInsertor insertor{buffer};
+
+   Serializer::serialize(input, insertor.getInsertor());
+   insertor.assertEmpty();
+
+   BufferExtractor   extractor{buffer};
+   const std::string output = Serializer::deserialize(extractor.getExtractor());
+   extractor.assertEmpty();
+
+   ASSERT_EQ(output, input);
+}
