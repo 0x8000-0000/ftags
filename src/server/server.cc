@@ -719,6 +719,7 @@ int main(int argc, char* argv[])
             }
             dispatchUpdateTranslationUnit(socket, projectDb, command.filename());
 
+#ifndef NDEBUG
             // self-check
             {
                for (const auto& [name, project] : projects)
@@ -731,6 +732,7 @@ int main(int argc, char* argv[])
                   assert(path == project->getRoot());
                }
             }
+#endif
 
             break;
 
