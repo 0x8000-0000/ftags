@@ -28,10 +28,9 @@ template <typename K, typename V>
 class FlatMap
 {
 public:
-
    using const_iterator = typename std::vector<std::pair<K, V>>::const_iterator;
 
-   FlatMap(std::vector<std::pair<K, V>>&& data) : m_data{data}
+   explicit FlatMap(std::vector<std::pair<K, V>>&& data) : m_data{data}
    {
       std::sort(m_data.begin(), m_data.end(), [](const std::pair<K, V>& left, const std::pair<K, V>& right) -> bool {
          return left.first < right.first;
@@ -40,9 +39,10 @@ public:
 
    const_iterator lookup(K kk) const
    {
-      const_iterator iter = std::lower_bound(m_data.cbegin(), m_data.cend(), kk, [](const std::pair<K, V>& left, K val) -> bool {
-         return left.first < val;
-      });
+      const_iterator iter =
+         std::lower_bound(m_data.cbegin(), m_data.cend(), kk, [](const std::pair<K, V>& left, K val) -> bool {
+            return left.first < val;
+         });
 
       if (iter->first == kk)
       {
