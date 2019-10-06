@@ -1,6 +1,6 @@
 ---
-Checks:          'clang-diagnostic-*,clang-analyzer-*,*,-modernize-use-trailing-return-type,-fuchsia-default-arguments-calls,-llvm-header-guard,-cppcoreguidelines-pro-bounds-array-to-pointer-decay,-hicpp-no-array-decay,-fuchsia-overloaded-operator,-cppcoreguidelines-pro-bounds-pointer-arithmetic,-cppcoreguidelines-pro-type-reinterpret-cast,-fuchsia-default-arguments-declarations,-google-runtime-references,-modernize-use-nodiscard'
-WarningsAsErrors: ''
+Checks:          'clang-diagnostic-*,clang-analyzer-*,*,-modernize-use-trailing-return-type,-fuchsia-default-arguments-calls,-llvm-header-guard,-cppcoreguidelines-pro-bounds-array-to-pointer-decay,-hicpp-no-array-decay,-fuchsia-overloaded-operator,-cppcoreguidelines-pro-bounds-pointer-arithmetic,-cppcoreguidelines-pro-type-reinterpret-cast,-fuchsia-default-arguments-declarations,-google-runtime-references,-modernize-use-nodiscard,-fuchsia-statically-constructed-objects'
+WarningsAsErrors: '*'
 HeaderFilterRegex: ''
 AnalyzeTemporaryDtors: false
 FormatStyle:     none
@@ -356,28 +356,26 @@ CheckOptions:
     value:           '800'
   - key:             readability-function-size.VariableThreshold
     value:           '4294967295'
+  - key:             readability-identifier-naming.ClassCase
+    value:           CamelCase
+  - key:             readability-identifier-naming.ClassConstantPrefix
+    value:           k_
+  - key:             readability-identifier-naming.FunctionCase
+    value:           camelCase
+  - key:             readability-identifier-naming.GlobalConstantCase
+    value:           CamelCase
+  - key:             readability-identifier-naming.GlobalConstantPrefix
+    value:           k_
   - key:             readability-identifier-naming.IgnoreFailedSplit
     value:           '0'
-  - key:             readability-identifier-naming.ClassCase
-    value:           'CamelCase'
-  - key:             readability-identifier-naming.StructCase
-    value:           'CamelCase'
-  - key:             readability-identifier-naming.FunctionCase
-    value:           'camelCase'
-  - key:             readability-identifier-naming.GlobalConstantCase
-    value:           'CamelCase'
-  - key:             readability-identifier-naming.StaticVariableCase
-    value:           'CamelCase'
   - key:             readability-identifier-naming.PrivateMemberPrefix
-    value:           'm_'
-  - key:             readability-identifier-naming.GlobalConstantPrefix
-    value:           'k_'
+    value:           m_
+  - key:             readability-identifier-naming.StaticVariableCase
+    value:           CamelCase
   - key:             readability-identifier-naming.StaticVariablePrefix
-    value:           'm_'
-  - key:             readability-identifier-naming.ClassConstantPrefix
-    value:           'k_'
-  - key:             readability-identifier-naming.ClassConstantCase
-    value:           'camelCase'
+    value:           m_
+  - key:             readability-identifier-naming.StructCase
+    value:           CamelCase
   - key:             readability-implicit-bool-conversion.AllowIntegerConditions
     value:           '0'
   - key:             readability-implicit-bool-conversion.AllowPointerConditions
